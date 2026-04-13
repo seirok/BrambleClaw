@@ -1,0 +1,51 @@
+# Gateway 配置文件示例
+# 该文件定义了消息路由规则、重试策略和健康检查配置
+
+version: "1.0"
+
+# 默认 Agent，当没有匹配的路由规则时使用
+default_agent: "main"
+
+# 路由规则列表
+# 按照优先级从高到低匹配，第一个匹配的规则生效
+routes:
+  # CLI 通道路由到主 Agent
+  - channel: "cli"
+    agent: "main"
+    priority: 10
+    conditions:
+      # 可以添加额外的匹配条件
+      # user_id: "admin"
+
+  # 微信通道路由到客服 Agent
+  - channel: "weixin"
+    agent: "customer_service"
+    priority: 20
+
+  # Telegram 通道路由到主 Agent
+  - channel: "telegram"
+    agent: "main"
+    priority: 15
+
+  # Discord 通道路由到娱乐 Agent
+  - channel: "discord"
+    agent: "entertainment"
+    priority: 15
+
+# 重试策略配置
+retry:
+  # 最大重试次数
+  max_retries: 3
+  # 重试间隔（秒）
+  retry_delay: 5
+  # 超时时间（秒）
+  timeout: 30
+
+# 通道健康检查配置
+health_check:
+  # 是否启用健康检查
+  enabled: true
+  # 检查间隔（秒）
+  interval: 30
+  # 检查超时（秒）
+  timeout: 10
