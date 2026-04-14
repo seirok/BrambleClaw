@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"miniGoClaw/logger"
 	"os"
 )
@@ -22,6 +23,11 @@ type Config struct {
 type ToolsConfig struct {
 	MCP       MCPConfig       `json:"mcp"`
 	WebSearch WebSearchConfig `json:"web_search"`
+	UrlParse  UrlParseConfig  `json:"url_parse"`
+}
+
+type UrlParseConfig struct {
+	Enabled bool `json:"enabled"`
 }
 
 type WebSearchConfig struct {
@@ -47,11 +53,15 @@ type MCPServerConfig struct {
 func Load(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		logger.L().Error().Str("文件读取失败: %v", err.Error())
+		err = fmt.Errorf("文件读取失败(%s): %w", path, err)
+		logger.L().Error().Err(err).Msg("")
+		return nil, err
 	}
 	var cfg Config
 	if err := json.Unmarshal(data, &cfg); err != nil {
-		logger.L().Error().Str("JSON解析失败: %v", err.Error())
+		err = fmt.Errorf("JSON解析失败(%s): %w", path, err)
+		logger.L().Error().Err(err).Msg("")
+		return nil, err
 	}
-	return &cfg, err
+	return &cfg, nil
 }

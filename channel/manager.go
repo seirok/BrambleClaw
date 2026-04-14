@@ -53,9 +53,6 @@ func (m *Manager) Start(ctx context.Context) error {
 		}
 	}
 
-	// 启动消息分发
-	go m.msgBus.DistributeOutBoundMessage(ctx)
-
 	return nil
 }
 

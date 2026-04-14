@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"miniGoClaw/logger"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -34,6 +35,7 @@ type MessageBus struct {
 	InBound  chan *InBoundMessage
 	OutBound chan *OutBoundMessage
 	outSubs  map[string]chan *OutBoundMessage
+	mu       sync.RWMutex
 }
 
 type MessageSubscription struct {
@@ -59,7 +61,11 @@ func NewMessageBus(buf_size int) *MessageBus {
 func (mb *MessageBus) Subscribe() *MessageSubscription {
 	id := uuid.New().String()
 	channel := make(chan *OutBoundMessage, 100)
+
+	mb.mu.Lock()
 	mb.outSubs[id] = channel
+	mb.mu.Unlock()
+
 	return &MessageSubscription{
 		ID:      id,
 		Channel: channel,
@@ -67,7 +73,9 @@ func (mb *MessageBus) Subscribe() *MessageSubscription {
 }
 
 func (mb *MessageBus) Unsubscribe(id string) {
+	mb.mu.Lock()
 	delete(mb.outSubs, id)
+	mb.mu.Unlock()
 }
 
 func (mb *MessageBus) DistributeOutBoundMessage(ctx context.Context) {
@@ -80,17 +88,21 @@ func (mb *MessageBus) DistributeOutBoundMessage(ctx context.Context) {
 				logger.L().Debug().Msg("OutBound channel closed")
 				return
 			}
+
+			mb.mu.RLock()
 			// 非阻塞发送给所有订阅者
 			for sub, ch := range mb.outSubs {
 				select {
 				case ch <- msg:
 				case <-ctx.Done():
+					mb.mu.RUnlock()
 					return
 				default:
 					// 如果订阅者通道已满，可以选择跳过或记录警告
 					logger.L().Debug().Str("Subscriber", sub).Msg("Subscriber channel full, dropping message")
 				}
 			}
+			mb.mu.RUnlock()
 		}
 	}
 }
