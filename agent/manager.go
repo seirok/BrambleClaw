@@ -1,10 +1,10 @@
 package agent
 
 import (
+	"brambleclaw/bus"
+	"brambleclaw/logger"
 	"context"
 	"errors"
-	"log"
-	"miniGoClaw/bus"
 	"sync"
 )
 
@@ -27,7 +27,7 @@ func NewAgentManager(bus *bus.MessageBus) *AgentManager {
 // Register 注册Agent
 func (m *AgentManager) Register(name string, agent *Agent) error {
 	if _, ok := m.agents[name]; ok {
-		log.Printf("Agent %s already registered", name)
+		logger.L().Warn().Str("Agent", name).Msg("Agent already registered")
 		return errors.New("Agent " + name + " already registered")
 	}
 	m.agents[name] = agent
@@ -38,7 +38,7 @@ func (m *AgentManager) Register(name string, agent *Agent) error {
 func (m *AgentManager) Start(ctx context.Context) error {
 	for _, agent := range m.agents {
 		if err := agent.Start(ctx); err != nil {
-			log.Printf("Agent %s fail to start", agent.config.Name)
+			logger.L().Error().Err(err).Str("Agent", agent.config.Name).Msg("Agent fail to start")
 			continue
 		}
 	}
@@ -59,6 +59,6 @@ func (m *AgentManager) Get(name string) (*Agent, bool) {
 	if _, ok := m.agents[name]; ok {
 		return m.agents[name], true
 	}
-	log.Printf("Agent %s not registered", name)
+	logger.L().Error().Str("Agent", name).Msg("Agent not registered")
 	return nil, false
 }

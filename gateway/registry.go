@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"miniGoClaw/agent"
+	"brambleclaw/agent"
 )
 
 // AgentEntry Agent 注册表项

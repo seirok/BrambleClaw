@@ -1,10 +1,10 @@
 package main
 
 import (
+	"brambleclaw/bus"
+	"brambleclaw/cli"
+	"brambleclaw/logger"
 	"context"
-	"log"
-	"miniGoClaw/bus"
-	"miniGoClaw/cli"
 	"time"
 )
 
@@ -12,7 +12,7 @@ import (
 // the <icon src="AllIcons.Actions.Execute"/> icon in the gutter and select the <b>Run</b> menu item from here.</p>
 func main() {
 	if err := cli.Execute(); err != nil {
-		log.Fatal(err)
+		logger.L().Fatal().Err(err).Msg("CLI执行失败")
 	}
 }
 
@@ -20,14 +20,20 @@ func processMessage(ctx context.Context, msgBus *bus.MessageBus) {
 	// 消息分发线程持续监听
 	go msgBus.DistributeOutBoundMessage(ctx)
 	for {
-		log.Println("ProcessMessage")
-		in_msg, _ := msgBus.ConsumeInBoundMessage(ctx)
+		logger.L().Debug().Msg("ProcessMessage")
+		in_msg, err := msgBus.ConsumeInBoundMessage(ctx)
+		if err != nil {
+			logger.L().Error().Err(err).Msg("消费消息失败")
+			continue
+		}
 		outMsg := &bus.OutBoundMessage{
 			ChatID:     "125",
 			OutChannel: in_msg.InChannel,
 			Content:    "Echo: " + in_msg.Content,
 			TimeStamp:  time.Now(),
 		}
-		msgBus.PublishOutBoundMessage(ctx, outMsg)
+		if err := msgBus.PublishOutBoundMessage(ctx, outMsg); err != nil {
+			logger.L().Error().Err(err).Msg("发布消息失败")
+		}
 	}
 }

@@ -1,8 +1,8 @@
 package channel
 
 import (
+	"brambleclaw/bus"
 	"context"
-	"miniGoClaw/bus"
 
 	"github.com/google/uuid"
 )

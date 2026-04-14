@@ -1,9 +1,9 @@
 package channel
 
 import (
+	"brambleclaw/bus"
 	"context"
 	"fmt"
-	"miniGoClaw/bus"
 )
 
 // CLIChannel CLI通道

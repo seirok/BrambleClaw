@@ -1,8 +1,8 @@
 package agent
 
 import (
+	"brambleclaw/logger"
 	"fmt"
-	"miniGoClaw/logger"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -323,7 +323,7 @@ func (cb *ContextBuilder) getIdentity() string {
 	version := config.FormatVersion()
 
 	return fmt.Sprintf(
-		`# BrambleClaw 🦞 (%s)
+		`# brambleclaw 🦞 (%s)
 
 You are brambleclaw, a helpful AI assistant.
 

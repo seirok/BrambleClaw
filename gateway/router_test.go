@@ -3,7 +3,7 @@ package gateway
 import (
 	"testing"
 
-	"miniGoClaw/bus"
+	"brambleclaw/bus"
 )
 
 func TestBuildSessionKey(t *testing.T) {

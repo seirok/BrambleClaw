@@ -1,8 +1,8 @@
 package tools
 
 import (
+	"brambleclaw/logger"
 	"context"
-	"log"
 )
 
 // Tool 工具接口
@@ -40,7 +40,7 @@ func (r *ToolRegistry) Register(tool Tool) {
 func (r *ToolRegistry) Get(name string) (Tool, bool) {
 	tool, ok := r.tools[name]
 	if !ok {
-		log.Printf("tool %s not found", name)
+		logger.L().Error().Str("Tool", name).Msg("tool not found")
 		return nil, false
 	}
 	return tool, true

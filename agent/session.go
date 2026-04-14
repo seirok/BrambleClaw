@@ -1,7 +1,7 @@
 package agent
 
 import (
-	"log"
+	"brambleclaw/logger"
 	"sync"
 	"time"
 )
@@ -34,7 +34,7 @@ func (m *SessionManager) GetOrCreate(key string) *Session {
 func (m *SessionManager) Get(key string) (*Session, bool) {
 	val, ok := m.sessions[key]
 	if !ok {
-		log.Printf("session %s not found", key)
+		logger.L().Error().Str("Session", key).Msg("session not found")
 		return nil, false
 	}
 	return val, true
@@ -44,7 +44,7 @@ func (m *SessionManager) Get(key string) (*Session, bool) {
 func (m *SessionManager) Update(session *Session) {
 	m.sessions[session.Key] = session
 	session.UpdatedAt = time.Now()
-	log.Printf("session %s updated", session.Key)
+	logger.L().Debug().Str("Session", session.Key).Msg("session updated")
 	return
 }
 
@@ -54,7 +54,7 @@ func (s *Session) GetHistory(max int) []AgentMessage {
 		return s.Messages // 返回全部历史消息
 	}
 	if max < 0 {
-		log.Printf("max is negative")
+		logger.L().Warn().Msg("max is negative")
 		return nil
 	}
 	return s.Messages[len(s.Messages)-max:]

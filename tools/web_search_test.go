@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"miniGoClaw/config"
+	"brambleclaw/config"
 )
 
 func TestWebSearchTool_Execute_Web(t *testing.T) {

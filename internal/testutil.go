@@ -1,14 +1,14 @@
 package testutil
 
 import (
+	"brambleclaw/agent"
+	"brambleclaw/bus"
+	"brambleclaw/channel"
+	"brambleclaw/config"
+	"brambleclaw/gateway"
+	"brambleclaw/sandbox"
 	"context"
 	"fmt"
-	"miniGoClaw/agent"
-	"miniGoClaw/bus"
-	"miniGoClaw/channel"
-	"miniGoClaw/config"
-	"miniGoClaw/gateway"
-	"miniGoClaw/sandbox"
 	"os"
 	"sync"
 	"time"

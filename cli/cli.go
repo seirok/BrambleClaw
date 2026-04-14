@@ -1,17 +1,17 @@
 package cli
 
 import (
+	"brambleclaw/agent"
+	"brambleclaw/bus"
+	"brambleclaw/channel"
+	"brambleclaw/config"
+	"brambleclaw/gateway"
+	"brambleclaw/logger"
+	"brambleclaw/tools"
 	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
-	"miniGoClaw/agent"
-	"miniGoClaw/bus"
-	"miniGoClaw/channel"
-	"miniGoClaw/config"
-	"miniGoClaw/gateway"
-	"miniGoClaw/logger"
-	"miniGoClaw/tools"
 	"os"
 	"os/signal"
 	"syscall"
@@ -261,7 +261,7 @@ func runAgent(cmd *cobra.Command, args []string) error {
 				color3 + `██████╔╝██║  ██║██║  ██║██║ ╚═╝ ██║██████╔╝███████╗███████╗    ╚██████╗███████╗██║  ██║╚███╔███╔╝` + "\n" +
 				color4 + `╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝╚═════╝ ╚══════╝╚══════╝     ╚═════╝╚══════╝╚═╝  ╚═╝ ╚══╝╚══╝ ` + resetColor
 		fmt.Println(banner)
-		fmt.Println("\n" + color4 + "    >>> Welcome to BrambleClaw System. <<<" + resetColor)
+		fmt.Println("\n" + color4 + "    >>> Welcome to brambleclaw System. <<<" + resetColor)
 		fmt.Println("> 你好，请问有什么可以帮您？")
 
 		scanner := bufio.NewScanner(os.Stdin)

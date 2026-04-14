@@ -1,12 +1,12 @@
 package mcp
 
 import (
+	"brambleclaw/config"
+	"brambleclaw/logger"
+	"brambleclaw/tools"
 	"context"
 	"encoding/json"
 	"fmt"
-	"miniGoClaw/config"
-	"miniGoClaw/logger"
-	"miniGoClaw/tools"
 	"os"
 	"strings"
 	"sync"

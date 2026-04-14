@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"miniGoClaw/agent"
-	"miniGoClaw/bus"
-	"miniGoClaw/config"
+	"brambleclaw/agent"
+	"brambleclaw/bus"
+	"brambleclaw/config"
 )
 
 // 创建测试用的 Mock Agent

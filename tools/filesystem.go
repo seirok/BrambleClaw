@@ -1,9 +1,10 @@
 package tools
 
 import (
+	"brambleclaw/logger"
 	"context"
 	"encoding/json"
-	"log"
+	"fmt"
 	"os"
 	"path/filepath"
 )
@@ -58,12 +59,13 @@ func (t *FileSystemTool) Execute(ctx context.Context, argStr string) (interface{
 	var args map[string]interface{}
 	err := json.Unmarshal([]byte(argStr), &args)
 	if err != nil {
-		log.Fatal("解析失败:", err)
+		logger.L().Fatal().Err(err).Msg("解析失败")
+		return nil, fmt.Errorf("解析失败: %w", err)
 	}
 	cmd, ok := args["command"].(string)
 	if !ok {
-		log.Fatal("参数解析有误")
-		return nil, nil
+		logger.L().Fatal().Msg("参数解析有误")
+		return nil, fmt.Errorf("参数解析有误")
 	}
 
 	switch cmd {
@@ -87,7 +89,7 @@ func (t *FileSystemTool) readFile(args map[string]interface{}) (interface{}, err
 
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("读取文件失败(%s): %w", path, err)
 	}
 
 	return string(data), nil
@@ -108,11 +110,11 @@ func (t *FileSystemTool) writeFile(args map[string]interface{}) (interface{}, er
 	// 确保目录存在
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("创建目录失败(%s): %w", dir, err)
 	}
 
 	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("写入文件失败(%s): %w", path, err)
 	}
 
 	return "File written successfully", nil
@@ -127,19 +129,19 @@ func (t *FileSystemTool) listFiles(args map[string]interface{}) (interface{}, er
 
 	files, err := os.ReadDir(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("读取目录失败(%s): %w", path, err)
 	}
 
 	fileList := make([]map[string]interface{}, 0, len(files))
 	for _, file := range files {
 		info, err := file.Info()
 		if err != nil {
-			log.Println("Error:", err)
+			logger.L().Error().Err(err).Str("File", file.Name()).Msg("获取文件信息失败")
 			continue
 		}
 		fileList = append(fileList, map[string]interface{}{
 			"name":     info.Name(),
-			"size":     info.Name(),
+			"size":     info.Size(),
 			"is_dir":   info.IsDir(),
 			"mod_time": info.ModTime(),
 		})

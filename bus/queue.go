@@ -1,9 +1,8 @@
 package bus
 
 import (
+	"brambleclaw/logger"
 	"context"
-	"log"
-	"miniGoClaw/logger"
 	"sync"
 	"time"
 
@@ -131,7 +130,7 @@ func (mb *MessageBus) ConsumeInBoundMessage(ctx context.Context) (*InBoundMessag
 		logger.L().Debug().Str("Message received", msg.Content).Msg("")
 		return msg, nil
 	case <-ctx.Done():
-		log.Println("Context cancelled")
+		logger.L().Debug().Msg("Context cancelled")
 		return nil, ctx.Err()
 	}
 }

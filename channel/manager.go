@@ -1,11 +1,10 @@
 package channel
 
 import (
+	"brambleclaw/bus"
+	"brambleclaw/logger"
 	"context"
 	"fmt"
-	"log"
-	"miniGoClaw/bus"
-	"miniGoClaw/logger"
 	"sync"
 )
 
@@ -42,13 +41,13 @@ func (m *Manager) Register(channel BaseChannel) error {
 // Start 启动所有通道
 func (m *Manager) Start(ctx context.Context) error {
 	if len(m.channels) == 0 {
-		log.Println("no channels registered")
+		logger.L().Info().Msg("no channels registered")
 		return nil
 	}
 	for _, channel := range m.channels {
 		err := channel.Start(ctx)
 		if err != nil {
-			log.Printf("channel %s start error %s:", channel.Name(), err)
+			logger.L().Error().Err(err).Str("channel", channel.Name()).Msg("channel start error")
 			continue
 		}
 	}
@@ -59,13 +58,13 @@ func (m *Manager) Start(ctx context.Context) error {
 // Stop 停止所有通道
 func (m *Manager) Stop() error {
 	if len(m.channels) == 0 {
-		log.Println("no channels registered")
+		logger.L().Info().Msg("no channels registered")
 		return nil
 	}
 	for _, channel := range m.channels {
 		err := channel.Stop()
 		if err != nil {
-			log.Printf("channel %s stop error %s:", channel.Name(), err)
+			logger.L().Error().Err(err).Str("channel", channel.Name()).Msg("channel stop error")
 			return err
 		}
 	}
@@ -85,15 +84,17 @@ func (m *Manager) Get(name string) (BaseChannel, bool) {
 
 // DispatchOutbound 分发出站消息
 func (m *Manager) DispatchOutbound(ctx context.Context) error {
-	log.Println("start dispatch outbound")
+	logger.L().Info().Msg("start dispatch outbound")
 	sub := m.msgBus.Subscribe()
 	for msg := range sub.Channel {
 		channel, ok := m.Get(msg.OutChannel)
 		if !ok {
-			log.Println("channel not found:", msg.OutChannel)
+			logger.L().Error().Str("channel", msg.OutChannel).Msg("channel not found")
 			continue
 		}
-		channel.Send(msg)
+		if err := channel.Send(msg); err != nil {
+			logger.L().Error().Err(err).Str("channel", msg.OutChannel).Msg("send message error")
+		}
 	}
 	return nil
 }

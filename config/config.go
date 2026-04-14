@@ -1,9 +1,9 @@
 package config
 
 import (
+	"brambleclaw/logger"
 	"encoding/json"
 	"fmt"
-	"miniGoClaw/logger"
 	"os"
 )
 

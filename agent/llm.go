@@ -1,11 +1,11 @@
 package agent
 
 import (
+	"brambleclaw/config"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
-	"miniGoClaw/config"
 	"net/http"
 )
 

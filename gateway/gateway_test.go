@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"miniGoClaw/agent"
-	"miniGoClaw/bus"
-	"miniGoClaw/channel"
-	"miniGoClaw/config"
+	"brambleclaw/agent"
+	"brambleclaw/bus"
+	"brambleclaw/channel"
+	"brambleclaw/config"
 )
 
 // 创建测试用的 Gateway 配置

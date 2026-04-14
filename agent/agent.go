@@ -1,13 +1,12 @@
 package agent
 
 import (
+	"brambleclaw/bus"
+	"brambleclaw/config"
+	"brambleclaw/logger"
+	"brambleclaw/tools"
+	"brambleclaw/tools/mcp"
 	"context"
-	"log"
-	"miniGoClaw/bus"
-	"miniGoClaw/config"
-	"miniGoClaw/logger"
-	"miniGoClaw/tools"
-	"miniGoClaw/tools/mcp"
 	"strings"
 	"time"
 )
@@ -77,7 +76,7 @@ func (a *Agent) handleInboundMessage(ctx context.Context, msg *bus.InBoundMessag
 	resp, err := a.orchestrator.Run(ctx, historyMsg)
 
 	if err != nil {
-		log.Println("Failed to complete communication with LLM:", err)
+		logger.L().Error().Err(err).Msg("Failed to complete communication with LLM")
 		return
 	}
 
@@ -102,7 +101,7 @@ func (a *Agent) handleInboundMessage(ctx context.Context, msg *bus.InBoundMessag
 	}
 
 	if err := a.bus.PublishOutBoundMessage(ctx, outbound); err != nil {
-		log.Printf("Error publishing response: %v", err)
+		logger.L().Error().Err(err).Msg("Error publishing response")
 	}
 
 }
@@ -112,7 +111,7 @@ func (a *Agent) processMessages(ctx context.Context) {
 	for {
 		msg, err := a.bus.ConsumeInBoundMessage(ctx)
 		if err != nil {
-			log.Printf("Error consuming message: %v", err)
+			logger.L().Error().Err(err).Msg("Error consuming message")
 			continue
 		}
 

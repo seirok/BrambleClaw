@@ -15,7 +15,7 @@ func TestBanner(t *testing.T) {
 	color4 := "\033[38;2;62;93;185m"
 	resetColor := "\033[0m"
 
-	// 2. BrambleClaw 艺术字 (使用多行反引号)
+	// 2. brambleclaw 艺术字 (使用多行反引号)
 	// 我为你挑选了一款更具“利爪”感且清晰的字体
 
 	banner :=
@@ -28,5 +28,5 @@ func TestBanner(t *testing.T) {
 
 	// 3. 打印输出
 	fmt.Println(banner)
-	fmt.Println("\n" + color4 + "    >>> Welcome to BrambleClaw System. <<<" + resetColor)
+	fmt.Println("\n" + color4 + "    >>> Welcome to brambleclaw System. <<<" + resetColor)
 }

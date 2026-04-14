@@ -1,4 +1,4 @@
-module miniGoClaw
+module brambleclaw
 
 go 1.25.8
 

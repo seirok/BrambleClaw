@@ -1,10 +1,10 @@
 package agent
 
 import (
+	"brambleclaw/config"
+	"brambleclaw/logger"
+	"brambleclaw/tools"
 	"context"
-	"miniGoClaw/config"
-	"miniGoClaw/logger"
-	"miniGoClaw/tools"
 	"testing"
 )
 

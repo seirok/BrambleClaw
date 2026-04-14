@@ -1,17 +1,17 @@
 package gateway
 
 import (
+	"brambleclaw/config"
+	"brambleclaw/logger"
 	"context"
 	"fmt"
-	"miniGoClaw/config"
-	"miniGoClaw/logger"
 	"sync"
 	"testing"
 	"time"
 
-	"miniGoClaw/agent"
-	"miniGoClaw/bus"
-	"miniGoClaw/channel"
+	"brambleclaw/agent"
+	"brambleclaw/bus"
+	"brambleclaw/channel"
 )
 
 // MockChannel 是一个用于测试的模拟通道

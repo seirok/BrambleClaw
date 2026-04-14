@@ -1,10 +1,10 @@
 package sandbox_test
 
 import (
+	"brambleclaw/bus"
+	"brambleclaw/internal"
+	"brambleclaw/logger"
 	"context"
-	"miniGoClaw/bus"
-	"miniGoClaw/internal"
-	"miniGoClaw/logger"
 	"testing"
 	"time"
 )

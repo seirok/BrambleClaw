@@ -1,16 +1,15 @@
 package gateway
 
 import (
+	"brambleclaw/logger"
 	"context"
 	"fmt"
-	"log"
-	"miniGoClaw/logger"
 	"sync"
 	"time"
 
-	"miniGoClaw/agent"
-	"miniGoClaw/bus"
-	"miniGoClaw/channel"
+	"brambleclaw/agent"
+	"brambleclaw/bus"
+	"brambleclaw/channel"
 )
 
 // MessageProcessor 消息处理器接口
@@ -60,7 +59,7 @@ func (g *Gateway) RegisterAgent(name string, ag *agent.Agent, config agent.Agent
 	if err := g.registry.Register(name, ag, config); err != nil {
 		return err
 	}
-	logger.L().Info().Str("[Gateway] Agent 已注册", name).Msg("")
+	logger.L().Info().Str("Agent", name).Msg("[Gateway] Agent 已注册")
 	return nil
 }
 
@@ -114,9 +113,9 @@ func (g *Gateway) Stop() error {
 
 	select {
 	case <-done:
-		log.Println("[Gateway] 已正常停止")
+		logger.L().Info().Msg("[Gateway] 已正常停止")
 	case <-time.After(10 * time.Second):
-		log.Println("[Gateway] 停止超时，强制结束")
+		logger.L().Warn().Msg("[Gateway] 停止超时，强制结束")
 	}
 
 	return nil
@@ -140,13 +139,13 @@ func (g *Gateway) processMessageLoop() {
 			if g.ctx.Err() != nil {
 				return
 			}
-			logger.L().Error().Msg(err.Error())
+			logger.L().Error().Err(err).Msg("[Gateway] 消费消息失败")
 			continue
 		}
 
 		// 处理消息
 		if err := g.handleMessage(g.ctx, msg); err != nil {
-			logger.L().Error().Msg(err.Error())
+			logger.L().Error().Err(err).Msg("[Gateway] 处理消息失败")
 		}
 	}
 }
@@ -235,12 +234,12 @@ func (g *Gateway) dispatchOutboundLoop() {
 			// 通过 Channel Manager 发送消息
 			ch, exists := g.channelManager.Get(msg.OutChannel)
 			if !exists {
-				log.Printf("[Gateway] 通道不存在: %s", msg.OutChannel)
+				logger.L().Error().Str("Channel", msg.OutChannel).Msg("[Gateway] 通道不存在")
 				continue
 			}
 
 			if err := ch.Send(msg); err != nil {
-				log.Printf("[Gateway] 发送消息失败: %v", err)
+				logger.L().Error().Err(err).Str("Channel", msg.OutChannel).Msg("[Gateway] 发送消息失败")
 			}
 		}
 	}

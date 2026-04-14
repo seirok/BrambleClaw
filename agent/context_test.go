@@ -1,7 +1,7 @@
 package agent
 
 import (
-	"miniGoClaw/logger"
+	"brambleclaw/logger"
 	"os"
 	"testing"
 )
