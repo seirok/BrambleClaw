@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"brambleclaw/config"
 	"fmt"
 	"os"
 
@@ -69,6 +70,40 @@ func LoadConfig(path string) (*GatewayConfig, error) {
 	}
 
 	return &cfg, nil
+}
+
+// LoadConfigFromConfig 从统一的 config.Config 加载 Gateway 配置
+// 用于将主配置中的 Gateway 配置转换为 gateway.GatewayConfig
+func LoadConfigFromConfig(cfg *config.Config) (*GatewayConfig, error) {
+	gwConfig := cfg.GetGatewayConfig()
+
+	// 转换 Routes
+	routes := make([]RouteRule, len(gwConfig.Routes))
+	for i, route := range gwConfig.Routes {
+		routes[i] = RouteRule{
+			Channel:    route.Channel,
+			Agent:      route.Agent,
+			Conditions: route.Conditions,
+			Priority:   route.Priority,
+		}
+	}
+
+	// 创建 GatewayConfig
+	return &GatewayConfig{
+		Version:      gwConfig.Version,
+		DefaultAgent: gwConfig.DefaultAgent,
+		Routes:       routes,
+		Retry: RetryPolicy{
+			MaxRetries: gwConfig.Retry.MaxRetries,
+			RetryDelay: gwConfig.Retry.RetryDelay,
+			Timeout:    gwConfig.Retry.Timeout,
+		},
+		HealthCheck: ChannelHealthCheck{
+			Enabled:  gwConfig.HealthCheck.Enabled,
+			Interval: gwConfig.HealthCheck.Interval,
+			Timeout:  gwConfig.HealthCheck.Timeout,
+		},
+	}, nil
 }
 
 // GetRouteForChannel 获取指定通道的路由规则

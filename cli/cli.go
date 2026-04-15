@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -107,17 +108,30 @@ func runInit(cmd *cobra.Command, args []string) error {
 	cfg.Tools.WebSearch.Enabled = false
 	cfg.Tools.UrlParse.Enabled = false
 	cfg.Tools.MCP.Enabled = false
+	// 设置默认的 Gateway 配置
+	cfg.Gateway = config.DefaultGatewayConfig()
 
-	err := os.MkdirAll("./config", 0755)
-	if err != nil {
-		err = fmt.Errorf("创建配置目录失败(./config): %w", err)
-		logger.L().Error().Err(err).Msg("")
-		return err
+	// 确定配置文件保存路径（优先保存到用户配置目录）
+	var configPath string
+	if userConfigDir, err := os.UserConfigDir(); err == nil {
+		configDir := filepath.Join(userConfigDir, config.AppName)
+		if err := os.MkdirAll(configDir, 0755); err == nil {
+			configPath = filepath.Join(configDir, config.DefaultConfigFileName)
+		}
+	}
+	// 如果用户配置目录不可用，退回到当前工作目录
+	if configPath == "" {
+		if err := os.MkdirAll(config.DefaultConfigDir, 0755); err != nil {
+			err = fmt.Errorf("创建配置目录失败(%s): %w", config.DefaultConfigDir, err)
+			logger.L().Error().Err(err).Msg("")
+			return err
+		}
+		configPath = filepath.Join(config.DefaultConfigDir, config.DefaultConfigFileName)
 	}
 
-	file, err := os.Create("./config/config.json")
+	file, err := os.Create(configPath)
 	if err != nil {
-		err = fmt.Errorf("创建配置文件失败(./config/config.json): %w", err)
+		err = fmt.Errorf("创建配置文件失败(%s): %w", configPath, err)
 		logger.L().Error().Err(err).Msg("")
 		return err
 	}
@@ -126,22 +140,26 @@ func runInit(cmd *cobra.Command, args []string) error {
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(cfg); err != nil {
-		err = fmt.Errorf("保存配置失败(./config/config.json): %w", err)
+		err = fmt.Errorf("保存配置失败(%s): %w", configPath, err)
 		logger.L().Error().Err(err).Msg("")
 		return err
 	}
 
-	fmt.Println("配置已成功保存至 ./config/config.json")
-	logger.L().Debug().Str("action", "init").Msg("初始化配置完成")
+	fmt.Printf("配置已成功保存至 %s\n", configPath)
+	logger.L().Debug().Str("config_path", configPath).Str("action", "init").Msg("初始化配置完成")
 	return nil
 }
 
 func runAgent(cmd *cobra.Command, args []string) error {
 	logger.L().Debug().Msg("加载系统配置...")
-	cfg, err := config.Load("./config/config.json")
+
+	// 使用配置加载器，支持多路径搜索
+	loader := config.NewLoader()
+	cfg, configPath, err := loader.Load()
 	if err != nil {
 		return err // 底层已经包装，直接透传
 	}
+	logger.L().Debug().Str("config_path", configPath).Msg("成功加载配置文件")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -165,7 +183,7 @@ func runAgent(cmd *cobra.Command, args []string) error {
 
 	// 4. 加载 Gateway 配置
 	logger.L().Debug().Msg("加载 Gateway 配置...")
-	gwCfg, err := gateway.LoadConfig("./gateway/example_gateway.yaml")
+	gwCfg, err := gateway.LoadConfigFromConfig(cfg)
 	if err != nil {
 		return err // 底层已经包装，直接透传
 	}
@@ -185,6 +203,7 @@ func runAgent(cmd *cobra.Command, args []string) error {
 	mainAgent := agent.NewAgent(agentCfg, msgBus)
 	mainAgent.RegisterTool(tools.NewFileSystemTool())
 	mainAgent.RegisterTool(tools.NewShellTool())
+	mainAgent.RegisterTool(tools.NewCodeSandboxTool())
 
 	if cfg.Tools.WebSearch.Enabled && cfg.Tools.WebSearch.APIKey != "" {
 		mainAgent.RegisterTool(tools.NewWebSearchTool(cfg.Tools.WebSearch.APIKey))

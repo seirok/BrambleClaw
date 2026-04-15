@@ -1,10 +1,10 @@
 package mcp
 
 import (
+	"brambleclaw/logger"
 	"context"
 	"encoding/json"
 	"fmt"
-	"miniGoClaw/logger"
 	"sync"
 	"sync/atomic"
 )
@@ -58,7 +58,7 @@ func (c *Client) initialize(ctx context.Context) error {
 		ProtocolVersion: "2024-11-05",
 		Capabilities:    make(map[string]interface{}),
 		ClientInfo: ClientInfo{
-			Name:    "miniGoClaw",
+			Name:    "brambleclaw",
 			Version: "1.0.0",
 		},
 	}

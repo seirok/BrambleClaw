@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"brambleclaw/config"
 	"os"
 	"path/filepath"
 	"testing"
