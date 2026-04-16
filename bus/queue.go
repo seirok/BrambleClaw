@@ -27,7 +27,7 @@ type OutBoundMessage struct {
 }
 
 func (m *InBoundMessage) SessionKey() string {
-	return m.InChannel + ":" + m.ChatID
+	return m.InChannel + "::" + m.ChatID
 }
 
 type MessageBus struct {
