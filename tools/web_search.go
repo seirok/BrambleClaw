@@ -65,14 +65,12 @@ func (w *WebSearchTool) Execute(ctx context.Context, args string) (interface{}, 
 
 	var req WebSearchRequest
 	if err := json.Unmarshal([]byte(args), &req); err != nil {
-		logger.L().Error().Err(err).Msg("解析 WebSearch 参数失败")
 		return nil, fmt.Errorf("解析 WebSearch 参数失败: %w", err)
 	}
 
 	// 执行搜索请求
 	resp, err := w.client.Search(ctx, req)
 	if err != nil {
-		logger.L().Error().Err(err).Msg("WebSearch 接口调用失败")
 		return nil, fmt.Errorf("执行搜索请求失败(%s): %w", req.Query, err)
 	}
 

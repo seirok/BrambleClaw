@@ -133,8 +133,22 @@ func LoadFromFile(path string) (*Config, error) {
 
 	// 设置 Gateway 默认值
 	cfg = ensureGatewayDefaults(cfg)
+	// 设置 Log 默认值
+	cfg = ensureLogDefaults(cfg)
 
 	return &cfg, nil
+}
+
+// ensureLogDefaults 确保日志配置有默认值
+func ensureLogDefaults(cfg Config) Config {
+	if cfg.Log.Path == "" {
+		cfg.Log.Path = "logs/brambleclaw.log"
+	}
+	if cfg.Log.Level == "" {
+		cfg.Log.Level = "debug"
+	}
+	// ConsoleEnabled 默认为 false，无需特殊处理
+	return cfg
 }
 
 // ensureGatewayDefaults 确保 Gateway 配置具有合理的默认值
@@ -183,8 +197,9 @@ func Load(path string) (*Config, error) {
 }
 
 type Config struct {
-	BusBufSize int `json:"bus-buf-size"`
-	SubBufSize int `json:"sub-buf-size"`
+	Log        LogConfig `json:"log"`
+	BusBufSize int       `json:"bus-buf-size"`
+	SubBufSize int       `json:"sub-buf-size"`
 	Channels   struct {
 		CLI struct {
 			Enabled    bool     `json:"enabled"`
@@ -194,6 +209,12 @@ type Config struct {
 	LLMConfig LLMConfig     `json:"llm"`
 	Tools     ToolsConfig   `json:"tools"`
 	Gateway   GatewayConfig `json:"gateway"`
+}
+
+type LogConfig struct {
+	Path           string `json:"path"`
+	ConsoleEnabled bool   `json:"console_enabled"`
+	Level          string `json:"level"`
 }
 
 type ToolsConfig struct {

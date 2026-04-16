@@ -45,10 +45,17 @@ var agentCmd = &cobra.Command{
 	RunE:  runAgent,
 }
 
+var debugCmd = &cobra.Command{
+	Use:   "debug",
+	Short: "输出并格式化最近的日志",
+	RunE:  runDebug,
+}
+
 // 选项
 var (
 	agentMessage string
 	agentSession string
+	debugLines   int
 )
 
 func init() {
@@ -58,6 +65,9 @@ func init() {
 	agentCmd.Flags().StringVarP(&agentMessage, "message", "m", "", "非交互式执行：发送一条消息后退出")
 	agentCmd.Flags().StringVarP(&agentSession, "session", "s", "cli:default", "指定 Session Key，保留上下文对话")
 	rootCmd.AddCommand(agentCmd)
+
+	debugCmd.Flags().IntVarP(&debugLines, "lines", "n", 100, "输出最近的日志行数")
+	rootCmd.AddCommand(debugCmd)
 }
 
 func Execute() error {
@@ -96,6 +106,11 @@ func runInit(cmd *cobra.Command, args []string) error {
 	}
 
 	cfg := config.Config{}
+	cfg.Log = config.LogConfig{
+		Path:           "logs/brambleclaw.log",
+		ConsoleEnabled: false,
+		Level:          "debug",
+	}
 	cfg.BusBufSize = 500
 	cfg.SubBufSize = 100
 	cfg.Channels.CLI.Enabled = true
@@ -150,6 +165,29 @@ func runInit(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func runDebug(cmd *cobra.Command, args []string) error {
+	logger.L().Debug().Msg("加载配置并初始化日志分析器...")
+
+	loader := config.NewLoader()
+	cfg, _, err := loader.Load()
+	if err != nil {
+		return err
+	}
+
+	logPath := cfg.Log.Path
+	if logPath == "" {
+		logPath = "logs/brambleclaw.log"
+	}
+
+	logger.L().Debug().Str("log_path", logPath).Int("lines", debugLines).Msg("开始格式化输出日志")
+
+	err = logger.AnalyzeLogs(logPath, debugLines)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func runAgent(cmd *cobra.Command, args []string) error {
 	logger.L().Debug().Msg("加载系统配置...")
 
@@ -159,6 +197,10 @@ func runAgent(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err // 底层已经包装，直接透传
 	}
+
+	// 根据配置重新初始化日志
+	logger.Setup(cfg.Log.Path, cfg.Log.Level, cfg.Log.ConsoleEnabled)
+
 	logger.L().Debug().Str("config_path", configPath).Msg("成功加载配置文件")
 
 	ctx, cancel := context.WithCancel(context.Background())
