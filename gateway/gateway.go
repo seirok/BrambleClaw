@@ -60,11 +60,15 @@ func (g *Gateway) RegisterAgents(config *config.Config) error {
 	mcpManager := mcp.NewManager(config.Tools.MCP)
 
 	for _, cfg := range config.Agents {
-
 		if !cfg.Enabled {
 			continue
 		}
+		// TODO:检查agent 的workspace 路径是否正确
+		// 正确的路径应该为： config.Workspace/cfg.Name/cfg.Workspace
+		// 需要检查路径是否满足此要求
+		// 如果不满足，需要修改cfg.Workspace, 并将修改同步到config.json中
 
+		//
 		newAgent := agent.NewAgent(&cfg, g.msgBus, mcpManager)
 		if err := g.registry.Register(cfg.Name, newAgent, &cfg); err != nil {
 			return err
