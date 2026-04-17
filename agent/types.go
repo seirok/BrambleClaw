@@ -1,6 +1,9 @@
 package agent
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // Role 消息角色
 type Role string
@@ -31,6 +34,79 @@ type AgentMessage struct {
 	Role      Role           `json:"role"`
 	Content   []ContentBlock `json:"content"`
 	Timestamp int64          `json:"timestamp"`
+}
+
+// serializableContent 用于JSON序列化的内容块
+type serializableContent struct {
+	Type string          `json:"type"`
+	Data json.RawMessage `json:"data"`
+}
+
+// MarshalJSON 自定义JSON序列化
+func (m AgentMessage) MarshalJSON() ([]byte, error) {
+	type Alias AgentMessage
+	aux := &struct {
+		*Alias
+		Content []serializableContent `json:"content"`
+	}{
+		Alias: (*Alias)(&m),
+	}
+
+	// 序列化 Content
+	for _, block := range m.Content {
+		var data []byte
+		var err error
+		switch v := block.(type) {
+		case TextContent:
+			data, err = json.Marshal(v)
+		default:
+			data, err = json.Marshal(block)
+		}
+		if err != nil {
+			return nil, err
+		}
+		aux.Content = append(aux.Content, serializableContent{
+			Type: block.Type(),
+			Data: data,
+		})
+	}
+
+	return json.Marshal(aux)
+}
+
+// UnmarshalJSON 自定义JSON反序列化
+func (m *AgentMessage) UnmarshalJSON(data []byte) error {
+	type Alias AgentMessage
+	aux := &struct {
+		*Alias
+		Content []serializableContent `json:"content"`
+	}{
+		Alias: (*Alias)(m),
+	}
+
+	if err := json.Unmarshal(data, aux); err != nil {
+		return err
+	}
+
+	// 反序列化 Content
+	for _, sc := range aux.Content {
+		switch sc.Type {
+		case "text":
+			var tc TextContent
+			if err := json.Unmarshal(sc.Data, &tc); err != nil {
+				return err
+			}
+			m.Content = append(m.Content, tc)
+		default:
+			// 未知类型，尝试作为 TextContent
+			var tc TextContent
+			if err := json.Unmarshal(sc.Data, &tc); err == nil {
+				m.Content = append(m.Content, tc)
+			}
+		}
+	}
+
+	return nil
 }
 
 // Session 会话

@@ -266,7 +266,7 @@ func (g *Gateway) healthCheckLoop() {
 func (g *Gateway) performHealthCheck() {
 	// 检查所有通道状态
 	// 这里可以实现具体的健康检查逻辑
-	logger.L().Info().Msg("[Gateway] 执行健康检查")
+	// logger.L().Info().Msg("[Gateway] 执行健康检查")
 }
 
 // IsRunning 检查 Gateway 是否正在运行

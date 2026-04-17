@@ -1,0 +1,462 @@
+{"level":"info","job":"CronService","time":"2026-04-16T14:59:09+08:00","message":"Cron Service start..."}
+{"level":"debug","Job":"1","time":"2026-04-16T14:59:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"2","time":"2026-04-16T14:59:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"2","time":"2026-04-16T14:59:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:105","message":"clean expired job"}
+{"level":"debug","Job":"3","time":"2026-04-16T14:59:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"4","time":"2026-04-16T14:59:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"4","time":"2026-04-16T14:59:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:105","message":"clean expired job"}
+{"level":"debug","Job":"1","time":"2026-04-16T14:59:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-16T14:59:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"3","time":"2026-04-16T14:59:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"3","time":"2026-04-16T14:59:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-16T14:59:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-16T14:59:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"3","time":"2026-04-16T14:59:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T14:59:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T14:59:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T14:59:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T14:59:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T14:59:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T14:59:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:00:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-16T15:00:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"3","time":"2026-04-16T15:00:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"3","time":"2026-04-16T15:00:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:00:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T15:00:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"3","time":"2026-04-16T15:00:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:00:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T15:00:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"3","time":"2026-04-16T15:00:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:00:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T15:00:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"3","time":"2026-04-16T15:00:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:00:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T15:00:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:00:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T15:00:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:01:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T15:01:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:01:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-16T15:01:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"3","time":"2026-04-16T15:01:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:01:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T15:01:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:01:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T15:01:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"3","time":"2026-04-16T15:01:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:01:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T15:01:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"3","time":"2026-04-16T15:01:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:01:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T15:01:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:02:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T15:02:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:02:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-16T15:02:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"3","time":"2026-04-16T15:02:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:02:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T15:02:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:02:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T15:02:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:02:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-16T15:02:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"3","time":"2026-04-16T15:02:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:105","message":"clean expired job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:02:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-16T15:02:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:03:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-16T15:03:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:03:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:03:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:03:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:03:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:03:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-16T15:03:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:04:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:04:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:04:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:04:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:04:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:04:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-16T15:04:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:05:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:05:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:05:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:05:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:05:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-16T15:05:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:05:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-16T15:05:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:06:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-16T15:06:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:06:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:06:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:06:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-16T15:06:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:06:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:06:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:07:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:07:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:07:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-16T15:07:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:07:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-16T15:07:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:07:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:07:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:08:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:08:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:08:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:08:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-16T15:08:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:08:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:08:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+4-16T15:08:25+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-16T15:08:25+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:08:35+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:08:45+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:08:55+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-16T15:08:55+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:09:05+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:09:15+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-16T15:09:15+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:09:25+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T15:09:35+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"info","job":"CronService","time":"2026-04-16T20:02:58+08:00","message":"Cron Service start..."}
+{"level":"debug","Job":"1","time":"2026-04-16T20:02:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"2","time":"2026-04-16T20:02:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"2","time":"2026-04-16T20:02:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:105","message":"clean expired job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:02:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"4","time":"2026-04-16T20:02:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"4","time":"2026-04-16T20:02:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:105","message":"clean expired job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:03:08+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-16T20:03:08+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:03:08+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"3","time":"2026-04-16T20:03:08+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:03:18+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:03:18+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:03:28+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:03:28+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:03:38+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:03:38+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:03:48+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:03:48+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:03:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-16T20:03:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:03:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:04:08+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-16T20:04:08+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:04:08+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:04:18+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:04:18+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:04:28+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:04:28+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:04:38+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:04:38+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:04:48+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-16T20:04:48+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:04:48+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:04:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:04:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:05:08+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:05:08+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:05:18+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:05:18+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:05:28+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:05:28+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:05:38+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:05:38+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:05:48+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:05:48+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:05:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:05:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:06:08+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-16T20:06:08+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:06:08+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:06:18+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:06:18+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:06:28+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:06:28+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:06:38+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:06:38+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:06:48+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:06:48+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:06:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:06:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:07:08+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:07:08+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:07:18+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:07:18+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:07:28+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:07:28+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:07:38+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-16T20:07:38+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:07:38+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"3","time":"2026-04-16T20:07:38+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:07:48+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:07:48+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:07:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:07:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:08:08+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:08:08+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:08:18+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:08:18+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:08:28+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:08:28+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:08:38+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:08:38+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:08:48+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-16T20:08:48+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:08:48+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:08:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:08:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:09:08+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-16T20:09:08+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:09:08+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:09:18+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:09:18+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:09:28+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:09:28+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:09:38+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:09:38+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:09:48+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-16T20:09:48+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:09:48+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:09:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:09:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:10:08+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:10:08+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"3","time":"2026-04-16T20:10:08+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:10:18+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:10:18+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:10:28+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:10:28+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"3","time":"2026-04-16T20:10:28+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:10:38+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-16T20:10:38+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:10:38+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:10:48+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:10:48+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:10:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:10:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:11:08+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:11:08+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:11:18+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-16T20:11:18+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:11:18+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"3","time":"2026-04-16T20:11:18+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:11:28+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:11:28+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"3","time":"2026-04-16T20:11:28+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:11:38+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-16T20:11:38+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:11:38+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:11:48+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:11:48+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:11:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:11:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:12:08+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:12:08+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:12:18+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:12:18+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-16T20:12:28+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-16T20:12:28+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"3","time":"2026-04-16T20:12:28+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"info","job":"CronService","time":"2026-04-17T11:53:19+08:00","message":"Cron Service start..."}
+{"level":"debug","Job":"1","time":"2026-04-17T11:53:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"2","time":"2026-04-17T11:53:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"2","time":"2026-04-17T11:53:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:105","message":"clean expired job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:53:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"4","time":"2026-04-17T11:53:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"4","time":"2026-04-17T11:53:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:105","message":"clean expired job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:53:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:53:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:53:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:53:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:53:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:53:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:53:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:53:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:54:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:54:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:54:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:54:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"3","time":"2026-04-17T11:54:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:54:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:54:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:54:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:54:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:54:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:54:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"3","time":"2026-04-17T11:54:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:54:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:54:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:55:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:55:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:55:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:55:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:55:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:55:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:55:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:55:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:55:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:55:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:55:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:55:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:56:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-17T11:56:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:56:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:56:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:56:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:56:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:56:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:56:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:56:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:56:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:56:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:56:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-17T11:56:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:56:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"3","time":"2026-04-17T11:56:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:57:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:57:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:57:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:57:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:57:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:57:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:57:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-17T11:57:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:57:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:57:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:57:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:57:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:57:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"3","time":"2026-04-17T11:57:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:58:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:58:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:58:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:58:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:58:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:58:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:58:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:58:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:58:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:58:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:58:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:58:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:59:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-17T11:59:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:59:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:59:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:59:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:59:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:59:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:59:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:59:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"3","time":"2026-04-17T11:59:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:59:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:59:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T11:59:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T11:59:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T12:00:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T12:00:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T12:00:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T12:00:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T12:00:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T12:00:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T12:00:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T12:00:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"3","time":"2026-04-17T12:00:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-17T12:00:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T12:00:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T12:00:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T12:00:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T12:01:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T12:01:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T12:01:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T12:01:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T12:01:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T12:01:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T12:01:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T12:01:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T12:01:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T12:01:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T12:01:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T12:01:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T12:02:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T12:02:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T12:02:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-17T12:02:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"3","time":"2026-04-17T12:02:19+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T12:02:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T12:02:29+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T12:02:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T12:02:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"3","time":"2026-04-17T12:02:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-17T12:02:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T12:02:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T12:02:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T12:02:59+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T12:03:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T12:03:09+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"info","job":"CronService","time":"2026-04-17T13:03:24+08:00","message":"Cron Service start..."}
+{"level":"debug","Job":"1","time":"2026-04-17T13:03:24+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"2","time":"2026-04-17T13:03:24+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"2","time":"2026-04-17T13:03:24+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:105","message":"clean expired job"}
+{"level":"debug","Job":"3","time":"2026-04-17T13:03:24+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"4","time":"2026-04-17T13:03:24+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"4","time":"2026-04-17T13:03:24+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:105","message":"clean expired job"}
+{"level":"debug","Job":"1","time":"2026-04-17T13:03:34+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-17T13:03:34+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"3","time":"2026-04-17T13:03:34+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"3","time":"2026-04-17T13:03:34+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-17T13:03:44+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T13:03:44+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T13:03:54+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T13:03:54+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T13:04:04+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T13:04:04+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T13:04:14+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-17T13:04:14+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"3","time":"2026-04-17T13:04:14+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T13:04:24+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T13:04:24+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T13:04:34+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T13:04:34+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T13:04:44+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T13:04:44+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T13:04:54+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T13:04:54+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T13:05:04+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T13:05:04+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T13:05:14+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T13:05:14+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T13:05:24+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T13:05:24+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T13:05:34+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T13:05:34+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"3","time":"2026-04-17T13:05:34+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-17T13:05:44+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-17T13:05:44+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"3","time":"2026-04-17T13:05:44+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T13:05:54+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-17T13:05:54+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"3","time":"2026-04-17T13:05:54+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T13:06:04+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T13:06:04+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T13:06:14+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T13:06:14+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"1","time":"2026-04-17T13:06:24+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T13:06:24+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"3","time":"2026-04-17T13:06:24+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"1","time":"2026-04-17T13:06:34+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"3","time":"2026-04-17T13:06:34+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"info","job":"CronService","time":"2026-04-17T13:19:15+08:00","message":"Cron Service start..."}
+{"level":"debug","Job":"1","time":"2026-04-17T13:19:15+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"2","time":"2026-04-17T13:19:15+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"2","time":"2026-04-17T13:19:15+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:105","message":"clean expired job"}
+{"level":"debug","Job":"3","time":"2026-04-17T13:19:15+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"4","time":"2026-04-17T13:19:15+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","Job":"4","time":"2026-04-17T13:19:15+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:105","message":"clean expired job"}
+{"level":"debug","Job":"1","time":"2026-04-17T13:19:25+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}
+{"level":"debug","job":"1","time":"2026-04-17T13:19:25+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:195","message":"reset signal lost"}
+{"level":"debug","Job":"3","time":"2026-04-17T13:19:25+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cron/cron.go:139","message":"Added job"}

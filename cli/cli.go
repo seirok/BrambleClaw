@@ -47,8 +47,14 @@ var agentCmd = &cobra.Command{
 
 var debugCmd = &cobra.Command{
 	Use:   "debug",
-	Short: "输出并格式化最近的日志",
+	Short: "输出并格式化最近的日志和分析 session",
 	RunE:  runDebug,
+}
+
+var agentNewCmd = &cobra.Command{
+	Use:   "new",
+	Short: "创建新 Agent",
+	RunE:  runAgentNew,
 }
 
 // 选项
@@ -56,6 +62,7 @@ var (
 	agentMessage string
 	agentSession string
 	debugLines   int
+	debugSession bool
 )
 
 func init() {
@@ -64,9 +71,11 @@ func init() {
 
 	agentCmd.Flags().StringVarP(&agentMessage, "message", "m", "", "非交互式执行：发送一条消息后退出")
 	agentCmd.Flags().StringVarP(&agentSession, "session", "s", "cli:default", "指定 Session Key，保留上下文对话")
+	agentCmd.AddCommand(agentNewCmd)
 	rootCmd.AddCommand(agentCmd)
 
 	debugCmd.Flags().IntVarP(&debugLines, "lines", "n", 100, "输出最近的日志行数")
+	debugCmd.Flags().BoolVarP(&debugSession, "session", "s", false, "分析 session")
 	rootCmd.AddCommand(debugCmd)
 }
 
@@ -166,6 +175,11 @@ func runInit(cmd *cobra.Command, args []string) error {
 }
 
 func runDebug(cmd *cobra.Command, args []string) error {
+	// 如果指定了 -s 或 --session，运行 session 分析器
+	if debugSession {
+		return runDebugSessions()
+	}
+
 	logger.L().Debug().Msg("加载配置并初始化日志分析器...")
 
 	loader := config.NewLoader()
@@ -361,6 +375,50 @@ func runAgent(cmd *cobra.Command, args []string) error {
 	gw.Stop()
 	channelManager.Stop()
 	mainAgent.Stop()
+
+	return nil
+}
+
+// runAgentNew 运行 Agent 创建向导
+func runAgentNew(cmd *cobra.Command, args []string) error {
+	logger.L().Debug().Msg("加载配置...")
+
+	// 加载配置
+	loader := config.NewLoader()
+	cfg, cfgPath, err := loader.Load()
+	if err != nil {
+		return err
+	}
+
+	// 创建 Agent 创建向导
+	creator := NewAgentCreator(cfg, cfgPath)
+	return creator.Run()
+}
+
+// runDebugSessions 运行 session 分析器
+func runDebugSessions() error {
+	fmt.Println("============================================")
+	fmt.Println("        Session 分析器")
+	fmt.Println("============================================")
+	fmt.Println()
+
+	// 获取当前工作目录作为 workspace
+	workspacePath, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("获取工作目录失败: %w", err)
+	}
+
+	// 创建分析器
+	analyzer := agent.NewSessionAnalyzer(workspacePath)
+
+	// 分析所有 session
+	infos, err := analyzer.AnalyzeAll()
+	if err != nil {
+		return fmt.Errorf("分析 session 失败: %w", err)
+	}
+
+	// 打印结果
+	agent.PrintSessionInfo(infos)
 
 	return nil
 }

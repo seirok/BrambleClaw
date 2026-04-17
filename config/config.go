@@ -135,6 +135,8 @@ func LoadFromFile(path string) (*Config, error) {
 	cfg = ensureGatewayDefaults(cfg)
 	// 设置 Log 默认值
 	cfg = ensureLogDefaults(cfg)
+	// 设置 Workspace 默认值
+	cfg = ensureWorkspaceDefaults(cfg)
 
 	return &cfg, nil
 }
@@ -148,6 +150,14 @@ func ensureLogDefaults(cfg Config) Config {
 		cfg.Log.Level = "debug"
 	}
 	// ConsoleEnabled 默认为 false，无需特殊处理
+	return cfg
+}
+
+// ensureWorkspaceDefaults 确保 workspace 配置有默认值
+func ensureWorkspaceDefaults(cfg Config) Config {
+	if cfg.Workspace == "" {
+		cfg.Workspace = "workspace"
+	}
 	return cfg
 }
 
@@ -209,6 +219,9 @@ type Config struct {
 	LLMConfig LLMConfig     `json:"llm"`
 	Tools     ToolsConfig   `json:"tools"`
 	Gateway   GatewayConfig `json:"gateway"`
+	Agents    []AgentConfig `json:"agents"`    // Agent 配置列表
+	Session   SessionConfig `json:"session"`   // Session 配置
+	Workspace string        `json:"workspace"` // 全局默认 workspace 根目录
 }
 
 type LogConfig struct {
