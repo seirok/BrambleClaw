@@ -1,7 +1,9 @@
 package gateway
 
 import (
+	"brambleclaw/config"
 	"brambleclaw/logger"
+	"brambleclaw/tools/mcp"
 	"context"
 	"fmt"
 	"sync"
@@ -54,12 +56,26 @@ func NewGateway(
 }
 
 // RegisterAgent 注册 Agent 到 Gateway
-// 中间层职责：透传错误
-func (g *Gateway) RegisterAgent(name string, ag *agent.Agent, config agent.AgentConfig) error {
-	if err := g.registry.Register(name, ag, config); err != nil {
-		return err
+func (g *Gateway) RegisterAgents(config *config.Config) error {
+	mcpManager := mcp.NewManager(config.Tools.MCP)
+
+	for _, cfg := range config.Agents {
+
+		if !cfg.Enabled {
+			continue
+		}
+
+		newAgent := agent.NewAgent(&cfg, g.msgBus, mcpManager)
+		if err := g.registry.Register(cfg.Name, newAgent, &cfg); err != nil {
+			return err
+		}
+		logger.L().Debug().Str("Agent", cfg.Name).Msg("register agent")
 	}
-	logger.L().Info().Str("Agent", name).Msg("[Gateway] Agent 已注册")
+
+	if len(g.registry.List()) == 0 {
+		return fmt.Errorf("[RegisterAgents]No available agents")
+	}
+
 	return nil
 }
 
@@ -94,11 +110,10 @@ func (g *Gateway) Start(ctx context.Context) error {
 }
 
 // Stop 停止 Gateway
-func (g *Gateway) Stop() error {
+func (g *Gateway) Stop() {
 	g.mu.Lock()
 	if !g.running {
 		g.mu.Unlock()
-		return nil
 	}
 	g.running = false
 	g.cancel()
@@ -118,7 +133,6 @@ func (g *Gateway) Stop() error {
 		logger.L().Warn().Msg("[Gateway] 停止超时，强制结束")
 	}
 
-	return nil
 }
 
 // processMessageLoop 消息处理主循环

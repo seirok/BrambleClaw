@@ -1,17 +1,17 @@
 package gateway
 
 import (
+	"brambleclaw/agent"
+	"brambleclaw/config"
 	"fmt"
 	"sync"
-
-	"brambleclaw/agent"
 )
 
 // AgentEntry Agent 注册表项
 type AgentEntry struct {
 	Name        string
 	Agent       *agent.Agent
-	Config      agent.AgentConfig
+	Config      *config.AgentConfig
 	Description string
 }
 
@@ -31,7 +31,7 @@ func NewAgentRegistry() *AgentRegistry {
 
 // Register 注册 Agent
 // 底层职责：参数验证和重复注册检查
-func (r *AgentRegistry) Register(name string, ag *agent.Agent, config agent.AgentConfig) error {
+func (r *AgentRegistry) Register(name string, ag *agent.Agent, config *config.AgentConfig) error {
 	if name == "" {
 		return fmt.Errorf("Agent名称不能为空")
 	}

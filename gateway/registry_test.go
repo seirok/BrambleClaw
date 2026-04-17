@@ -21,7 +21,7 @@ func createMockAgent(t *testing.T) *agent.Agent {
 		},
 		MaxHistory: 10,
 	}
-	return agent.NewAgent(agentCfg, msgBus)
+	return agent.NewAgent(agentCfg, msgBus, "", 0)
 }
 
 func TestNewAgentRegistry(t *testing.T) {

@@ -7,52 +7,48 @@ import (
 	"brambleclaw/tools"
 	"brambleclaw/tools/mcp"
 	"context"
-	"strings"
+	"path/filepath"
 	"time"
 )
 
 // AgentConfig Agent配置
-type AgentConfig struct {
-	Name       string             `json:"name"`
-	LLM        config.LLMConfig   `json:"llm"`
-	MaxHistory int                `json:"max_history"`
-	Tools      config.ToolsConfig `json:"tools"`
-}
 
 // Agent Agent核心
 type Agent struct {
-	config       AgentConfig
-	sessionMgr   *SessionManager
+	config       *config.AgentConfig
+	sessionMgr   *PersistentSessionManager
 	llmClient    *LLMClient
 	bus          *bus.MessageBus
 	toolRegistry *tools.ToolRegistry
 	orchestrator *Orchestrator
 	mcpManager   *mcp.Manager
+	workspace    string
 }
 
 // NewAgent 创建Agent
-func NewAgent(config AgentConfig, bus *bus.MessageBus) *Agent {
+// 如果 workspacePath 为空，则使用非持久化模式（用于测试和兼容旧代码）
+func NewAgent(config *config.AgentConfig, bus *bus.MessageBus, mcpManager *mcp.Manager) *Agent {
 	llmClient := NewLLMClient(config.LLM)
 	toolRegistry := tools.NewToolRegistry()
 	orchestrator := NewOrchestrator(llmClient, toolRegistry)
+
+	var sessionMgr *PersistentSessionManager
+	sessionMgr = NewPersistentSessionManager(config.Name, config.Workspace)
+
 	return &Agent{
 		config:       config,
-		sessionMgr:   NewSessionManager(),
+		sessionMgr:   sessionMgr,
 		llmClient:    llmClient,
 		bus:          bus,
 		toolRegistry: toolRegistry,
 		orchestrator: orchestrator,
-		mcpManager:   mcp.NewManager(config.Tools.MCP),
+		mcpManager:   mcpManager,
+		workspace:    config.Workspace,
 	}
 }
 
 func (a *Agent) RegisterTool(tool tools.Tool) {
 	a.toolRegistry.Register(tool)
-}
-
-func shouldExecuteTool(content string) bool {
-	// 简单的工具调用检测
-	return strings.HasPrefix(content, "/tool")
 }
 
 // handleInboundMessage 处理入站消息
@@ -123,6 +119,13 @@ func (a *Agent) processMessages(ctx context.Context) {
 
 // Start 启动Agent
 func (a *Agent) Start(ctx context.Context) error {
+	// 加载历史 sessions
+	logger.L().Info().Msg("Starting agent")
+	if err := a.LoadSessions(); err != nil {
+		logger.L().Warn().Err(err).Msg("加载历史 sessions 失败")
+		// 不中断启动，继续使用空 sessions
+	}
+
 	// 启动 MCP 管理器并注册工具
 	if err := a.mcpManager.Start(ctx, a.toolRegistry); err != nil {
 		logger.L().Error().Err(err).Msg("启动 MCP 管理器失败")
@@ -136,6 +139,31 @@ func (a *Agent) Start(ctx context.Context) error {
 	return nil
 }
 
+// LoadSessions 从存储加载所有 session
+func (a *Agent) LoadSessions() error {
+	return a.sessionMgr.LoadSessions()
+}
+
+// SaveSession 立即保存指定 session
+func (a *Agent) SaveSession(sessionKey string) error {
+	return a.sessionMgr.SaveSession(sessionKey)
+}
+
+// SaveAllSessions 保存所有 session
+func (a *Agent) SaveAllSessions() error {
+	return a.sessionMgr.SaveAllSessions()
+}
+
+// GetWorkspace 获取工作目录
+func (a *Agent) GetWorkspace() string {
+	return a.workspace
+}
+
+// GetMemoryDir 获取 memory 目录
+func (a *Agent) GetMemoryDir() string {
+	return filepath.Join(a.workspace, "memory")
+}
+
 // StartStandalone 独立模式启动Agent（自己消费消息）
 func (a *Agent) StartStandalone(ctx context.Context) error {
 	if err := a.Start(ctx); err != nil {
@@ -147,12 +175,20 @@ func (a *Agent) StartStandalone(ctx context.Context) error {
 
 // Stop 停止Agent
 func (a *Agent) Stop() {
+	// 保存所有 sessions
+	if err := a.sessionMgr.SaveAllSessions(); err != nil {
+		logger.L().Error().Err(err).Msg("保存 sessions 失败")
+	}
+
+	// 停止 session manager
+	a.sessionMgr.Stop()
+
 	// 关闭 MCP 管理器，释放资源
 	a.mcpManager.Stop()
 }
 
 // GetConfig 获取 Agent 配置
-func (a *Agent) GetConfig() AgentConfig {
+func (a *Agent) GetConfig() *config.AgentConfig {
 	return a.config
 }
 

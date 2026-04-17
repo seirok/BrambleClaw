@@ -170,7 +170,7 @@ func CreateTestAgent(name string, llmConfig config.LLMConfig) (*agent.Agent, err
 		LLM:        llmConfig,
 		MaxHistory: 10,
 	}
-	testAgent := agent.NewAgent(agentCfg, msgBus)
+	testAgent := agent.NewAgent(agentCfg, msgBus, "", 0)
 
 	// 创建并注册沙箱工具
 	sandBox, _, _, err := CreateTestSandbox()

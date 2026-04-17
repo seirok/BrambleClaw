@@ -7,7 +7,6 @@ import (
 	"brambleclaw/config"
 	"brambleclaw/gateway"
 	"brambleclaw/logger"
-	"brambleclaw/tools"
 	"bufio"
 	"context"
 	"encoding/json"
@@ -235,7 +234,9 @@ func runAgent(cmd *cobra.Command, args []string) error {
 		AllowedIDs: cfg.Channels.CLI.AllowedIDs,
 	}
 	cliChan := channel.NewCLIChannel(cliCfg, msgBus)
-	channelManager.Register(cliChan)
+	if err = channelManager.Register(cliChan); err != nil {
+		return err
+	}
 
 	// 4. 加载 Gateway 配置
 	logger.L().Debug().Msg("加载 Gateway 配置...")
@@ -248,41 +249,30 @@ func runAgent(cmd *cobra.Command, args []string) error {
 	logger.L().Debug().Msg("初始化 Gateway...")
 	gw := gateway.NewGateway(gwCfg, msgBus, channelManager)
 
-	// 6. 创建并注册 Agent
-	logger.L().Debug().Msg("创建并注册 Agent...")
-	agentCfg := agent.AgentConfig{
-		Name:       "main",
-		LLM:        cfg.LLMConfig,
-		MaxHistory: 5,
-		Tools:      cfg.Tools,
-	}
-	mainAgent := agent.NewAgent(agentCfg, msgBus)
-	mainAgent.RegisterTool(tools.NewFileSystemTool())
-	mainAgent.RegisterTool(tools.NewShellTool())
-	mainAgent.RegisterTool(tools.NewCodeSandboxTool())
-
-	if cfg.Tools.WebSearch.Enabled && cfg.Tools.WebSearch.APIKey != "" {
-		mainAgent.RegisterTool(tools.NewWebSearchTool(cfg.Tools.WebSearch.APIKey))
-	}
-	if cfg.Tools.UrlParse.Enabled {
-		mainAgent.RegisterTool(tools.NewUrlParseTool())
-	}
-
-	if err := mainAgent.Start(ctx); err != nil {
+	// 6. 恢复 Agent 并重新注册
+	logger.L().Debug().Msg("[runAgent] 恢复 Agent 并重新注册...")
+	if err = gw.RegisterAgents(cfg); err != nil {
 		return err
 	}
 
-	if err := gw.RegisterAgent("main", mainAgent, agentCfg); err != nil {
-		return err
+	// 启动 agents
+	agentRegistry := gw.GetRegistry()
+	agents := agentRegistry.List()
+	for _, agentName := range agents {
+		aGent, _ := agentRegistry.GetAgent(agentName)
+		err = aGent.Start(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
 	// 7. 启动 Gateway 和 Channel
 	logger.L().Debug().Msg("启动 Gateway 和 Channel...")
-	if err := gw.Start(ctx); err != nil {
+	if err = gw.Start(ctx); err != nil {
 		return err
 	}
 
-	if err := channelManager.Start(ctx); err != nil {
+	if err = channelManager.Start(ctx); err != nil {
 		return err
 	}
 
@@ -371,11 +361,17 @@ func runAgent(cmd *cobra.Command, args []string) error {
 		<-sigChan
 	}
 
-	fmt.Println("Shutting down...")
+	// 停止
+	fmt.Println("Shutting down... Hope to see you next time!😊")
 	gw.Stop()
-	channelManager.Stop()
-	mainAgent.Stop()
-
+	if err = channelManager.Stop(); err != nil {
+		return err
+	}
+	agentNames := agentRegistry.List()
+	for _, agentName := range agentNames {
+		aGent, _ := agentRegistry.GetAgent(agentName)
+		aGent.Stop()
+	}
 	return nil
 }
 

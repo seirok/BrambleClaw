@@ -15,37 +15,42 @@ type PersistentSessionManager struct {
 	store            *SessionStore
 	agentName        string
 	autosaveInterval time.Duration
+	autosaveEnabled  bool
 	stopChan         chan struct{}
 }
 
+func (psm *PersistentSessionManager) SetAutoSaveInterval(interval time.Duration) {
+	psm.autosaveInterval = interval
+	psm.autosaveEnabled = true
+}
+
+func (psm *PersistentSessionManager) Start() {
+	if psm.autosaveEnabled && psm.autosaveInterval > 0 {
+		go psm.autosaveLoop()
+	}
+}
+
 // NewPersistentSessionManager 创建持久化 Session 管理器
-func NewPersistentSessionManager(agentName, workspacePath string, autosaveInterval time.Duration) *PersistentSessionManager {
+func NewPersistentSessionManager(agentName, workspacePath string) *PersistentSessionManager {
 	store := NewSessionStore(workspacePath)
-
 	mgr := &PersistentSessionManager{
-		sessions:         make(map[string]*Session),
-		store:            store,
-		agentName:        agentName,
-		autosaveInterval: autosaveInterval,
-		stopChan:         make(chan struct{}),
+		sessions:        make(map[string]*Session),
+		store:           store,
+		agentName:       agentName,
+		stopChan:        make(chan struct{}),
+		autosaveEnabled: false,
 	}
-
-	// 启动自动保存协程
-	if autosaveInterval > 0 {
-		go mgr.autosaveLoop()
-	}
-
 	return mgr
 }
 
 // LoadSessions 从存储加载所有 session
 func (m *PersistentSessionManager) LoadSessions() error {
-	metadatas, err := m.store.ListSessions(m.agentName)
+	metadata, err := m.store.ListSessions(m.agentName)
 	if err != nil {
 		return fmt.Errorf("列出 sessions 失败: %w", err)
 	}
 
-	for _, metadata := range metadatas {
+	for _, metadata := range metadata {
 		messages, _, err := m.store.LoadSession(m.agentName, metadata.ChannelName, metadata.ChatID)
 		if err != nil {
 			logger.L().Warn().
@@ -177,6 +182,7 @@ func (m *PersistentSessionManager) SaveAllSessions() error {
 
 // autosaveLoop 自动保存循环
 func (m *PersistentSessionManager) autosaveLoop() {
+	logger.L().Debug().Msg("[Session] autosave loop start")
 	ticker := time.NewTicker(m.autosaveInterval)
 	defer ticker.Stop()
 
@@ -185,8 +191,6 @@ func (m *PersistentSessionManager) autosaveLoop() {
 		case <-ticker.C:
 			if err := m.SaveAllSessions(); err != nil {
 				logger.L().Error().Err(err).Msg("自动保存 sessions 失败")
-			} else {
-				logger.L().Debug().Msg("自动保存 sessions 成功")
 			}
 		case <-m.stopChan:
 			return
