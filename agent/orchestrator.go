@@ -88,7 +88,7 @@ func (o *Orchestrator) UpdateHistory(llmResp *LLMResponse, historyMsg *[]ChatMsg
 }
 
 // Run 运行编排器
-func (o *Orchestrator) Run(ctx context.Context, messages []AgentMessage) (string, error) {
+func (o *Orchestrator) Run(ctx context.Context, messages []AgentMessage) (*LLMResponse, error) {
 	// 准备工具定义
 	toolDefs := o.prepareToolDefinitions()
 
@@ -113,24 +113,24 @@ func (o *Orchestrator) Run(ctx context.Context, messages []AgentMessage) (string
 	}
 	response, err := o.llmClient.Chat(chatReq)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	// Update Chat History
 	if err = o.UpdateHistory(response, &chatMsgs); err != nil {
-		return "", err
+		return nil, err
 	}
 
 	// Call Tools
 	if len(response.Choices) == 0 { // 在 Go 中，对一个 nil 切片调用 len() 函数是安全且合法的
-		return "", errors.New("empty response choices: choices is nil or empty")
+		return nil, errors.New("empty response choices: choices is nil or empty")
 	}
 	toolCalls := response.Choices[0].Message.ToolCalls
 	for len(toolCalls) > 0 {
 		for _, call := range toolCalls {
 			result, err := o.executeToolCall(ctx, call.Function, call.ID)
 			if err != nil {
-				return "", err
+				return nil, err
 			}
 			msgWithToolresult := ChatMsg{
 				Role:       RoleTool,
@@ -147,23 +147,23 @@ func (o *Orchestrator) Run(ctx context.Context, messages []AgentMessage) (string
 		}
 		response, err = o.llmClient.Chat(chatReq)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 
 		// Update Chat History
 		if err = o.UpdateHistory(response, &chatMsgs); err != nil {
-			return "", err
+			return nil, err
 		}
 
 		// Get Tool Call
 		if len(response.Choices) == 0 {
-			return "", errors.New("empty response choices: choices is nil or empty")
+			return nil, errors.New("empty response choices: choices is nil or empty")
 		}
 		toolCalls = response.Choices[0].Message.ToolCalls
 	}
 
 	// don't need to check again since before did
-	return response.Choices[0].Message.Content, nil
+	return response, nil
 }
 
 // executeToolCalls 执行工具调用

@@ -213,8 +213,9 @@ func runAgent(cmd *cobra.Command, args []string) error {
 
 	// 根据配置重新初始化日志
 	logger.Setup(cfg.Log.Path, cfg.Log.Level, cfg.Log.ConsoleEnabled)
-
 	logger.L().Debug().Str("config_path", configPath).Msg("成功加载配置文件")
+
+	// 配置项检查
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -398,14 +399,23 @@ func runDebugSessions() error {
 	fmt.Println("============================================")
 	fmt.Println()
 
-	// 获取当前工作目录作为 workspace
-	workspacePath, err := os.Getwd()
+	// 使用配置加载器，支持多路径搜索
+	loader := config.NewLoader()
+	cfg, _, err := loader.Load()
 	if err != nil {
-		return fmt.Errorf("获取工作目录失败: %w", err)
+		return err // 底层已经包装，直接透传
+	}
+
+	// 根据配置重新初始化日志
+	logger.Setup(cfg.Log.Path, cfg.Log.Level, cfg.Log.ConsoleEnabled)
+
+	// 检查配置文件
+	if err = cfg.CheckConfig(); err != nil {
+		return err
 	}
 
 	// 创建分析器
-	analyzer := agent.NewSessionAnalyzer(workspacePath)
+	analyzer := agent.NewSessionAnalyzer(cfg.Workspace)
 
 	// 分析所有 session
 	infos, err := analyzer.AnalyzeAll()

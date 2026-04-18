@@ -715,3 +715,129 @@
 {"level":"error","error":"无效的 session key: agent:main:cli:direct:cli:default","time":"2026-04-17T18:48:14+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/agent/agent.go:180","message":"保存 sessions 失败"}
 {"level":"error","error":"无效的 session key: agent:main:cli:direct:cli:default","session_key":"agent:main:cli:direct:cli:default","time":"2026-04-17T18:48:14+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/agent/session_manager.go:175","message":"保存 session 失败"}
 {"level":"error","error":"无效的 session key: agent:main:cli:direct:cli:default","time":"2026-04-17T18:48:14+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/agent/session_manager.go:207","message":"停止时保存 sessions 失败"}
+{"level":"debug","time":"2026-04-17T19:36:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cli/cli.go:205","message":"加载系统配置..."}
+{"level":"debug","time":"2026-04-17T19:36:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/config/config.go:88","message":"显示加载"}
+{"level":"debug","time":"2026-04-17T19:36:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/config/config.go:99","message":"环境变量加载"}
+{"level":"debug","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config\\config.json","time":"2026-04-17T19:36:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/config/config.go:102","message":"从环境变量加载配置成功"}
+{"level":"debug","config_path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config\\config.json","time":"2026-04-17T19:36:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cli/cli.go:217","message":"成功加载配置文件"}
+{"level":"debug","time":"2026-04-17T19:36:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cli/cli.go:223","message":"初始化消息总线..."}
+{"level":"debug","time":"2026-04-17T19:36:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cli/cli.go:227","message":"初始化通道管理器..."}
+{"level":"debug","time":"2026-04-17T19:36:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cli/cli.go:231","message":"初始化 CLI 通道..."}
+{"level":"debug","channel":"cli","time":"2026-04-17T19:36:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/channel/manager.go:36","message":"channel registered"}
+{"level":"debug","time":"2026-04-17T19:36:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cli/cli.go:242","message":"加载 Gateway 配置..."}
+{"level":"debug","time":"2026-04-17T19:36:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cli/cli.go:249","message":"初始化 Gateway..."}
+{"level":"debug","time":"2026-04-17T19:36:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cli/cli.go:253","message":"[runAgent] 恢复 Agent 并重新注册..."}
+{"level":"debug","Agent":"main","OldWorkspace":"C:Users/93986/.brambleclaw/","NewWorkspace":"C:Users\\93986\\.brambleclaw\\workspace\\main\\C:Users\\93986\\.brambleclaw","time":"2026-04-17T19:36:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/gateway/gateway.go:84","message":"修正 agent workspace 路径"}
+{"level":"debug","Agent":"main","time":"2026-04-17T19:36:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/gateway/gateway.go:94","message":"register agent"}
+{"level":"debug","Agent":"weixin","OldWorkspace":"","NewWorkspace":"C:Users\\93986\\.brambleclaw\\workspace\\weixin","time":"2026-04-17T19:36:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/gateway/gateway.go:84","message":"修正 agent workspace 路径"}
+{"level":"debug","Agent":"weixin","time":"2026-04-17T19:36:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/gateway/gateway.go:94","message":"register agent"}
+{"level":"debug","time":"2026-04-17T19:36:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/config/config.go:88","message":"显示加载"}
+{"level":"debug","time":"2026-04-17T19:36:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/config/config.go:99","message":"环境变量加载"}
+{"level":"debug","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config\\config.json","time":"2026-04-17T19:36:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/config/config.go:102","message":"从环境变量加载配置成功"}
+{"level":"debug","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config\\config.json","time":"2026-04-17T19:36:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/gateway/gateway.go:351","message":"[Gateway] 配置已同步到文件"}
+{"level":"info","time":"2026-04-17T19:36:58+08:00","message":"Starting agent"}
+{"level":"warn","error":"列出 sessions 失败: 读取 memory 目录失败(C:Users\\93986\\.brambleclaw\\workspace\\main\\C:Users\\93986\\.brambleclaw\\main\\workspace\\memory): open C:Users\\93986\\.brambleclaw\\workspace\\main\\C:Users\\93986\\.brambleclaw\\main\\workspace\\memory: The filename, directory name, or volume label syntax is incorrect.","time":"2026-04-17T19:36:58+08:00","message":"加载历史 sessions 失败"}
+{"level":"info","time":"2026-04-17T19:36:58+08:00","message":"Starting agent"}
+{"level":"debug","time":"2026-04-17T19:36:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cli/cli.go:270","message":"启动 Gateway 和 Channel..."}
+{"level":"info","time":"2026-04-17T19:36:58+08:00","message":"[Gateway] 已启动"}
+{"level":"debug","time":"2026-04-17T19:36:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/gateway/gateway.go:262","message":"[Gateway] 订阅分发启动"}
+{"level":"debug","time":"2026-04-17T19:36:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/gateway/gateway.go:172","message":"[Gateway] 消息处理循环启动"}
+{"level":"debug","time":"2026-04-17T19:36:58+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/gateway/gateway.go:265","message":"[Gateway] 响应分发启动"}
+{"level":"debug","Message received":"fkdjkfjdpf","time":"2026-04-17T19:37:04+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/bus/queue.go:130"}
+{"level":"debug","Message received":"kdjfknd","time":"2026-04-17T19:37:13+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/bus/queue.go:130"}
+{"level":"debug","time":"2026-04-17T19:37:28+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/bus/queue.go:133","message":"Context cancelled"}
+{"level":"info","time":"2026-04-17T19:37:28+08:00","message":"[Gateway] 已正常停止"}
+{"level":"error","error":"无效的 session key: agent:main:cli:direct:cli:default","session_key":"agent:main:cli:direct:cli:default","time":"2026-04-17T19:37:28+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/agent/session_manager.go:175","message":"保存 session 失败"}
+{"level":"error","error":"无效的 session key: agent:main:cli:direct:cli:default","time":"2026-04-17T19:37:28+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/agent/agent.go:180","message":"保存 sessions 失败"}
+{"level":"error","error":"无效的 session key: agent:main:cli:direct:cli:default","session_key":"agent:main:cli:direct:cli:default","time":"2026-04-17T19:37:28+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/agent/session_manager.go:175","message":"保存 session 失败"}
+{"level":"error","error":"无效的 session key: agent:main:cli:direct:cli:default","time":"2026-04-17T19:37:28+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/agent/session_manager.go:207","message":"停止时保存 sessions 失败"}
+{"level":"debug","time":"2026-04-17T19:37:33+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/config/config.go:88","message":"显示加载"}
+{"level":"debug","time":"2026-04-17T19:37:33+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/config/config.go:99","message":"环境变量加载"}
+{"level":"debug","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config\\config.json","time":"2026-04-17T19:37:33+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/config/config.go:102","message":"从环境变量加载配置成功"}
+{"level":"debug","time":"2026-04-17T19:37:56+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cli/cli.go:182","message":"加载配置并初始化日志分析器..."}
+{"level":"debug","time":"2026-04-17T19:37:56+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/config/config.go:88","message":"显示加载"}
+{"level":"debug","time":"2026-04-17T19:37:56+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/config/config.go:99","message":"环境变量加载"}
+{"level":"debug","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config\\config.json","time":"2026-04-17T19:37:56+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/config/config.go:102","message":"从环境变量加载配置成功"}
+{"level":"debug","log_path":"logs/brambleclaw.log","lines":100,"time":"2026-04-17T19:37:56+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cli/cli.go:195","message":"开始格式化输出日志"}
+{"level":"debug","log_path":"logs/brambleclaw.log","lines":100,"time":"2026-04-17T19:37:56+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/logger/analyzer.go:14","message":"开始读取和分析日志"}
+{"level":"debug","time":"2026-04-18T16:53:00+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cli/cli.go:205","message":"加载系统配置..."}
+{"level":"debug","time":"2026-04-18T16:53:00+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/config/config.go:103","message":"显示加载"}
+{"level":"debug","time":"2026-04-18T16:53:00+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/config/config.go:114","message":"环境变量加载"}
+{"level":"debug","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config\\config.json","time":"2026-04-18T16:53:00+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/config/config.go:117","message":"从环境变量加载配置成功"}
+{"level":"debug","config_path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config\\config.json","time":"2026-04-18T16:53:00+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cli/cli.go:216","message":"成功加载配置文件"}
+{"level":"debug","time":"2026-04-18T16:53:00+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cli/cli.go:224","message":"初始化消息总线..."}
+{"level":"debug","time":"2026-04-18T16:53:00+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cli/cli.go:228","message":"初始化通道管理器..."}
+{"level":"debug","time":"2026-04-18T16:53:00+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cli/cli.go:232","message":"初始化 CLI 通道..."}
+{"level":"debug","channel":"cli","time":"2026-04-18T16:53:00+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/channel/manager.go:36","message":"channel registered"}
+{"level":"debug","time":"2026-04-18T16:53:00+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cli/cli.go:243","message":"加载 Gateway 配置..."}
+{"level":"debug","time":"2026-04-18T16:53:00+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cli/cli.go:250","message":"初始化 Gateway..."}
+{"level":"debug","time":"2026-04-18T16:53:00+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cli/cli.go:254","message":"[runAgent] 恢复 Agent 并重新注册..."}
+{"level":"debug","Agent":"main","OldWorkspace":"C:Users\\93986\\.brambleclaw\\workspace\\main\\C:Users\\93986\\.brambleclaw","NewWorkspace":"C:Users\\93986\\.brambleclaw\\workspace\\main\\C:Users\\93986\\.brambleclaw\\workspace\\main\\C:Users\\93986\\.brambleclaw","time":"2026-04-18T16:53:00+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/gateway/gateway.go:84","message":"修正 agent workspace 路径"}
+{"level":"debug","Agent":"main","time":"2026-04-18T16:53:00+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/gateway/gateway.go:99","message":"register agent"}
+{"level":"debug","Agent":"weixin","OldWorkspace":"C:Users\\93986\\.brambleclaw\\workspace\\weixin","NewWorkspace":"C:Users\\93986\\.brambleclaw\\workspace\\weixin\\C:Users\\93986\\.brambleclaw\\workspace\\weixin","time":"2026-04-18T16:53:00+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/gateway/gateway.go:84","message":"修正 agent workspace 路径"}
+{"level":"debug","Agent":"weixin","time":"2026-04-18T16:53:00+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/gateway/gateway.go:99","message":"register agent"}
+{"level":"debug","time":"2026-04-18T16:53:00+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/config/config.go:103","message":"显示加载"}
+{"level":"debug","time":"2026-04-18T16:53:00+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/config/config.go:114","message":"环境变量加载"}
+{"level":"debug","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config\\config.json","time":"2026-04-18T16:53:00+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/config/config.go:117","message":"从环境变量加载配置成功"}
+{"level":"debug","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config\\config.json","time":"2026-04-18T16:53:00+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/gateway/gateway.go:315","message":"[Gateway] 配置已同步到文件"}
+{"level":"info","time":"2026-04-18T16:53:00+08:00","message":"Starting agent"}
+{"level":"warn","error":"列出 sessions 失败: 读取 memory 目录失败(C:Users\\93986\\.brambleclaw\\workspace\\main\\C:Users\\93986\\.brambleclaw\\workspace\\main\\C:Users\\93986\\.brambleclaw\\main\\workspace\\memory): open C:Users\\93986\\.brambleclaw\\workspace\\main\\C:Users\\93986\\.brambleclaw\\workspace\\main\\C:Users\\93986\\.brambleclaw\\main\\workspace\\memory: The filename, directory name, or volume label syntax is incorrect.","time":"2026-04-18T16:53:00+08:00","message":"加载历史 sessions 失败"}
+{"level":"info","time":"2026-04-18T16:53:00+08:00","message":"Starting agent"}
+{"level":"warn","error":"列出 sessions 失败: 读取 memory 目录失败(C:Users\\93986\\.brambleclaw\\workspace\\weixin\\C:Users\\93986\\.brambleclaw\\workspace\\weixin\\weixin\\workspace\\memory): open C:Users\\93986\\.brambleclaw\\workspace\\weixin\\C:Users\\93986\\.brambleclaw\\workspace\\weixin\\weixin\\workspace\\memory: The filename, directory name, or volume label syntax is incorrect.","time":"2026-04-18T16:53:00+08:00","message":"加载历史 sessions 失败"}
+{"level":"debug","time":"2026-04-18T16:53:00+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cli/cli.go:271","message":"启动 Gateway 和 Channel..."}
+{"level":"info","time":"2026-04-18T16:53:00+08:00","message":"[Gateway] 已启动"}
+{"level":"debug","time":"2026-04-18T16:53:00+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/gateway/gateway.go:177","message":"[Gateway] 消息处理循环启动"}
+{"level":"debug","time":"2026-04-18T16:53:00+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/gateway/gateway.go:226","message":"[Gateway] 订阅分发启动"}
+{"level":"debug","time":"2026-04-18T16:53:00+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/gateway/gateway.go:229","message":"[Gateway] 响应分发启动"}
+{"level":"debug","Message received":"你是谁","time":"2026-04-18T16:53:06+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/bus/queue.go:130"}
+{"level":"error","error":"failed to read file AGENT.md: open AGENT.md: The system cannot find the file specified.","time":"2026-04-18T16:53:06+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/agent/agent.go:67","message":"Failed to build full system prompt"}
+{"level":"debug","Message received":"你的soul是什么","time":"2026-04-18T16:53:28+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/bus/queue.go:130"}
+{"level":"debug","time":"2026-04-18T16:54:04+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/config/config.go:103","message":"显示加载"}
+{"level":"debug","time":"2026-04-18T16:54:04+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/config/config.go:114","message":"环境变量加载"}
+{"level":"debug","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config\\config.json","time":"2026-04-18T16:54:04+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/config/config.go:117","message":"从环境变量加载配置成功"}
+{"level":"error","error":"全局工作空间目录并不存在。你是否忘记运行`brambleclaw init` 命令？请检查配置文件","time":"2026-04-18T16:54:04+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cli/cli.go:84","message":"命令执行失败"}
+{"level":"fatal","error":"全局工作空间目录并不存在。你是否忘记运行`brambleclaw init` 命令？请检查配置文件","time":"2026-04-18T16:54:04+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/main.go:12","message":"CLI执行失败"}
+{"level":"debug","Message received":"你好地方","time":"2026-04-18T16:57:04+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/bus/queue.go:130"}
+{"level":"error","error":"context canceled","time":"2026-04-18T16:57:08+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/agent/agent.go:123","message":"Error publishing response"}
+{"level":"info","time":"2026-04-18T16:57:08+08:00","message":"[Gateway] 已正常停止"}
+{"level":"error","error":"保存 session 失败: 创建 memory 目录失败(C:Users\\93986\\.brambleclaw\\workspace\\main\\C:Users\\93986\\.brambleclaw\\workspace\\main\\C:Users\\93986\\.brambleclaw\\main\\workspace\\memory): mkdir C:Users\\93986\\.brambleclaw\\workspace\\main\\C:Users: The directory name is invalid.","session_key":"cli::cli:default","time":"2026-04-18T16:57:08+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/agent/session_manager.go:171","message":"保存 session 失败"}
+{"level":"error","error":"保存 session 失败: 创建 memory 目录失败(C:Users\\93986\\.brambleclaw\\workspace\\main\\C:Users\\93986\\.brambleclaw\\workspace\\main\\C:Users\\93986\\.brambleclaw\\main\\workspace\\memory): mkdir C:Users\\93986\\.brambleclaw\\workspace\\main\\C:Users: The directory name is invalid.","time":"2026-04-18T16:57:08+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/agent/agent.go:180","message":"保存 sessions 失败"}
+{"level":"error","error":"保存 session 失败: 创建 memory 目录失败(C:Users\\93986\\.brambleclaw\\workspace\\main\\C:Users\\93986\\.brambleclaw\\workspace\\main\\C:Users\\93986\\.brambleclaw\\main\\workspace\\memory): mkdir C:Users\\93986\\.brambleclaw\\workspace\\main\\C:Users: The directory name is invalid.","session_key":"cli::cli:default","time":"2026-04-18T16:57:08+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/agent/session_manager.go:171","message":"保存 session 失败"}
+{"level":"error","error":"保存 session 失败: 创建 memory 目录失败(C:Users\\93986\\.brambleclaw\\workspace\\main\\C:Users\\93986\\.brambleclaw\\workspace\\main\\C:Users\\93986\\.brambleclaw\\main\\workspace\\memory): mkdir C:Users\\93986\\.brambleclaw\\workspace\\main\\C:Users: The directory name is invalid.","time":"2026-04-18T16:57:08+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/agent/session_manager.go:203","message":"停止时保存 sessions 失败"}
+{"level":"debug","time":"2026-04-18T16:57:15+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cli/cli.go:205","message":"加载系统配置..."}
+{"level":"debug","time":"2026-04-18T16:57:15+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/config/config.go:103","message":"显示加载"}
+{"level":"debug","time":"2026-04-18T16:57:15+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/config/config.go:114","message":"环境变量加载"}
+{"level":"debug","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config\\config.json","time":"2026-04-18T16:57:15+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/config/config.go:117","message":"从环境变量加载配置成功"}
+{"level":"debug","config_path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config\\config.json","time":"2026-04-18T16:57:15+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cli/cli.go:216","message":"成功加载配置文件"}
+{"level":"debug","time":"2026-04-18T16:57:15+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cli/cli.go:224","message":"初始化消息总线..."}
+{"level":"debug","time":"2026-04-18T16:57:15+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cli/cli.go:228","message":"初始化通道管理器..."}
+{"level":"debug","time":"2026-04-18T16:57:15+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cli/cli.go:232","message":"初始化 CLI 通道..."}
+{"level":"debug","channel":"cli","time":"2026-04-18T16:57:15+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/channel/manager.go:36","message":"channel registered"}
+{"level":"debug","time":"2026-04-18T16:57:15+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cli/cli.go:243","message":"加载 Gateway 配置..."}
+{"level":"debug","time":"2026-04-18T16:57:15+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cli/cli.go:250","message":"初始化 Gateway..."}
+{"level":"debug","time":"2026-04-18T16:57:15+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cli/cli.go:254","message":"[runAgent] 恢复 Agent 并重新注册..."}
+{"level":"debug","Agent":"main","OldWorkspace":"C:Users\\93986\\.brambleclaw\\workspace\\main\\C:Users\\93986\\.brambleclaw\\workspace\\main\\C:Users\\93986\\.brambleclaw","NewWorkspace":"C:Users\\93986\\.brambleclaw\\workspace\\main\\C:Users\\93986\\.brambleclaw\\workspace\\main\\C:Users\\93986\\.brambleclaw\\workspace\\main\\C:Users\\93986\\.brambleclaw","time":"2026-04-18T16:57:15+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/gateway/gateway.go:84","message":"修正 agent workspace 路径"}
+{"level":"debug","Agent":"main","time":"2026-04-18T16:57:15+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/gateway/gateway.go:99","message":"register agent"}
+{"level":"debug","Agent":"weixin","OldWorkspace":"C:Users\\93986\\.brambleclaw\\workspace\\weixin\\C:Users\\93986\\.brambleclaw\\workspace\\weixin","NewWorkspace":"C:Users\\93986\\.brambleclaw\\workspace\\weixin\\C:Users\\93986\\.brambleclaw\\workspace\\weixin\\C:Users\\93986\\.brambleclaw\\workspace\\weixin","time":"2026-04-18T16:57:15+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/gateway/gateway.go:84","message":"修正 agent workspace 路径"}
+{"level":"debug","Agent":"weixin","time":"2026-04-18T16:57:15+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/gateway/gateway.go:99","message":"register agent"}
+{"level":"debug","time":"2026-04-18T16:57:15+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/config/config.go:103","message":"显示加载"}
+{"level":"debug","time":"2026-04-18T16:57:15+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/config/config.go:114","message":"环境变量加载"}
+{"level":"debug","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config\\config.json","time":"2026-04-18T16:57:15+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/config/config.go:117","message":"从环境变量加载配置成功"}
+{"level":"debug","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config\\config.json","time":"2026-04-18T16:57:15+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/gateway/gateway.go:315","message":"[Gateway] 配置已同步到文件"}
+{"level":"info","time":"2026-04-18T16:57:15+08:00","message":"Starting agent"}
+{"level":"warn","error":"列出 sessions 失败: 读取 memory 目录失败(C:Users\\93986\\.brambleclaw\\workspace\\main\\C:Users\\93986\\.brambleclaw\\workspace\\main\\C:Users\\93986\\.brambleclaw\\workspace\\main\\C:Users\\93986\\.brambleclaw\\main\\workspace\\memory): open C:Users\\93986\\.brambleclaw\\workspace\\main\\C:Users\\93986\\.brambleclaw\\workspace\\main\\C:Users\\93986\\.brambleclaw\\workspace\\main\\C:Users\\93986\\.brambleclaw\\main\\workspace\\memory: The filename, directory name, or volume label syntax is incorrect.","time":"2026-04-18T16:57:15+08:00","message":"加载历史 sessions 失败"}
+{"level":"info","time":"2026-04-18T16:57:15+08:00","message":"Starting agent"}
+{"level":"warn","error":"列出 sessions 失败: 读取 memory 目录失败(C:Users\\93986\\.brambleclaw\\workspace\\weixin\\C:Users\\93986\\.brambleclaw\\workspace\\weixin\\C:Users\\93986\\.brambleclaw\\workspace\\weixin\\weixin\\workspace\\memory): open C:Users\\93986\\.brambleclaw\\workspace\\weixin\\C:Users\\93986\\.brambleclaw\\workspace\\weixin\\C:Users\\93986\\.brambleclaw\\workspace\\weixin\\weixin\\workspace\\memory: The filename, directory name, or volume label syntax is incorrect.","time":"2026-04-18T16:57:15+08:00","message":"加载历史 sessions 失败"}
+{"level":"debug","time":"2026-04-18T16:57:15+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cli/cli.go:271","message":"启动 Gateway 和 Channel..."}
+{"level":"info","time":"2026-04-18T16:57:15+08:00","message":"[Gateway] 已启动"}
+{"level":"debug","time":"2026-04-18T16:57:15+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/gateway/gateway.go:177","message":"[Gateway] 消息处理循环启动"}
+{"level":"debug","time":"2026-04-18T16:57:15+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/gateway/gateway.go:226","message":"[Gateway] 订阅分发启动"}
+{"level":"debug","time":"2026-04-18T16:57:15+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/gateway/gateway.go:229","message":"[Gateway] 响应分发启动"}
+{"level":"debug","Message received":"的开发接口的","time":"2026-04-18T16:57:17+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/bus/queue.go:130"}
+{"level":"error","error":"failed to read file AGENT.md: open AGENT.md: The system cannot find the file specified.","time":"2026-04-18T16:57:17+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/agent/agent.go:67","message":"Failed to build full system prompt"}
+{"level":"debug","time":"2026-04-18T16:57:35+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cli/cli.go:182","message":"加载配置并初始化日志分析器..."}
+{"level":"debug","time":"2026-04-18T16:57:35+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/config/config.go:103","message":"显示加载"}
+{"level":"debug","time":"2026-04-18T16:57:35+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/config/config.go:114","message":"环境变量加载"}
+{"level":"debug","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config\\config.json","time":"2026-04-18T16:57:35+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/config/config.go:117","message":"从环境变量加载配置成功"}
+{"level":"debug","log_path":"logs/brambleclaw.log","lines":100,"time":"2026-04-18T16:57:35+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cli/cli.go:195","message":"开始格式化输出日志"}
+{"level":"debug","log_path":"logs/brambleclaw.log","lines":100,"time":"2026-04-18T16:57:35+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/logger/analyzer.go:14","message":"开始读取和分析日志"}

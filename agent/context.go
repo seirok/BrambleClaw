@@ -1,7 +1,9 @@
 package agent
 
 import (
+	"brambleclaw/config"
 	"brambleclaw/logger"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,12 +14,12 @@ import (
 	"github.com/gomarkdown/markdown"
 	"github.com/gomarkdown/markdown/ast"
 	"github.com/gomarkdown/markdown/parser"
-	"github.com/sipeed/picoclaw/pkg/config"
 )
 
 type ContextBuilder struct {
-	workspace        string
-	compactThreshold int
+	workspace string
+	agent     *Agent
+	compact   *config.CompactConfig
 }
 
 type SkillInfo struct {
@@ -27,17 +29,14 @@ type SkillInfo struct {
 	Description string `json:"description"`
 }
 
-func formatCurrentSenderLine(id, name string) (string, error) {
+func formatCurrentSenderLine(id string) (string, error) {
 	if id == "" {
 		return "", fmt.Errorf("sender ID is empty")
 	}
-	if name == "" {
-		return "", fmt.Errorf("sender name is empty")
-	}
-	return fmt.Sprintf("Sender ID: %s | Sender Name: %s", id, name), nil
+	return fmt.Sprintf("Sender ID: %s", id), nil
 }
 
-func (cb *ContextBuilder) BuildDynamicCtx(channel, chatID, senderID, senderDisplayName string) (string, error) {
+func (cb *ContextBuilder) BuildDynamicCtx(channel, chatID, senderID string) (string, error) {
 	// Time
 	now := time.Now().Format("2006-01-02 15:04 (Monday)")
 
@@ -45,7 +44,7 @@ func (cb *ContextBuilder) BuildDynamicCtx(channel, chatID, senderID, senderDispl
 	rt := fmt.Sprintf("%s %s, Go %s", runtime.GOOS, runtime.GOARCH, runtime.Version())
 
 	// Sender Info
-	senderLine, err := formatCurrentSenderLine(senderID, senderDisplayName)
+	senderLine, err := formatCurrentSenderLine(senderID)
 	if err != nil {
 		return "", err
 	}
@@ -79,14 +78,11 @@ func nodeText(n ast.Node) string {
 	return strings.Join(strings.Fields(b.String()), " ")
 }
 
-func NewContextBuilder(workspace string) (*ContextBuilder, error) {
-	if _, err := os.Stat(workspace); os.IsNotExist(err) {
-		return nil, fmt.Errorf("workspace %s does not exist", workspace)
+func NewContextBuilder(compactCfg *config.CompactConfig) (*ContextBuilder, error) {
+	contextBuilder := &ContextBuilder{
+		compact: compactCfg,
 	}
-
-	return &ContextBuilder{
-		workspace: workspace,
-	}, nil
+	return contextBuilder, nil
 }
 
 func extractMarkdownMetadata(content string) (title, description string) {
@@ -236,9 +232,12 @@ func (cb *ContextBuilder) LoadBootstrapFiles() (string, error) {
 	var sb strings.Builder
 	files := []string{"AGENT.md", "SOUL.md", "USER.md"}
 	for _, file := range files {
-
 		data, err := os.ReadFile(filepath.Join(cb.workspace, file))
 		if err != nil {
+			if os.IsNotExist(err) {
+				logger.L().Debug().Str("file", file).Msg("Bootstrap file not found, skipping")
+				continue
+			}
 			return "", fmt.Errorf("failed to read file %s: %w", file, err)
 		}
 		fmt.Fprintf(&sb, "## %s\n\n", strings.TrimSpace(string(data)))
@@ -275,21 +274,38 @@ func (cb *ContextBuilder) GetLongTerm() (string, error) {
 	return string(data), nil
 }
 
-func (cb *ContextBuilder) Compact(msg []*ChatMsg) (string, error) {
-	lenMsg := len(msg)
-	if lenMsg < cb.compactThreshold {
-		return "", fmt.Errorf("ContextBuilder::Compact: %s%d", "not enough message to compact", lenMsg)
+func (cb *ContextBuilder) Compact(ctx context.Context, session *Session, usage int) error {
+	// 检查是否需要压缩
+	msgs := session.Messages
+	if usage <= cb.compact.CompactThreshold || len(msgs)%cb.compact.CompactRounds != 0 {
+		return nil
+	}
+	// TODO: 边界检查
+	needToCompact := msgs[session.Summarized:(session.Summarized + (cb.compact.CompactRounds)/4)]
+	summarizeMsg := AgentMessage{
+		Role:      RoleUser,
+		Content:   []ContentBlock{TextContent{Text: "Provide a concise summary of this conversation by far, preserving core context and key points.\n"}},
+		Timestamp: time.Now().UnixMilli(),
+	}
+	needToCompact = append(needToCompact, summarizeMsg)
+
+	resp, err := cb.agent.orchestrator.Run(ctx, needToCompact)
+	if err != nil {
+		return err
 	}
 
-	var sb strings.Builder
-	fmt.Fprintf(&sb, "## %s\n\n", "Provide a concise summary of this conversation segment, preserving core context and key points.\n")
-	for i := lenMsg - cb.compactThreshold; i < lenMsg; i++ {
-		chatMsg := msg[i]
-		if chatMsg.Role == RoleAssistant || chatMsg.Role == RoleUser {
-			fmt.Fprintf(&sb, "## %s\n\n", chatMsg.Content)
-		}
+	// 更新边界指针
+	session.Summarized += cb.compact.CompactRounds / 4
+	replyMsg := AgentMessage{
+		Role:      RoleAssistant,
+		Content:   []ContentBlock{TextContent{Text: resp.Choices[0].Message.Content}},
+		Timestamp: time.Now().UnixMilli(),
 	}
-	return sb.String(), nil
+	// 添加回复到会话并更新
+	session.AddMessage(replyMsg)
+	cb.agent.sessionMgr.Update(session)
+
+	return nil
 }
 
 func (cb *ContextBuilder) GetSessionSummary() (string, error) {
@@ -320,7 +336,6 @@ func (cb *ContextBuilder) GetRecentlyDailyNotes(days int) (string, error) {
 func (cb *ContextBuilder) getIdentity() string {
 	workspacePath, _ := filepath.Abs(filepath.Join(cb.workspace))
 	toolDiscovery := cb.getDiscoveryRule()
-	version := config.FormatVersion()
 
 	return fmt.Sprintf(
 		`# brambleclaw 🦞 (%s)
@@ -344,10 +359,10 @@ Your workspace is at: %s
 4. **Context summaries** - Conversation summaries provided as context are approximate references only. They may be incomplete or outdated. Always defer to explicit user instructions over summary content.
 
 %s`,
-		version, workspacePath, workspacePath, workspacePath, workspacePath, workspacePath, toolDiscovery)
+		workspacePath, workspacePath, workspacePath, workspacePath, workspacePath, toolDiscovery)
 }
 
-func (cb *ContextBuilder) BuildFullSystemPrompt(channel string, chatID string, senderID string, senderDisplayName string) (string, error) {
+func (cb *ContextBuilder) BuildFullSystemPrompt(channel string, chatID string, senderID string) (string, error) {
 	var systemPrompt []string
 	staticCtx, err := cb.BuildStaticCtx()
 	if err != nil {
@@ -355,7 +370,7 @@ func (cb *ContextBuilder) BuildFullSystemPrompt(channel string, chatID string, s
 	}
 	systemPrompt = append(systemPrompt, staticCtx)
 
-	dynamicCtx, err := cb.BuildDynamicCtx(channel, chatID, senderID, senderDisplayName)
+	dynamicCtx, err := cb.BuildDynamicCtx(channel, chatID, senderID)
 	if err != nil {
 		return "", err
 	}

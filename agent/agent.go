@@ -15,19 +15,20 @@ import (
 
 // Agent Agent核心
 type Agent struct {
-	config       *config.AgentConfig
-	sessionMgr   *PersistentSessionManager
-	llmClient    *LLMClient
-	bus          *bus.MessageBus
-	toolRegistry *tools.ToolRegistry
-	orchestrator *Orchestrator
-	mcpManager   *mcp.Manager
-	workspace    string
+	config         *config.AgentConfig
+	sessionMgr     *PersistentSessionManager
+	llmClient      *LLMClient
+	bus            *bus.MessageBus
+	toolRegistry   *tools.ToolRegistry
+	orchestrator   *Orchestrator
+	mcpManager     *mcp.Manager
+	contextBuilder *ContextBuilder
+	workspace      string
 }
 
 // NewAgent 创建Agent
 // 如果 workspacePath 为空，则使用非持久化模式（用于测试和兼容旧代码）
-func NewAgent(config *config.AgentConfig, bus *bus.MessageBus, mcpManager *mcp.Manager) *Agent {
+func NewAgent(config *config.AgentConfig, bus *bus.MessageBus, mcpManager *mcp.Manager, builder *ContextBuilder) *Agent {
 	llmClient := NewLLMClient(config.LLM)
 	toolRegistry := tools.NewToolRegistry()
 	orchestrator := NewOrchestrator(llmClient, toolRegistry)
@@ -35,7 +36,7 @@ func NewAgent(config *config.AgentConfig, bus *bus.MessageBus, mcpManager *mcp.M
 	var sessionMgr *PersistentSessionManager
 	sessionMgr = NewPersistentSessionManager(config.Name, config.Workspace)
 
-	return &Agent{
+	agent := &Agent{
 		config:       config,
 		sessionMgr:   sessionMgr,
 		llmClient:    llmClient,
@@ -45,28 +46,44 @@ func NewAgent(config *config.AgentConfig, bus *bus.MessageBus, mcpManager *mcp.M
 		mcpManager:   mcpManager,
 		workspace:    config.Workspace,
 	}
+	builder.agent = agent
+	agent.contextBuilder = builder
+
+	return agent
 }
 
 func (a *Agent) RegisterTool(tool tools.Tool) {
 	a.toolRegistry.Register(tool)
 }
 
-// handleInboundMessage 处理入站消息
-func (a *Agent) handleInboundMessage(ctx context.Context, msg *bus.InBoundMessage) {
-	// 当前消息转化为AgentMessage格式
+// handleMessage 处理入站消息
+func (a *Agent) HandleMessage(ctx context.Context, msg *bus.InBoundMessage) {
+	// 构建系统提示
+	sessKey := msg.SessionKey()
+	sess, isNewSession := a.sessionMgr.GetOrCreate(sessKey)
+	if isNewSession {
+		fullSystemPrompt, err := a.contextBuilder.BuildFullSystemPrompt(msg.InChannel, msg.ChatID, msg.SenderID)
+		if err != nil {
+			logger.L().Error().Err(err).Msg("Failed to build full system prompt")
+			fullSystemPrompt = ""
+		} else {
+			sess.Messages = append(sess.Messages, AgentMessage{
+				Role:      RoleSystem,
+				Content:   []ContentBlock{TextContent{fullSystemPrompt}},
+				Timestamp: time.Now().UnixMilli(),
+			})
+		}
+	}
+	// 添加当前消息
 	agentMsg := AgentMessage{
 		Role:      RoleUser,
 		Content:   []ContentBlock{TextContent{Text: msg.Content}},
 		Timestamp: time.Now().UnixMilli(),
 	}
-
-	// 添加当前消息到历史消息
-	sessKey := msg.SessionKey()
-	sess := a.sessionMgr.GetOrCreate(sessKey)
 	sess.Messages = append(sess.Messages, agentMsg)
 
 	// 加载历史消息
-	historyMsg := sess.GetHistory(a.config.MaxHistory)
+	historyMsg := sess.LoadHistory()
 
 	// 使用Orchestrator处理消息
 	resp, err := a.orchestrator.Run(ctx, historyMsg)
@@ -78,42 +95,32 @@ func (a *Agent) handleInboundMessage(ctx context.Context, msg *bus.InBoundMessag
 
 	replyMsg := AgentMessage{
 		Role:      RoleAssistant,
-		Content:   []ContentBlock{TextContent{Text: resp}},
+		Content:   []ContentBlock{TextContent{Text: resp.Choices[0].Message.Content}},
 		Timestamp: time.Now().UnixMilli(),
 	}
 	// 添加回复到会话
 	sess.AddMessage(replyMsg)
-
 	// 更新会话
 	a.sessionMgr.Update(sess)
+
+	// TODO: 异步压缩上下文并更新summary
+	go func() {
+		currentTokenUsed := resp.Usage.CompletionTokens + resp.Usage.PromptTokens
+		if err = a.contextBuilder.Compact(ctx, sess, currentTokenUsed); err != nil {
+			logger.L().Error().Err(err).Msg("Failed to compact session")
+		}
+	}()
 
 	// 发布响应
 	outbound := &bus.OutBoundMessage{
 		OutChannel: msg.InChannel,
 		ChatID:     msg.ChatID,
-		Content:    resp,
+		Content:    resp.Choices[0].Message.Content,
 		ReplyTo:    msg.ID,
 		TimeStamp:  time.Now(),
 	}
-
 	if err := a.bus.PublishOutBoundMessage(ctx, outbound); err != nil {
 		logger.L().Error().Err(err).Msg("Error publishing response")
-	}
-
-}
-
-// processMessages 处理消息
-func (a *Agent) processMessages(ctx context.Context) {
-	for {
-		msg, err := a.bus.ConsumeInBoundMessage(ctx)
-		if err != nil {
-			logger.L().Error().Err(err).Msg("Error consuming message")
-			continue
-		}
-
-		// 处理消息
-		a.handleInboundMessage(ctx, msg)
-
 	}
 }
 
@@ -126,6 +133,8 @@ func (a *Agent) Start(ctx context.Context) error {
 		// 不中断启动，继续使用空 sessions
 	}
 
+	// 启动 session 管理
+	a.sessionMgr.Start()
 	// 启动 MCP 管理器并注册工具
 	if err := a.mcpManager.Start(ctx, a.toolRegistry); err != nil {
 		logger.L().Error().Err(err).Msg("启动 MCP 管理器失败")
@@ -164,15 +173,6 @@ func (a *Agent) GetMemoryDir() string {
 	return filepath.Join(a.workspace, "memory")
 }
 
-// StartStandalone 独立模式启动Agent（自己消费消息）
-func (a *Agent) StartStandalone(ctx context.Context) error {
-	if err := a.Start(ctx); err != nil {
-		return err
-	}
-	go a.processMessages(ctx)
-	return nil
-}
-
 // Stop 停止Agent
 func (a *Agent) Stop() {
 	// 保存所有 sessions
@@ -195,7 +195,8 @@ func (a *Agent) GetConfig() *config.AgentConfig {
 // GetOrCreateSession 获取或创建会话
 // 这是提供给 Gateway 的公共方法
 func (a *Agent) GetOrCreateSession(key string) *Session {
-	return a.sessionMgr.GetOrCreate(key)
+	sess, _ := a.sessionMgr.GetOrCreate(key)
+	return sess
 }
 
 // GetSession 获取会话（如果不存在则返回 nil）
@@ -206,14 +207,4 @@ func (a *Agent) GetSession(key string) (*Session, bool) {
 // UpdateSession 更新会话
 func (a *Agent) UpdateSession(session *Session) {
 	a.sessionMgr.Update(session)
-}
-
-// Process 处理消息并返回响应
-// 这是提供给 Gateway 的同步处理方法
-func (a *Agent) Process(ctx context.Context, history []AgentMessage) (string, error) {
-	resp, err := a.orchestrator.Run(ctx, history)
-	if err != nil {
-		return "", err
-	}
-	return resp, nil
 }

@@ -81,6 +81,21 @@ func buildDefaultSearchPaths() []string {
 	return paths
 }
 
+func (c *Config) CheckConfig() error {
+	// TODO: 后续添加更加完善的检查逻辑
+	info, err := os.Stat(c.Workspace)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("全局工作空间目录并不存在。你是否忘记运行`brambleclaw init` 命令？请检查配置文件或手动创建")
+		}
+		return err
+	}
+	if info.IsDir() != true {
+		return fmt.Errorf("无效的全局工作空间目录：类型错误")
+	}
+	return nil
+}
+
 // Load 尝试从多个位置加载配置
 // 优先级：ExplicitPath > 环境变量 > SearchPaths
 func (l *Loader) Load() (*Config, string, error) {
@@ -206,6 +221,10 @@ func Load(path string) (*Config, error) {
 	return cfg, err
 }
 
+type CompactConfig struct {
+	CompactThreshold int `json:"compact_threshold"`
+	CompactRounds    int `json:"compact-rounds"`
+}
 type Config struct {
 	Log        LogConfig `json:"log"`
 	BusBufSize int       `json:"bus-buf-size"`
@@ -222,6 +241,7 @@ type Config struct {
 	Agents    []AgentConfig `json:"agents"`    // Agent 配置列表
 	Session   SessionConfig `json:"session"`   // Session 配置
 	Workspace string        `json:"workspace"` // 全局默认 workspace 根目录
+	Compact   CompactConfig `json:"compact"`
 }
 
 type LogConfig struct {

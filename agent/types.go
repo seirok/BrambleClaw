@@ -111,8 +111,18 @@ func (m *AgentMessage) UnmarshalJSON(data []byte) error {
 
 // Session 会话
 type Session struct {
-	Key       string         `json:"key"`
-	Messages  []AgentMessage `json:"messages"` // 会话消息
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
+	Key        string         `json:"key"`
+	Messages   []AgentMessage `json:"messages"` // 会话消息
+	CreatedAt  time.Time      `json:"created_at"`
+	UpdatedAt  time.Time      `json:"updated_at"`
+	Summarized int            `json:"summarized"` // 指向最古老的有效信息
+}
+
+func (s *Session) LoadHistory() []AgentMessage {
+	// TODO: 防御性编程
+	return s.Messages[s.Summarized:]
+}
+
+func (s *Session) AddMessage(msg AgentMessage) {
+	s.Messages = append(s.Messages, msg)
 }

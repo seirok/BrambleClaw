@@ -19,13 +19,8 @@ type PersistentSessionManager struct {
 	stopChan         chan struct{}
 }
 
-func (psm *PersistentSessionManager) SetAutoSaveInterval(interval time.Duration) {
-	psm.autosaveInterval = interval
-	psm.autosaveEnabled = true
-}
-
 func (psm *PersistentSessionManager) Start() {
-	if psm.autosaveEnabled && psm.autosaveInterval > 0 {
+	if psm.autosaveEnabled {
 		go psm.autosaveLoop()
 	}
 }
@@ -86,21 +81,22 @@ func (m *PersistentSessionManager) LoadSessions() error {
 }
 
 // GetOrCreate 获取或创建 session
-func (m *PersistentSessionManager) GetOrCreate(key string) *Session {
+func (m *PersistentSessionManager) GetOrCreate(key string) (*Session, bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	if sess, ok := m.sessions[key]; ok {
-		return sess
+		return sess, false
 	}
 
 	sess := &Session{
-		Key:       key,
-		Messages:  []AgentMessage{},
-		CreatedAt: time.Now(),
+		Key:        key,
+		Messages:   []AgentMessage{},
+		CreatedAt:  time.Now(),
+		Summarized: 0,
 	}
 	m.sessions[key] = sess
-	return sess
+	return sess, true
 }
 
 // Get 获取 session
