@@ -68,7 +68,7 @@ func (a *Agent) HandleMessage(ctx context.Context, msg *bus.InBoundMessage) {
 			logger.L().Error().Err(err).Msg("Failed to build full system prompt")
 			fullSystemPrompt = ""
 		} else {
-			sess.Messages = append(sess.Messages, AgentMessage{
+			sess.AddMessage(AgentMessage{
 				Role:      RoleSystem,
 				Content:   []ContentBlock{TextContent{fullSystemPrompt}},
 				Timestamp: time.Now().UnixMilli(),
@@ -81,7 +81,7 @@ func (a *Agent) HandleMessage(ctx context.Context, msg *bus.InBoundMessage) {
 		Content:   []ContentBlock{TextContent{Text: msg.Content}},
 		Timestamp: time.Now().UnixMilli(),
 	}
-	sess.Messages = append(sess.Messages, agentMsg)
+	sess.AddMessage(agentMsg)
 
 	// 加载历史消息
 	historyMsg := sess.LoadHistory()

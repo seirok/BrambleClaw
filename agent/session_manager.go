@@ -118,6 +118,7 @@ func (m *PersistentSessionManager) Update(session *Session) {
 	defer m.mu.Unlock()
 
 	session.UpdatedAt = time.Now()
+	session.Modified = true
 	m.sessions[session.Key] = session
 }
 
@@ -157,6 +158,10 @@ func (m *PersistentSessionManager) SaveSession(sessionKey string) error {
 		logger.L().Warn().Err(err).Str("session_key", sessionKey).Msg("保存元数据失败")
 	}
 
+	m.mu.Lock()
+	sess.Modified = false
+	m.mu.Unlock()
+
 	return nil
 }
 
@@ -165,7 +170,9 @@ func (m *PersistentSessionManager) SaveAllSessions() {
 	m.mu.RLock()
 	sessions := make([]*Session, 0, len(m.sessions))
 	for _, sess := range m.sessions {
-		sessions = append(sessions, sess)
+		if sess.Modified {
+			sessions = append(sessions, sess)
+		}
 	}
 	m.mu.RUnlock()
 
@@ -174,7 +181,6 @@ func (m *PersistentSessionManager) SaveAllSessions() {
 			logger.L().Error().Err(err).Str("session_key", sess.Key).Msg("保存 session 失败")
 		}
 	}
-
 }
 
 // autosaveLoop 自动保存循环

@@ -111,11 +111,13 @@ func (m *AgentMessage) UnmarshalJSON(data []byte) error {
 
 // Session 会话
 type Session struct {
-	Key        string         `json:"key"`
-	Messages   []AgentMessage `json:"messages"` // 会话消息
-	CreatedAt  time.Time      `json:"created_at"`
-	UpdatedAt  time.Time      `json:"updated_at"`
-	Summarized int            `json:"summarized"` // 指向最古老的有效信息
+	Key               string         `json:"key"`
+	Messages          []AgentMessage `json:"messages"` // 会话消息
+	CreatedAt         time.Time      `json:"created_at"`
+	UpdatedAt         time.Time      `json:"updated_at"`
+	Summarized        int            `json:"summarized"`          // 指向最古老的有效信息
+	Modified          bool           `json:"modified"`            // 自上次保存后是否修改过
+	LastSavedChecksum string         `json:"last_saved_checksum"` // 上次保存时的校验和，用于检测变化
 }
 
 func (s *Session) LoadHistory() []AgentMessage {
@@ -125,4 +127,5 @@ func (s *Session) LoadHistory() []AgentMessage {
 
 func (s *Session) AddMessage(msg AgentMessage) {
 	s.Messages = append(s.Messages, msg)
+	s.Modified = true
 }
