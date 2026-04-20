@@ -82,17 +82,26 @@ func buildDefaultSearchPaths() []string {
 }
 
 func (c *Config) CheckConfig() error {
-	// TODO: 后续添加更加完善的检查逻辑
+	// 1. 核心防御：必须是绝对路径
+	// 这能直接干掉 "C:Users" 这种没有根斜杠的写法，也能干掉 "./data" 这种写法
+	if !filepath.IsAbs(c.Workspace) {
+		return fmt.Errorf("工作空间路径必须是绝对路径 (例如 C:\\workspace)，当前配置为: %s", c.Workspace)
+	}
+
+	// 2. 检查目录是否存在
 	info, err := os.Stat(c.Workspace)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return fmt.Errorf("全局工作空间目录并不存在。你是否忘记运行`brambleclaw init` 命令？请检查配置文件或手动创建")
+			return fmt.Errorf("工作空间目录不存在: %s", c.Workspace)
 		}
 		return err
 	}
-	if info.IsDir() != true {
-		return fmt.Errorf("无效的全局工作空间目录：类型错误")
+
+	// 3. 确保它不是个文件
+	if !info.IsDir() {
+		return fmt.Errorf("工作空间路径必须是一个目录，而非文件: %s", c.Workspace)
 	}
+
 	return nil
 }
 

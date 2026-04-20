@@ -1,6 +1,7 @@
 package agent
 
 import (
+	util "brambleclaw/internal"
 	"brambleclaw/logger"
 	"fmt"
 	"strings"
@@ -10,7 +11,7 @@ import (
 
 // PersistentSessionManager 支持持久化的 Session 管理器
 type PersistentSessionManager struct {
-	sessions         map[string]*Session
+	sessions         map[string]*Session // session key --> session
 	mu               sync.RWMutex
 	store            *SessionStore
 	agentName        string
@@ -33,19 +34,23 @@ func NewPersistentSessionManager(agentName, workspacePath string) *PersistentSes
 		store:           store,
 		agentName:       agentName,
 		stopChan:        make(chan struct{}),
-		autosaveEnabled: false,
+		autosaveEnabled: true,
 	}
 	return mgr
 }
 
-// LoadSessions 从存储加载所有 session
-func (m *PersistentSessionManager) LoadSessions() error {
-	metadata, err := m.store.ListSessions(m.agentName)
-	if err != nil {
-		return fmt.Errorf("列出 sessions 失败: %w", err)
+// LoadSessions 加载所有 session
+func (m *PersistentSessionManager) LoadSessions() {
+	metaData, err := m.store.ListSessions()
+	if len(metaData) == 0 {
+		logger.L().Debug().Msg("No sessions found")
 	}
 
-	for _, metadata := range metadata {
+	if err != nil {
+		logger.L().Error().Err(err).Msg("Error loading sessions")
+	}
+
+	for _, metadata := range metaData {
 		messages, _, err := m.store.LoadSession(m.agentName, metadata.ChannelName, metadata.ChatID)
 		if err != nil {
 			logger.L().Warn().
@@ -58,7 +63,8 @@ func (m *PersistentSessionManager) LoadSessions() error {
 		}
 
 		// 构建 session key
-		sessionKey := metadata.ChannelName + "::" + metadata.ChatID
+		sessionKey := util.BuildSessionKey(m.agentName, metadata.ChannelName, metadata.ChatID)
+
 		sess := &Session{
 			Key:       sessionKey,
 			Messages:  messages,
@@ -76,8 +82,6 @@ func (m *PersistentSessionManager) LoadSessions() error {
 			Int("message_count", len(messages)).
 			Msg("session 加载成功")
 	}
-
-	return nil
 }
 
 // GetOrCreate 获取或创建 session
@@ -117,7 +121,7 @@ func (m *PersistentSessionManager) Update(session *Session) {
 	m.sessions[session.Key] = session
 }
 
-// SaveSession 保存指定 session 到存储
+// SaveSession 保存指定 session 和 对应的 meta data
 func (m *PersistentSessionManager) SaveSession(sessionKey string) error {
 	m.mu.RLock()
 	sess, ok := m.sessions[sessionKey]
@@ -127,16 +131,16 @@ func (m *PersistentSessionManager) SaveSession(sessionKey string) error {
 		return fmt.Errorf("session 不存在: %s", sessionKey)
 	}
 
-	// 解析 session key: channel::chatID
-	parts := strings.SplitN(sessionKey, "::", 2)
-	if len(parts) != 2 {
+	// 解析 session key: channel::agent::chatID
+	parts := strings.SplitN(sessionKey, "::", 3)
+	if len(parts) != 3 {
 		return fmt.Errorf("无效的 session key: %s", sessionKey)
 	}
-	channelName, chatID := parts[0], parts[1]
+	channelName, chatID := parts[0], parts[2]
 
 	// 保存消息
 	if err := m.store.SaveSession(m.agentName, channelName, chatID, sess.Messages); err != nil {
-		return fmt.Errorf("保存 session 失败: %w", err)
+		return err
 	}
 
 	// 更新并保存元数据
@@ -157,7 +161,7 @@ func (m *PersistentSessionManager) SaveSession(sessionKey string) error {
 }
 
 // SaveAllSessions 保存所有 session
-func (m *PersistentSessionManager) SaveAllSessions() error {
+func (m *PersistentSessionManager) SaveAllSessions() {
 	m.mu.RLock()
 	sessions := make([]*Session, 0, len(m.sessions))
 	for _, sess := range m.sessions {
@@ -165,29 +169,24 @@ func (m *PersistentSessionManager) SaveAllSessions() error {
 	}
 	m.mu.RUnlock()
 
-	var lastErr error
 	for _, sess := range sessions {
 		if err := m.SaveSession(sess.Key); err != nil {
 			logger.L().Error().Err(err).Str("session_key", sess.Key).Msg("保存 session 失败")
-			lastErr = err
 		}
 	}
 
-	return lastErr
 }
 
 // autosaveLoop 自动保存循环
 func (m *PersistentSessionManager) autosaveLoop() {
 	logger.L().Debug().Msg("[Session] autosave loop start")
-	ticker := time.NewTicker(m.autosaveInterval)
+	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ticker.C:
-			if err := m.SaveAllSessions(); err != nil {
-				logger.L().Error().Err(err).Msg("自动保存 sessions 失败")
-			}
+			m.SaveAllSessions()
 		case <-m.stopChan:
 			return
 		}
@@ -199,9 +198,7 @@ func (m *PersistentSessionManager) Stop() {
 	close(m.stopChan)
 
 	// 最后一次保存
-	if err := m.SaveAllSessions(); err != nil {
-		logger.L().Error().Err(err).Msg("停止时保存 sessions 失败")
-	}
+	m.SaveAllSessions()
 }
 
 // GetAllSessions 获取所有 session（用于分析器）

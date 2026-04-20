@@ -3,6 +3,7 @@ package agent
 import (
 	"brambleclaw/bus"
 	"brambleclaw/config"
+	util "brambleclaw/internal"
 	"brambleclaw/logger"
 	"brambleclaw/tools"
 	"brambleclaw/tools/mcp"
@@ -59,7 +60,7 @@ func (a *Agent) RegisterTool(tool tools.Tool) {
 // handleMessage 处理入站消息
 func (a *Agent) HandleMessage(ctx context.Context, msg *bus.InBoundMessage) {
 	// 构建系统提示
-	sessKey := msg.SessionKey()
+	sessKey := util.BuildSessionKey(a.config.Name, msg.InChannel, msg.ChatID)
 	sess, isNewSession := a.sessionMgr.GetOrCreate(sessKey)
 	if isNewSession {
 		fullSystemPrompt, err := a.contextBuilder.BuildFullSystemPrompt(msg.InChannel, msg.ChatID, msg.SenderID)
@@ -128,10 +129,7 @@ func (a *Agent) HandleMessage(ctx context.Context, msg *bus.InBoundMessage) {
 func (a *Agent) Start(ctx context.Context) error {
 	// 加载历史 sessions
 	logger.L().Info().Msg("Starting agent")
-	if err := a.LoadSessions(); err != nil {
-		logger.L().Warn().Err(err).Msg("加载历史 sessions 失败")
-		// 不中断启动，继续使用空 sessions
-	}
+	a.sessionMgr.LoadSessions()
 
 	// 启动 session 管理
 	a.sessionMgr.Start()
@@ -148,19 +146,14 @@ func (a *Agent) Start(ctx context.Context) error {
 	return nil
 }
 
-// LoadSessions 从存储加载所有 session
-func (a *Agent) LoadSessions() error {
-	return a.sessionMgr.LoadSessions()
-}
-
 // SaveSession 立即保存指定 session
 func (a *Agent) SaveSession(sessionKey string) error {
 	return a.sessionMgr.SaveSession(sessionKey)
 }
 
 // SaveAllSessions 保存所有 session
-func (a *Agent) SaveAllSessions() error {
-	return a.sessionMgr.SaveAllSessions()
+func (a *Agent) SaveAllSessions() {
+	a.sessionMgr.SaveAllSessions()
 }
 
 // GetWorkspace 获取工作目录
@@ -176,9 +169,7 @@ func (a *Agent) GetMemoryDir() string {
 // Stop 停止Agent
 func (a *Agent) Stop() {
 	// 保存所有 sessions
-	if err := a.sessionMgr.SaveAllSessions(); err != nil {
-		logger.L().Error().Err(err).Msg("保存 sessions 失败")
-	}
+	a.sessionMgr.SaveAllSessions()
 
 	// 停止 session manager
 	a.sessionMgr.Stop()

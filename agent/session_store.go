@@ -24,7 +24,7 @@ type SessionMetadata struct {
 
 // SessionStore session 存储管理器
 type SessionStore struct {
-	basePath string
+	basePath string // Agent workspace. ex: ~/.brambleclaw/worksapce/main/workspace
 }
 
 // NewSessionStore 创建 session 存储管理器
@@ -35,21 +35,8 @@ func NewSessionStore(basePath string) *SessionStore {
 }
 
 // GetMemoryDir 获取 agent 的 memory 目录
-// 新的结构: {basePath}/{agentName}/workspace/memory
 func (s *SessionStore) GetMemoryDir(agentName string) string {
-	return filepath.Join(s.basePath, agentName, "workspace", "memory")
-}
-
-// GetAgentWorkspaceDir 获取 agent 的 workspace 根目录
-// 结构: {basePath}/{agentName}/
-func (s *SessionStore) GetAgentWorkspaceDir(agentName string) string {
-	return filepath.Join(s.basePath, agentName)
-}
-
-// GetAgentWorkspaceSubDir 获取 agent workspace 下的子目录
-// 结构: {basePath}/{agentName}/workspace/{subDir}
-func (s *SessionStore) GetAgentWorkspaceSubDir(agentName, subDir string) string {
-	return filepath.Join(s.basePath, agentName, "workspace", subDir)
+	return filepath.Join(s.basePath, "memory")
 }
 
 // BuildSessionFilename 构建 session 文件名
@@ -62,11 +49,11 @@ func (s *SessionStore) BuildMetadataFilename(agentName, channelName, chatID stri
 	return fmt.Sprintf("agent_%s_%s_%s.meta.json", agentName, channelName, chatID)
 }
 
-// SaveSession 保存 session 到文件
+// SaveSession 保存 session 和 meta data 到文件
 func (s *SessionStore) SaveSession(agentName, channelName, chatID string, messages []AgentMessage) error {
 	// 确保目录存在
-	memoryDir := s.GetMemoryDir(agentName)
-	if err := os.MkdirAll(memoryDir, 0755); err != nil {
+	memoryDir := filepath.Join(s.basePath, "memory")
+	if err := os.MkdirAll(filepath.Join(s.basePath, "memory"), 0755); err != nil {
 		return fmt.Errorf("创建 memory 目录失败(%s): %w", memoryDir, err)
 	}
 
@@ -74,8 +61,8 @@ func (s *SessionStore) SaveSession(agentName, channelName, chatID string, messag
 	filename := s.BuildSessionFilename(agentName, channelName, chatID)
 	filepath := filepath.Join(memoryDir, filename)
 
-	// 以追加模式打开文件（JSONL 格式）
-	file, err := os.OpenFile(filepath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	// 以覆盖模式打开文件（JSONL 格式），每次保存完整消息列表
+	file, err := os.OpenFile(filepath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
 		return fmt.Errorf("打开 session 文件失败(%s): %w", filepath, err)
 	}
@@ -121,8 +108,8 @@ func (s *SessionStore) SaveSession(agentName, channelName, chatID string, messag
 
 // LoadSession 从文件加载 session
 func (s *SessionStore) LoadSession(agentName, channelName, chatID string) ([]AgentMessage, *SessionMetadata, error) {
-	// 构建文件路径
-	memoryDir := s.GetMemoryDir(agentName)
+	// 构建 session 文件路径
+	memoryDir := filepath.Join(s.basePath, "memory")
 	filename := s.BuildSessionFilename(agentName, channelName, chatID)
 	filepath := filepath.Join(memoryDir, filename)
 
@@ -139,14 +126,13 @@ func (s *SessionStore) LoadSession(agentName, channelName, chatID string) ([]Age
 		return []AgentMessage{}, metadata, nil
 	}
 
-	// 打开文件
+	// 打开 session 文件并读取
 	file, err := os.Open(filepath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("打开 session 文件失败(%s): %w", filepath, err)
 	}
 	defer file.Close()
 
-	// 读取消息
 	var messages []AgentMessage
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -162,7 +148,6 @@ func (s *SessionStore) LoadSession(agentName, channelName, chatID string) ([]Age
 		}
 		messages = append(messages, msg)
 	}
-
 	if err := scanner.Err(); err != nil {
 		return nil, nil, fmt.Errorf("读取 session 文件失败: %w", err)
 	}
@@ -182,9 +167,8 @@ func (s *SessionStore) LoadSession(agentName, channelName, chatID string) ([]Age
 
 // loadOrCreateMetadata 加载或创建元数据
 func (s *SessionStore) loadOrCreateMetadata(agentName, channelName, chatID string, messages []AgentMessage) *SessionMetadata {
-	memoryDir := s.GetMemoryDir(agentName)
 	metaFilename := s.BuildMetadataFilename(agentName, channelName, chatID)
-	metaPath := filepath.Join(memoryDir, metaFilename)
+	metaPath := filepath.Join(s.basePath, "memory", "meta_data", metaFilename)
 
 	// 尝试加载现有元数据
 	if data, err := os.ReadFile(metaPath); err == nil {
@@ -220,19 +204,24 @@ func (s *SessionStore) loadOrCreateMetadata(agentName, channelName, chatID strin
 
 // SaveMetadata 保存元数据
 func (s *SessionStore) SaveMetadata(metadata *SessionMetadata) error {
-	memoryDir := s.GetMemoryDir(metadata.AgentName)
-	if err := os.MkdirAll(memoryDir, 0755); err != nil {
-		return fmt.Errorf("创建 memory 目录失败(%s): %w", memoryDir, err)
-	}
-
+	// 1. 先构造出完整的文件路径
 	metaFilename := s.BuildMetadataFilename(metadata.AgentName, metadata.ChannelName, metadata.ChatID)
-	metaPath := filepath.Join(memoryDir, metaFilename)
+	metaPath := filepath.Join(s.basePath, "memory", "meta_data", metaFilename)
+
+	// 2. 获取该文件所在的目录 (即 .../memory/meta_data)
+	dir := filepath.Dir(metaPath)
+
+	// 3. 一次性创建所有缺失的父级目录
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("创建元数据目录失败(%s): %w", dir, err)
+	}
 
 	data, err := json.MarshalIndent(metadata, "", "  ")
 	if err != nil {
 		return fmt.Errorf("序列化元数据失败: %w", err)
 	}
 
+	// 4. 写入文件
 	if err := os.WriteFile(metaPath, data, 0644); err != nil {
 		return fmt.Errorf("保存元数据失败(%s): %w", metaPath, err)
 	}
@@ -240,9 +229,9 @@ func (s *SessionStore) SaveMetadata(metadata *SessionMetadata) error {
 	return nil
 }
 
-// ListSessions 列出所有 session
-func (s *SessionStore) ListSessions(agentName string) ([]SessionMetadata, error) {
-	memoryDir := s.GetMemoryDir(agentName)
+// ListSessions 列出所有 session 的 metadata
+func (s *SessionStore) ListSessions() ([]SessionMetadata, error) {
+	memoryDir := filepath.Join(s.basePath, "memory")
 
 	// 检查目录是否存在
 	if _, err := os.Stat(memoryDir); os.IsNotExist(err) {
@@ -287,7 +276,7 @@ func (s *SessionStore) ListSessions(agentName string) ([]SessionMetadata, error)
 
 // DeleteSession 删除 session
 func (s *SessionStore) DeleteSession(agentName, channelName, chatID string) error {
-	memoryDir := s.GetMemoryDir(agentName)
+	memoryDir := filepath.Join(s.basePath, "memory")
 
 	// 删除数据文件
 	filename := s.BuildSessionFilename(agentName, channelName, chatID)
@@ -298,7 +287,7 @@ func (s *SessionStore) DeleteSession(agentName, channelName, chatID string) erro
 
 	// 删除元数据文件
 	metaFilename := s.BuildMetadataFilename(agentName, channelName, chatID)
-	metaPath := filepath.Join(memoryDir, metaFilename)
+	metaPath := filepath.Join(memoryDir, "meta_data", metaFilename)
 	if err := os.Remove(metaPath); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("删除元数据文件失败(%s): %w", metaPath, err)
 	}

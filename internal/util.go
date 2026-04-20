@@ -1,10 +1,26 @@
 package util
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
+
+func BuildSessionKey(agentName, channelName, chatID string) string {
+	sessionKey := channelName + "::" + agentName + "::" + chatID
+	return sessionKey
+}
+
+func PrintStack() {
+	fmt.Println("--- Current Call Stack ---")
+	// 创建一个缓冲区来存放堆栈信息
+	buf := make([]byte, 1024)
+	n := runtime.Stack(buf, false) // false 表示只获取当前 goroutine 的堆栈
+
+	fmt.Printf("%s\n", buf[:n])
+}
 
 // IsFirstLevelSubDir 判断 sub 是否是 parent 的第一级子目录
 func IsFirstLevelSubDir(parent, sub string) (bool, error) {

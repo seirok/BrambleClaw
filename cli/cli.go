@@ -69,7 +69,7 @@ func init() {
 	rootCmd.AddCommand(initCmd)
 
 	agentCmd.Flags().StringVarP(&agentMessage, "message", "m", "", "非交互式执行：发送一条消息后退出")
-	agentCmd.Flags().StringVarP(&agentSession, "session", "s", "cli:default", "指定 Session Key，保留上下文对话")
+	agentCmd.Flags().StringVarP(&agentSession, "session", "s", "default", "指定 Session Key，保留上下文对话")
 	agentCmd.AddCommand(agentNewCmd)
 	rootCmd.AddCommand(agentCmd)
 

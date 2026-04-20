@@ -72,8 +72,8 @@ func (g *Gateway) RegisterAgents(config *config.Config) error {
 		}
 
 		// 检查并修正 agent 的 workspace 路径
-		// 正确的路径应该为： config.Workspace/cfg.Name/cfg.Workspace
-		expectedWorkspace := filepath.Join(config.Workspace, cfg.Name, cfg.Workspace)
+		// 正确的路径应该为： $config.Workspace$ / $cfg.Name$ / workspace
+		expectedWorkspace := filepath.Join(config.Workspace, cfg.Name, "workspace")
 
 		// 检查当前路径是否与期望路径一致
 		if cfg.Workspace != expectedWorkspace {

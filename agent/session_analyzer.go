@@ -77,7 +77,7 @@ func (a *SessionAnalyzer) AnalyzeAll() ([]SessionInfo, error) {
 
 // AnalyzeAgent 分析指定 agent 的所有 session
 func (a *SessionAnalyzer) AnalyzeAgent(agentName string) ([]SessionInfo, error) {
-	metadatas, err := a.store.ListSessions(agentName)
+	metadatas, err := a.store.ListSessions()
 	if err != nil {
 		return nil, err
 	}

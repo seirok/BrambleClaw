@@ -37,6 +37,12 @@ type MessageBus struct {
 	mu       sync.RWMutex
 }
 
+// 在goclaw系统中，同一条消息可能需要被多个组件处理：
+//
+// - 通道管理器 ：需要将消息发送到对应的通道（如Telegram、CLI等）
+// - 日志系统 ：需要记录所有消息
+// - 监控系统 ：需要统计消息流量和处理状态
+// - 其他组件 ：可能有其他组件需要处理特定类型的消息
 type MessageSubscription struct {
 	ID      string
 	Channel chan *OutBoundMessage
@@ -49,13 +55,6 @@ func NewMessageBus(buf_size int) *MessageBus {
 		outSubs:  make(map[string]chan *OutBoundMessage),
 	}
 }
-
-// 在goclaw系统中，同一条消息可能需要被多个组件处理：
-//
-//- 通道管理器 ：需要将消息发送到对应的通道（如Telegram、CLI等）
-//- 日志系统 ：需要记录所有消息
-//- 监控系统 ：需要统计消息流量和处理状态
-//- 其他组件 ：可能有其他组件需要处理特定类型的消息
 
 func (mb *MessageBus) Subscribe() *MessageSubscription {
 	id := uuid.New().String()
@@ -105,6 +104,7 @@ func (mb *MessageBus) DistributeOutBoundMessage(ctx context.Context) {
 		}
 	}
 }
+
 func (mb *MessageBus) PublishInBoundMessage(ctx context.Context, in_msg *InBoundMessage) error {
 	select {
 	case mb.InBound <- in_msg:

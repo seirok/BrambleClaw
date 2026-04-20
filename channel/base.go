@@ -3,8 +3,6 @@ package channel
 import (
 	"brambleclaw/bus"
 	"context"
-
-	"github.com/google/uuid"
 )
 
 type BaseChannel interface {
@@ -34,17 +32,10 @@ func NewBaseChannelImpl(name string, config *BaseChannelConfig, bus *bus.Message
 	}
 }
 
-func BuildMediaScope(channel, chatID, messageID string) string {
-	id := messageID
-	if id == "" {
-		id = uuid.NewString()
-	}
-	return channel + ":" + chatID + ":" + id
-}
-
 func (c *BaseChannelImpl) Name() string {
 	return c.name
 }
+
 func (c *BaseChannelImpl) IsAllowed(id string) bool {
 	// Channel 是否使能
 	if c.config.Enabled == false {
