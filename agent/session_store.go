@@ -49,6 +49,59 @@ func (s *SessionStore) BuildMetadataFilename(agentName, channelName, chatID stri
 	return fmt.Sprintf("agent_%s_%s_%s.meta.json", agentName, channelName, chatID)
 }
 
+// ClearSession 清空指定 session 的所有消息
+func (s *SessionStore) ClearSession(agentName, channelName, chatID string) error {
+	memoryDir := filepath.Join(s.basePath, "memory")
+	if err := os.MkdirAll(memoryDir, 0755); err != nil {
+		return fmt.Errorf("创建 memory 目录失败(%s): %w", memoryDir, err)
+	}
+
+	filename := s.BuildSessionFilename(agentName, channelName, chatID)
+	sessionPath := filepath.Join(memoryDir, filename)
+
+	// 先写入临时文件
+	tmpPath := sessionPath + ".tmp"
+	// 空会话只需写入空文件即可
+	if err := os.WriteFile(tmpPath, []byte{}, 0644); err != nil {
+		return fmt.Errorf("写入临时文件失败: %w", err)
+	}
+
+	// 原子重命名：确保要么完全成功，要么保持原文件不变
+	if err := os.Rename(tmpPath, sessionPath); err != nil {
+		// 清理临时文件
+		os.Remove(tmpPath)
+		return fmt.Errorf("重命名临时文件失败: %w", err)
+	}
+
+	// 更新元数据
+	metadata := &SessionMetadata{
+		AgentName:    agentName,
+		ChannelName:  channelName,
+		ChatID:       chatID,
+		UpdatedAt:    time.Now(),
+		MessageCount: 0,
+	}
+
+	_, existingMetadata, _ := s.LoadSession(agentName, channelName, chatID)
+	if existingMetadata != nil {
+		metadata.CreatedAt = existingMetadata.CreatedAt
+	} else {
+		metadata.CreatedAt = time.Now()
+	}
+
+	if err := s.SaveMetadata(metadata); err != nil {
+		logger.L().Warn().Err(err).Str("agent", agentName).Msg("保存元数据失败")
+	}
+
+	logger.L().Debug().
+		Str("agent", agentName).
+		Str("channel", channelName).
+		Str("chat_id", chatID).
+		Msg("session 清空成功")
+
+	return nil
+}
+
 // SaveSession 保存 session 和 meta data 到文件
 func (s *SessionStore) SaveSession(agentName, channelName, chatID string, messages []AgentMessage) error {
 	// 确保目录存在
@@ -231,16 +284,16 @@ func (s *SessionStore) SaveMetadata(metadata *SessionMetadata) error {
 
 // ListSessions 列出所有 session 的 metadata
 func (s *SessionStore) ListSessions() ([]SessionMetadata, error) {
-	memoryDir := filepath.Join(s.basePath, "memory")
+	metaDir := filepath.Join(s.basePath, "memory", "meta_data")
 
 	// 检查目录是否存在
-	if _, err := os.Stat(memoryDir); os.IsNotExist(err) {
+	if _, err := os.Stat(metaDir); os.IsNotExist(err) {
 		return []SessionMetadata{}, nil
 	}
 
-	entries, err := os.ReadDir(memoryDir)
+	entries, err := os.ReadDir(metaDir)
 	if err != nil {
-		return nil, fmt.Errorf("读取 memory 目录失败(%s): %w", memoryDir, err)
+		return nil, fmt.Errorf("读取 meta_data 目录失败(%s): %w", metaDir, err)
 	}
 
 	var metadatas []SessionMetadata
@@ -255,7 +308,7 @@ func (s *SessionStore) ListSessions() ([]SessionMetadata, error) {
 			continue
 		}
 
-		metaPath := filepath.Join(memoryDir, name)
+		metaPath := filepath.Join(metaDir, name)
 		data, err := os.ReadFile(metaPath)
 		if err != nil {
 			logger.L().Warn().Err(err).Str("path", metaPath).Msg("读取元数据文件失败")

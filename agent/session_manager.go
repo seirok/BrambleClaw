@@ -112,6 +112,41 @@ func (m *PersistentSessionManager) Get(key string) (*Session, bool) {
 	return sess, ok
 }
 
+// ClearSession 清空指定 session 的消息
+// 返回清空前消息数量和错误
+func (m *PersistentSessionManager) ClearSession(sessionKey string) (int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	sess, ok := m.sessions[sessionKey]
+	if !ok {
+		return 0, fmt.Errorf("session not found: %s", sessionKey)
+	}
+
+	// 记录清空前消息数量
+	count := len(sess.Messages)
+
+	// 解析 session key
+	parts := strings.SplitN(sessionKey, "::", 3)
+	if len(parts) != 3 {
+		return 0, fmt.Errorf("invalid session key: %s", sessionKey)
+	}
+	channelName, chatID := parts[0], parts[2]
+
+	// 清空磁盘文件
+	if err := m.store.ClearSession(m.agentName, channelName, chatID); err != nil {
+		return 0, fmt.Errorf("failed to clear session file: %w", err)
+	}
+
+	// 清空内存消息
+	sess.Messages = []AgentMessage{}
+	sess.Modified = true
+	sess.UpdatedAt = time.Now()
+	sess.Summarized = 0
+
+	return count, nil
+}
+
 // Update 更新 session
 func (m *PersistentSessionManager) Update(session *Session) {
 	m.mu.Lock()

@@ -8,7 +8,9 @@ import (
 	"brambleclaw/tools"
 	"brambleclaw/tools/mcp"
 	"context"
+	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -61,8 +63,41 @@ func (a *Agent) RegisterTool(tool tools.Tool) {
 func (a *Agent) HandleMessage(ctx context.Context, msg *bus.InBoundMessage) {
 	// 构建系统提示
 	sessKey := util.BuildSessionKey(a.config.Name, msg.InChannel, msg.ChatID)
+
+	// 处理 /clear 命令
+	if strings.TrimSpace(msg.Content) == "/clear" {
+		count, err := a.sessionMgr.ClearSession(sessKey)
+		if err != nil {
+			// 发送错误响应
+			outbound := &bus.OutBoundMessage{
+				OutChannel: msg.InChannel,
+				ChatID:     msg.ChatID,
+				Content:    fmt.Sprintf("Session clear failed: %v", err),
+				ReplyTo:    msg.ID,
+				TimeStamp:  time.Now(),
+			}
+			if err := a.bus.PublishOutBoundMessage(ctx, outbound); err != nil {
+				logger.L().Error().Err(err).Msg("Error publishing clear error response")
+			}
+			return
+		}
+
+		// 发送成功响应
+		outbound := &bus.OutBoundMessage{
+			OutChannel: msg.InChannel,
+			ChatID:     msg.ChatID,
+			Content:    fmt.Sprintf("Session cleared. %d message(s) removed.", count),
+			ReplyTo:    msg.ID,
+			TimeStamp:  time.Now(),
+		}
+		if err := a.bus.PublishOutBoundMessage(ctx, outbound); err != nil {
+			logger.L().Error().Err(err).Msg("Error publishing clear success response")
+		}
+		return
+	}
+
 	sess, isNewSession := a.sessionMgr.GetOrCreate(sessKey)
-	if isNewSession {
+	if isNewSession || len(sess.Messages) == 0 {
 		fullSystemPrompt, err := a.contextBuilder.BuildFullSystemPrompt(msg.InChannel, msg.ChatID, msg.SenderID)
 		if err != nil {
 			logger.L().Error().Err(err).Msg("Failed to build full system prompt")

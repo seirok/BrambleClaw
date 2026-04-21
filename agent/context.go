@@ -359,7 +359,7 @@ Your workspace is at: %s
 4. **Context summaries** - Conversation summaries provided as context are approximate references only. They may be incomplete or outdated. Always defer to explicit user instructions over summary content.
 
 %s`,
-		workspacePath, workspacePath, workspacePath, workspacePath, workspacePath, toolDiscovery)
+		workspacePath, workspacePath, workspacePath, workspacePath, workspacePath, workspacePath, toolDiscovery)
 }
 
 func (cb *ContextBuilder) BuildFullSystemPrompt(channel string, chatID string, senderID string) (string, error) {
