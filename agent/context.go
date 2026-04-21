@@ -17,9 +17,8 @@ import (
 )
 
 type ContextBuilder struct {
-	workspace string
-	agent     *Agent
-	compact   *config.CompactConfig
+	agent   *Agent
+	compact *config.CompactConfig
 }
 
 type SkillInfo struct {
@@ -29,14 +28,15 @@ type SkillInfo struct {
 	Description string `json:"description"`
 }
 
-func formatCurrentSenderLine(id string) (string, error) {
+func formatCurrentSenderLine(id string) string {
 	if id == "" {
-		return "", fmt.Errorf("sender ID is empty")
+		logger.L().Error().Msg("sender ID is empty")
+		return ""
 	}
-	return fmt.Sprintf("Sender ID: %s", id), nil
+	return fmt.Sprintf("Sender ID: %s", id)
 }
 
-func (cb *ContextBuilder) BuildDynamicCtx(channel, chatID, senderID string) (string, error) {
+func (cb *ContextBuilder) BuildDynamicCtx(channel, chatID, senderID string) string {
 	// Time
 	now := time.Now().Format("2006-01-02 15:04 (Monday)")
 
@@ -44,10 +44,7 @@ func (cb *ContextBuilder) BuildDynamicCtx(channel, chatID, senderID string) (str
 	rt := fmt.Sprintf("%s %s, Go %s", runtime.GOOS, runtime.GOARCH, runtime.Version())
 
 	// Sender Info
-	senderLine, err := formatCurrentSenderLine(senderID)
-	if err != nil {
-		return "", err
-	}
+	senderLine := formatCurrentSenderLine(senderID)
 
 	// Compose
 	var sb strings.Builder
@@ -55,7 +52,7 @@ func (cb *ContextBuilder) BuildDynamicCtx(channel, chatID, senderID string) (str
 	fmt.Fprintf(&sb, "## Current Runtime\n%s\n\n", rt)
 	fmt.Fprintf(&sb, "## Current Session\nChannel: %s\nChat ID: %s\n\n", channel, chatID)
 	fmt.Fprintf(&sb, "## Current Sender\n%s", senderLine)
-	return sb.String(), nil
+	return sb.String()
 }
 
 func nodeText(n ast.Node) string {
@@ -126,10 +123,10 @@ func escapeXML(s string) string {
 	return s
 }
 
-func (cb *ContextBuilder) ListSkills() ([]SkillInfo, error) {
+func (cb *ContextBuilder) ListSkills() []SkillInfo {
 	//
 	var skills []SkillInfo
-	err := filepath.Walk(filepath.Join(cb.workspace, "skills"), func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(filepath.Join(cb.agent.workspace, "skills"), func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -157,19 +154,17 @@ func (cb *ContextBuilder) ListSkills() ([]SkillInfo, error) {
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		logger.L().Error().Err(err).Msg("could not list skills")
+		return nil
 	}
 
 	//
-	return skills, nil
+	return skills
 }
 
-func (cb *ContextBuilder) BuildSkillsSummary() (string, error) {
+func (cb *ContextBuilder) BuildSkillsSummary() string {
 	// Load skill
-	allSkills, err := cb.ListSkills()
-	if err != nil {
-		return "", err
-	}
+	allSkills := cb.ListSkills()
 
 	//
 	var lines []string
@@ -191,10 +186,10 @@ func (cb *ContextBuilder) BuildSkillsSummary() (string, error) {
 	}
 	lines = append(lines, "</skills>")
 
-	return strings.Join(lines, "\n"), nil
+	return strings.Join(lines, "\n")
 }
 
-func (cb *ContextBuilder) BuildStaticCtx() (string, error) {
+func (cb *ContextBuilder) BuildStaticCtx() string {
 	//
 	var lines []string
 
@@ -203,47 +198,132 @@ func (cb *ContextBuilder) BuildStaticCtx() (string, error) {
 	lines = append(lines, identity)
 
 	// 2. 加载Bootstrap（助手身份设定）
-	bootstrap, err := cb.LoadBootstrapFiles()
-	if err != nil {
-		return "", err
-	}
+	bootstrap := cb.LoadBootstrapFiles()
 	lines = append(lines, bootstrap)
 
 	// 3. Skill summary
-	summary, err := cb.BuildSkillsSummary()
-	if err != nil {
-		return "", err
-	}
+	summary := cb.BuildSkillsSummary()
 	lines = append(lines, summary)
 
 	// 4. Memory
-	memory, err := cb.GetMemoryContext()
-	if err != nil {
-		return "", err
-	}
+	memory := cb.GetMemoryContext()
 	lines = append(lines, memory)
 
 	//
 	staticCtx := strings.Join(lines, "\n\n-------\n\n")
-	return staticCtx, nil
+	return staticCtx
 }
 
-func (cb *ContextBuilder) LoadBootstrapFiles() (string, error) {
+func (cb *ContextBuilder) LoadBootstrapFiles() string {
 	var sb strings.Builder
 	files := []string{"AGENT.md", "SOUL.md", "USER.md"}
 	for _, file := range files {
-		data, err := os.ReadFile(filepath.Join(cb.workspace, file))
+		filePath := filepath.Join(cb.agent.workspace, file)
+
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			if err := cb.createDefaultBootstrapFile(file, filePath); err != nil {
+				logger.L().Warn().Err(err).Str("file", file).Msg("创建默认 bootstrap 文件失败")
+				continue
+			}
+		}
+
+		data, err := os.ReadFile(filePath)
 		if err != nil {
 			if os.IsNotExist(err) {
 				logger.L().Debug().Str("file", file).Msg("Bootstrap file not found, skipping")
 				continue
 			}
-			return "", fmt.Errorf("failed to read file %s: %w", file, err)
+			logger.L().Error().Err(err).Str("file", file).Msg("failed to read file")
+			return ""
 		}
 		fmt.Fprintf(&sb, "## %s\n\n", strings.TrimSpace(string(data)))
 	}
 
-	return sb.String(), nil
+	return sb.String()
+}
+
+func (cb *ContextBuilder) createDefaultBootstrapFile(filename, filePath string) error {
+	var content string
+
+	switch filename {
+	case "AGENT.md":
+		content = "---\n" +
+			"name: pico\n" +
+			"description: >\n" +
+			"  The default general-purpose assistant for everyday conversation, problem\n" +
+			"  solving, and workspace help.\n" +
+			"---\n" +
+			"You are my default assistant for this workspace.\n" +
+			"Your name is brambleclaw 🦞.\n\n" +
+			"## Role\n\n" +
+			"You are an ultra-lightweight personal AI assistant written in Go, designed to\n" +
+			"be practical, accurate, and efficient.\n\n" +
+			"## Mission\n\n" +
+			"- Help with general requests, questions, and problem solving\n" +
+			"- Use available tools when action is required\n" +
+			"- Stay useful even on constrained hardware and minimal environments\n\n" +
+			"## Capabilities\n\n" +
+			"- Web search and content fetching\n" +
+			"- File system operations\n" +
+			"- Shell command execution\n" +
+			"- Skill-based extension\n" +
+			"- Memory and context management\n" +
+			"- Multi-channel messaging integrations when configured\n\n" +
+			"## Working Principles\n\n" +
+			"- Be clear, direct, and accurate\n" +
+			"- Prefer simplicity over unnecessary complexity\n" +
+			"- Be transparent about actions and limits\n" +
+			"- Respect user control, privacy, and safety\n" +
+			"- Aim for fast, efficient help without sacrificing quality\n\n" +
+			"## Goals\n\n" +
+			"- Provide fast and lightweight AI assistance\n" +
+			"- Support customization through skills and workspace files\n" +
+			"- Remain effective on constrained hardware\n" +
+			"- Improve through feedback and continued iteration\n\n" +
+			"Read `SOUL.md` as part of your identity and communication style."
+
+	case "SOUL.md":
+		content = "# Soul\n\n" +
+			"I am PicoClaw: calm, helpful, and practical.\n\n" +
+			"## Personality\n\n" +
+			"- Helpful and friendly\n" +
+			"- Concise and to the point\n" +
+			"- Curious and eager to learn\n" +
+			"- Honest and transparent\n" +
+			"- Calm under uncertainty\n\n" +
+			"## Values\n\n" +
+			"- Accuracy over speed\n" +
+			"- User privacy and safety\n" +
+			"- Transparency in actions\n" +
+			"- Continuous improvement\n" +
+			"- Simplicity over unnecessary complexity"
+
+	case "USER.md":
+		content = "# User\n\n" +
+			"Information about the user goes here.\n\n" +
+			"## Preferences\n\n" +
+			"- Communication style: (casual/formal)\n" +
+			"- Timezone: (your timezone)\n" +
+			"- Language: (your preferred language)\n\n" +
+			"## Personal Information\n\n" +
+			"- Name: (optional)\n" +
+			"- Location: (optional)\n" +
+			"- Occupation: (optional)\n\n" +
+			"## Learning Goals\n\n" +
+			"- What the user wants to learn from AI\n" +
+			"- Preferred interaction style\n" +
+			"- Areas of interest"
+
+	default:
+		return fmt.Errorf("unknown bootstrap file: %s", filename)
+	}
+
+	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+		return fmt.Errorf("failed to write default %s: %w", filename, err)
+	}
+
+	logger.L().Info().Str("file", filename).Msg("已创建默认 bootstrap 文件")
+	return nil
 }
 
 // TODO: 工具发现规则：只加载常见工具到上下文，如果需要再加载全部工具库
@@ -251,27 +331,25 @@ func (cb *ContextBuilder) getDiscoveryRule() string {
 	return ""
 }
 
-func (cb *ContextBuilder) GetMemoryContext() (string, error) {
+func (cb *ContextBuilder) GetMemoryContext() string {
 	var sb strings.Builder
 
-	memory, err := cb.GetLongTerm()
-	if err != nil {
-		return "", fmt.Errorf("failed to get memory context: %w", err)
-	}
+	memory := cb.GetLongTerm()
 	dailyNotes, _ := cb.GetRecentlyDailyNotes(3)
 
 	fmt.Fprintf(&sb, "## Memory Context\n%s\n\n", memory)
 	fmt.Fprintf(&sb, "## Recently Daily Notes\n%s\n", dailyNotes)
-	return sb.String(), nil
+	return sb.String()
 }
 
-func (cb *ContextBuilder) GetLongTerm() (string, error) {
-	longTermMemoryFile := filepath.Join(cb.workspace, "memory", "MEMORY.md")
+func (cb *ContextBuilder) GetLongTerm() string {
+	longTermMemoryFile := filepath.Join(cb.agent.workspace, "memory", "MEMORY.md")
 	data, err := os.ReadFile(longTermMemoryFile)
 	if err != nil {
-		return "", fmt.Errorf("failed to read file %s: %w", longTermMemoryFile, err)
+		logger.L().Error().Str("file", longTermMemoryFile).Err(err).Msg("Failed to read memory file")
+		return ""
 	}
-	return string(data), nil
+	return string(data)
 }
 
 func (cb *ContextBuilder) Compact(ctx context.Context, session *Session, usage int) error {
@@ -308,9 +386,10 @@ func (cb *ContextBuilder) Compact(ctx context.Context, session *Session, usage i
 	return nil
 }
 
-func (cb *ContextBuilder) GetSessionSummary() (string, error) {
-	return "", nil
+func (cb *ContextBuilder) GetSessionSummary() string {
+	return ""
 }
+
 func (cb *ContextBuilder) GetRecentlyDailyNotes(days int) (string, error) {
 	var sb strings.Builder
 
@@ -319,7 +398,7 @@ func (cb *ContextBuilder) GetRecentlyDailyNotes(days int) (string, error) {
 		//
 		date := time.Now().AddDate(0, 0, -i)
 		dateStr := date.Format("20060102")
-		dailyNote := filepath.Join(cb.workspace, "memory", dateStr[:6], dateStr+".md")
+		dailyNote := filepath.Join(cb.agent.workspace, "memory", dateStr[:6], dateStr+".md")
 		data, err := os.ReadFile(dailyNote)
 		if err != nil {
 			logger.L().Debug().Msg("failed to read file " + dailyNote + " maybe not exist")
@@ -334,7 +413,7 @@ func (cb *ContextBuilder) GetRecentlyDailyNotes(days int) (string, error) {
 }
 
 func (cb *ContextBuilder) getIdentity() string {
-	workspacePath, _ := filepath.Abs(filepath.Join(cb.workspace))
+	workspacePath, _ := filepath.Abs(filepath.Join(cb.agent.workspace))
 	toolDiscovery := cb.getDiscoveryRule()
 
 	return fmt.Sprintf(
@@ -364,22 +443,13 @@ Your workspace is at: %s
 
 func (cb *ContextBuilder) BuildFullSystemPrompt(channel string, chatID string, senderID string) (string, error) {
 	var systemPrompt []string
-	staticCtx, err := cb.BuildStaticCtx()
-	if err != nil {
-		return "", err
-	}
+	staticCtx := cb.BuildStaticCtx()
 	systemPrompt = append(systemPrompt, staticCtx)
 
-	dynamicCtx, err := cb.BuildDynamicCtx(channel, chatID, senderID)
-	if err != nil {
-		return "", err
-	}
+	dynamicCtx := cb.BuildDynamicCtx(channel, chatID, senderID)
 	systemPrompt = append(systemPrompt, dynamicCtx)
 
-	sessionSummary, err := cb.GetSessionSummary()
-	if err != nil {
-		return "", err
-	}
+	sessionSummary := cb.GetSessionSummary()
 	systemPrompt = append(systemPrompt, sessionSummary)
 
 	return strings.Join(systemPrompt, "\n\n"), nil

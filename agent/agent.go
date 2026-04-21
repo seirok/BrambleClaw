@@ -49,6 +49,7 @@ func NewAgent(config *config.AgentConfig, bus *bus.MessageBus, mcpManager *mcp.M
 		mcpManager:   mcpManager,
 		workspace:    config.Workspace,
 	}
+
 	builder.agent = agent
 	agent.contextBuilder = builder
 
@@ -173,11 +174,6 @@ func (a *Agent) Start(ctx context.Context) error {
 		logger.L().Error().Err(err).Msg("启动 MCP 管理器失败")
 		return err
 	}
-
-	// 注意：如果使用 Gateway 路由消息，这里不应该启动独立的 processMessages 循环，
-	// 因为 Gateway 会消费消息并调用 a.Process()。
-	// 但为了兼容独立运行模式，这里暂且保留或由上层决定是否启动。
-	// 为了避免和 Gateway 争抢消息，当作为 Gateway 的 Agent 注册时，不应调用此处的 processMessages。
 	return nil
 }
 
