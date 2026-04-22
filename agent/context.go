@@ -352,13 +352,20 @@ func (cb *ContextBuilder) GetLongTerm() string {
 	return string(data)
 }
 
-func (cb *ContextBuilder) Compact(ctx context.Context, session *Session, usage int) error {
+func (cb *ContextBuilder) Compact(ctx context.Context, session *Session, usage int, channel, chatID, senderID string) error {
 	// 检查是否需要压缩
 	msgs := session.Messages
 	if usage <= cb.compact.CompactThreshold || len(msgs)%cb.compact.CompactRounds != 0 {
 		return nil
 	}
-	// TODO: 边界检查
+	// 边界检查
+	if session.Summarized+(cb.compact.CompactRounds/4) > len(msgs) {
+		logger.L().Debug().Int("summarized", session.Summarized).
+			Int("rounds", cb.compact.CompactRounds).
+			Int("msgsLen", len(msgs)).
+			Msg("compact boundary check failed, skipping")
+		return nil
+	}
 	needToCompact := msgs[session.Summarized:(session.Summarized + (cb.compact.CompactRounds)/4)]
 	summarizeMsg := AgentMessage{
 		Role:      RoleUser,
@@ -369,14 +376,50 @@ func (cb *ContextBuilder) Compact(ctx context.Context, session *Session, usage i
 
 	resp, err := cb.agent.orchestrator.Run(ctx, needToCompact)
 	if err != nil {
-		return err
+		return fmt.Errorf("compact: generate summary failed: %w", err)
+	}
+
+	// 提取摘要内容
+	summaryContent := ""
+	if len(resp.Choices) > 0 {
+		summaryContent = resp.Choices[0].Message.Content
+	}
+
+	// 更新 SessionSummary 到 metadata
+	if summaryContent != "" {
+		if err := cb.agent.sessionMgr.UpdateSessionSummary(session.Key, summaryContent); err != nil {
+			logger.L().Error().Err(err).Str("sessionKey", session.Key).
+				Msg("compact: failed to update session summary, but continuing")
+		} else {
+			logger.L().Debug().Str("sessionKey", session.Key).
+				Str("summary", summaryContent[:min(100, len(summaryContent))]).
+				Msg("compact: session summary updated successfully")
+		}
+
+		// 重新构建 System Prompt 并替换 Messages[0]
+		newSystemPrompt, err := cb.BuildFullSystemPrompt(channel, chatID, senderID)
+		if err != nil {
+			logger.L().Error().Err(err).Str("sessionKey", session.Key).
+				Msg("compact: failed to rebuild system prompt, but continuing")
+		} else {
+			// 替换 Messages[0]
+			if len(session.Messages) > 0 {
+				session.Messages[0] = AgentMessage{
+					Role:      RoleSystem,
+					Content:   []ContentBlock{TextContent{Text: newSystemPrompt}},
+					Timestamp: time.Now().UnixMilli(),
+				}
+				session.Modified = true
+				logger.L().Debug().Str("sessionKey", session.Key).
+					Msg("compact: system prompt updated with new session summary")
+			}
+		}
 	}
 
 	// 更新边界指针
 	session.Summarized += cb.compact.CompactRounds / 4
 
-	// TODO
-
+	// 更新 token 使用情况
 	currentTokenUsed := resp.Usage.CompletionTokens + resp.Usage.PromptTokens
 	cb.agent.sessionMgr.Update(session, currentTokenUsed)
 

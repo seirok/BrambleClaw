@@ -143,7 +143,7 @@ func (a *Agent) HandleMessage(ctx context.Context, msg *bus.InBoundMessage) {
 
 	// TODO: 异步压缩上下文并更新summary
 	go func() {
-		if err = a.contextBuilder.Compact(ctx, sess, currentTokenUsed); err != nil {
+		if err = a.contextBuilder.Compact(ctx, sess, currentTokenUsed, msg.InChannel, msg.ChatID, msg.SenderID); err != nil {
 			logger.L().Error().Err(err).Msg("Failed to compact session")
 		}
 	}()

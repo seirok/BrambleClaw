@@ -238,6 +238,47 @@ func (m *PersistentSessionManager) Update(session *Session, tokenUsed int) {
 
 }
 
+// UpdateSessionSummary 更新 session 的摘要（追加模式，带时间戳）
+func (m *PersistentSessionManager) UpdateSessionSummary(sessionKey string, summaryContent string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	meta, exists := m.sessionsMeta[sessionKey]
+	if !exists {
+		return fmt.Errorf("session meta not found: %s", sessionKey)
+	}
+
+	// 追加新摘要（带时间戳）
+	timestamp := time.Now().Format("2006-01-02 15:04")
+	newEntry := fmt.Sprintf("[%s] %s", timestamp, summaryContent)
+
+	if meta.SessionSummary != "" {
+		meta.SessionSummary = meta.SessionSummary + "\n---\n" + newEntry
+	} else {
+		meta.SessionSummary = newEntry
+	}
+
+	// 限制最大长度（10000 字符），保留最近内容
+	const maxSummaryLength = 10000
+	if len(meta.SessionSummary) > maxSummaryLength {
+		meta.SessionSummary = meta.SessionSummary[len(meta.SessionSummary)-maxSummaryLength:]
+		// 尝试在分隔符处截断，保持完整条目
+		if idx := strings.Index(meta.SessionSummary, "---\n["); idx > 0 {
+			meta.SessionSummary = meta.SessionSummary[idx+4:] // 跳过 "---\n"
+		}
+	}
+
+	// 更新 metadata
+	meta.UpdatedAt = time.Now()
+
+	// 保存metadata
+	if err := m.SaveSessionMeta(sessionKey); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (m *PersistentSessionManager) SaveSessionMeta(sessionKey string) error {
 	m.mu.RLock()
 	sessMeta, ok := m.sessionsMeta[sessionKey]

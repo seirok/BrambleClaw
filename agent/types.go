@@ -121,13 +121,14 @@ type Session struct {
 }
 
 type SessionMetadata struct {
-	AgentName    string    `json:"agent_name"`
-	ChannelName  string    `json:"channel_name"`
-	ChatID       string    `json:"chat_id"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
-	MessageCount int       `json:"message_count"`
-	TokenCount   int       `json:"token_count"`
+	AgentName      string    `json:"agent_name"`
+	ChannelName    string    `json:"channel_name"`
+	ChatID         string    `json:"chat_id"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+	MessageCount   int       `json:"message_count"`
+	TokenCount     int       `json:"token_count"`
+	SessionSummary string    `json:"session_summary,omitempty"` // 会话摘要（多条，带时间戳）
 }
 
 func (s *Session) LoadHistory() []AgentMessage {
