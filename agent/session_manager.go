@@ -3,21 +3,33 @@ package agent
 import (
 	util "brambleclaw/internal"
 	"brambleclaw/logger"
+	"brambleclaw/store"
+	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 )
 
+const (
+	SessionSuffix = ".jsonl"
+	MetaSuffix    = ".meta.json"
+)
+
 // PersistentSessionManager 支持持久化的 Session 管理器
 type PersistentSessionManager struct {
 	sessions         map[string]*Session // session key --> session
+	sessionsMeta     map[string]*SessionMetadata
+	workspace        string
+	sessionStore     *store.FileStorage[Session]
+	sessionMetaStore *store.FileStorage[SessionMetadata]
 	mu               sync.RWMutex
-	store            *SessionStore
-	agentName        string
 	autosaveInterval time.Duration
 	autosaveEnabled  bool
 	stopChan         chan struct{}
+	context          context.Context
 }
 
 func (psm *PersistentSessionManager) Start() {
@@ -27,80 +39,133 @@ func (psm *PersistentSessionManager) Start() {
 }
 
 // NewPersistentSessionManager 创建持久化 Session 管理器
-func NewPersistentSessionManager(agentName, workspacePath string) *PersistentSessionManager {
-	store := NewSessionStore(workspacePath)
+func NewPersistentSessionManager(workspace string) *PersistentSessionManager {
 	mgr := &PersistentSessionManager{
-		sessions:        make(map[string]*Session),
-		store:           store,
-		agentName:       agentName,
-		stopChan:        make(chan struct{}),
-		autosaveEnabled: true,
+		sessions:         make(map[string]*Session),
+		sessionsMeta:     make(map[string]*SessionMetadata),
+		workspace:        workspace,
+		sessionStore:     store.NewFileStorage[Session](filepath.Join(workspace, "memory")),
+		sessionMetaStore: store.NewFileStorage[SessionMetadata](filepath.Join(workspace, "memory", "meta_data")),
+		stopChan:         make(chan struct{}),
+		autosaveEnabled:  true,
+		autosaveInterval: time.Second * 5,
+		context:          context.Background(),
+		mu:               sync.RWMutex{},
 	}
 	return mgr
 }
 
+func (m *PersistentSessionManager) LoadAllSessionsWithMeta() error {
+	if err := m.LoadSessions(); err != nil {
+		return err
+	}
+
+	if err := m.LoadSessionsMeta(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // LoadSessions 加载所有 session
-func (m *PersistentSessionManager) LoadSessions() {
-	metaData, err := m.store.ListSessions()
-	if len(metaData) == 0 {
-		logger.L().Debug().Msg("No sessions found")
-	}
-
+func (m *PersistentSessionManager) LoadSessions() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	// 1. 遍历存储目录下的所有文件
+	// 我们假设 session 文件都直接放在 DataDir 下
+	files, err := os.ReadDir(m.sessionStore.DataDir)
 	if err != nil {
-		logger.L().Error().Err(err).Msg("Error loading sessions")
+		if os.IsNotExist(err) {
+			return nil // 目录不存在说明还没数据，正常返回
+		}
+		return fmt.Errorf("failed to read dir: %w", err)
 	}
 
-	for _, metadata := range metaData {
-		messages, _, err := m.store.LoadSession(m.agentName, metadata.ChannelName, metadata.ChatID)
-		if err != nil {
-			logger.L().Warn().
-				Err(err).
-				Str("agent", m.agentName).
-				Str("channel", metadata.ChannelName).
-				Str("chat_id", metadata.ChatID).
-				Msg("加载 session 失败，跳过")
+	for _, file := range files {
+		if file.IsDir() || !strings.HasSuffix(file.Name(), SessionSuffix) {
 			continue
 		}
 
-		// 构建 session key
-		sessionKey := util.BuildSessionKey(m.agentName, metadata.ChannelName, metadata.ChatID)
-
-		sess := &Session{
-			Key:       sessionKey,
-			Messages:  messages,
-			CreatedAt: metadata.CreatedAt,
-			UpdatedAt: metadata.UpdatedAt,
+		session, err := m.sessionStore.Load(m.context, file.Name())
+		if err != nil {
+			logger.L().Error().Err(err).Str("file", file.Name()).Msg("failed to load")
+			continue
 		}
 
-		m.mu.Lock()
-		m.sessions[sessionKey] = sess
-		m.mu.Unlock()
+		sessionKey := strings.TrimSuffix(file.Name(), SessionSuffix)
 
-		logger.L().Debug().
-			Str("agent", m.agentName).
-			Str("session_key", sessionKey).
-			Int("message_count", len(messages)).
-			Msg("session 加载成功")
+		m.sessions[sessionKey] = session
 	}
+	return nil
 }
 
-// GetOrCreate 获取或创建 session
-func (m *PersistentSessionManager) GetOrCreate(key string) (*Session, bool) {
+func (m *PersistentSessionManager) LoadSessionsMeta() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if sess, ok := m.sessions[key]; ok {
+	files, err := os.ReadDir(m.sessionMetaStore.DataDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil // 目录不存在说明还没数据，正常返回
+		}
+		return fmt.Errorf("failed to read dir: %w", err)
+	}
+
+	for _, file := range files {
+		if file.IsDir() || !strings.HasSuffix(file.Name(), MetaSuffix) {
+			continue
+		}
+
+		sessionMeta, err := m.sessionMetaStore.Load(m.context, file.Name())
+		if err != nil {
+			logger.L().Error().Err(err).Str("file", file.Name()).Msg("failed to load")
+			continue
+		}
+
+		sessionKey := strings.TrimSuffix(file.Name(), MetaSuffix)
+
+		m.sessionsMeta[sessionKey] = sessionMeta
+	}
+
+	return nil
+}
+
+// GetOrCreate 获取或创建 session
+func (m *PersistentSessionManager) GetOrCreate(sessionkey string) (*Session, bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if sess, ok := m.sessions[sessionkey]; ok {
 		return sess, false
 	}
 
 	sess := &Session{
-		Key:        key,
+		Key:        sessionkey,
 		Messages:   []AgentMessage{},
 		CreatedAt:  time.Now(),
 		Summarized: 0,
 	}
-	m.sessions[key] = sess
+	m.sessions[sessionkey] = sess
+
+	if _, exists := m.sessionsMeta[sessionkey]; !exists {
+		agentName, channelName, chatID, err := util.ParseSessionKey(sessionkey)
+		if err != nil {
+			logger.L().Error().Err(err).Str("sessionkey", sessionkey).Msg("failed to parse session key")
+		}
+
+		m.sessionsMeta[sessionkey] = &SessionMetadata{
+			// 初始化你的 Meta 字段，例如：
+			AgentName:    agentName,
+			ChannelName:  channelName,
+			ChatID:       chatID,
+			CreatedAt:    time.Now(),
+			MessageCount: 0,
+			TokenCount:   0,
+		}
+	}
+
 	return sess, true
+
 }
 
 // Get 获取 session
@@ -123,85 +188,102 @@ func (m *PersistentSessionManager) ClearSession(sessionKey string) (int, error) 
 		return 0, fmt.Errorf("session not found: %s", sessionKey)
 	}
 
+	sessMeta, ok := m.sessionsMeta[sessionKey]
+	if !ok {
+		return 0, fmt.Errorf("session 和 sessionMeta 状态不一致: %s", sessionKey)
+	}
+
 	// 记录清空前消息数量
 	count := len(sess.Messages)
 
-	// 解析 session key
-	parts := strings.SplitN(sessionKey, "::", 3)
-	if len(parts) != 3 {
-		return 0, fmt.Errorf("invalid session key: %s", sessionKey)
+	// 删除session
+	if err := m.sessionStore.Delete(m.context, sessionKey+SessionSuffix); err != nil {
+		return 0, err
 	}
-	channelName, chatID := parts[0], parts[2]
-
-	// 清空磁盘文件
-	if err := m.store.ClearSession(m.agentName, channelName, chatID); err != nil {
-		return 0, fmt.Errorf("failed to clear session file: %w", err)
+	if err := m.sessionMetaStore.Delete(m.context, sessionKey+MetaSuffix); err != nil {
+		return 0, err
 	}
 
-	// 清空内存消息
+	// 同步更新到内存
 	sess.Messages = []AgentMessage{}
 	sess.Modified = true
 	sess.UpdatedAt = time.Now()
 	sess.Summarized = 0
 
+	sessMeta.TokenCount = 0
+	sessMeta.MessageCount = 0
+	sessMeta.UpdatedAt = time.Now()
+
 	return count, nil
 }
 
-// Update 更新 session
-func (m *PersistentSessionManager) Update(session *Session) {
+// Update 更新 session 和 session meta 的内存状态
+func (m *PersistentSessionManager) Update(session *Session, tokenUsed int) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	session.UpdatedAt = time.Now()
 	session.Modified = true
 	m.sessions[session.Key] = session
+
+	sessionMeta, ok := m.sessionsMeta[session.Key]
+	if !ok {
+		logger.L().Error().Msg("session 和 sessionMeta 状态不一致")
+		return
+	}
+
+	sessionMeta.UpdatedAt = time.Now()
+	sessionMeta.MessageCount = len(session.Messages)
+	sessionMeta.TokenCount = tokenUsed
+
 }
 
-// SaveSession 保存指定 session 和 对应的 meta data
-func (m *PersistentSessionManager) SaveSession(sessionKey string) error {
+func (m *PersistentSessionManager) SaveSessionMeta(sessionKey string) error {
 	m.mu.RLock()
-	sess, ok := m.sessions[sessionKey]
+	sessMeta, ok := m.sessionsMeta[sessionKey]
 	m.mu.RUnlock()
 
 	if !ok {
-		return fmt.Errorf("session 不存在: %s", sessionKey)
+		return fmt.Errorf("session meta不存在: %s", sessionKey)
 	}
 
-	// 解析 session key: channel::agent::chatID
-	parts := strings.SplitN(sessionKey, "::", 3)
-	if len(parts) != 3 {
-		return fmt.Errorf("无效的 session key: %s", sessionKey)
-	}
-	channelName, chatID := parts[0], parts[2]
-
-	// 保存消息
-	if err := m.store.SaveSession(m.agentName, channelName, chatID, sess.Messages); err != nil {
+	if err := m.sessionMetaStore.Save(m.context, sessionKey+MetaSuffix, sessMeta); err != nil {
 		return err
 	}
 
-	// 更新并保存元数据
-	metadata := &SessionMetadata{
-		AgentName:    m.agentName,
-		ChannelName:  channelName,
-		ChatID:       chatID,
-		CreatedAt:    sess.CreatedAt,
-		UpdatedAt:    time.Now(),
-		MessageCount: len(sess.Messages),
+	return nil
+}
+
+// SaveSession 保存指定 session
+func (m *PersistentSessionManager) SaveSession(sessionKey string) error {
+	m.mu.RLock()
+	sess, ok := m.sessions[sessionKey]
+	if !ok {
+		m.mu.RUnlock()
+		return fmt.Errorf("指定的session key: %s 不存在", sessionKey)
 	}
 
-	if err := m.store.SaveMetadata(metadata); err != nil {
-		logger.L().Warn().Err(err).Str("session_key", sessionKey).Msg("保存元数据失败")
+	// 记录下准备保存的那一刻的时间
+	saveStartedAt := sess.UpdatedAt
+	m.mu.RUnlock()
+
+	// IO 操作（不带锁）
+	if err := m.sessionStore.Save(m.context, sessionKey+SessionSuffix, sess); err != nil {
+		return err
 	}
 
 	m.mu.Lock()
-	sess.Modified = false
-	m.mu.Unlock()
+	defer m.mu.Unlock()
+	// 核心检查：如果在 IO 期间 UpdatedAt 没变，说明没有新修改，可以安全置为 false
+	if sess.UpdatedAt.Equal(saveStartedAt) {
+		sess.Modified = false
+	}
 
 	return nil
 }
 
 // SaveAllSessions 保存所有 session
-func (m *PersistentSessionManager) SaveAllSessions() {
+func (m *PersistentSessionManager) SaveAllSessionsWithMeta() {
 	m.mu.RLock()
 	sessions := make([]*Session, 0, len(m.sessions))
 	for _, sess := range m.sessions {
@@ -215,6 +297,9 @@ func (m *PersistentSessionManager) SaveAllSessions() {
 		if err := m.SaveSession(sess.Key); err != nil {
 			logger.L().Error().Err(err).Str("session_key", sess.Key).Msg("保存 session 失败")
 		}
+		if err := m.SaveSessionMeta(sess.Key); err != nil {
+			logger.L().Error().Err(err).Str("session_key", sess.Key).Msg("保存 session meta 失败")
+		}
 	}
 }
 
@@ -227,7 +312,7 @@ func (m *PersistentSessionManager) autosaveLoop() {
 	for {
 		select {
 		case <-ticker.C:
-			m.SaveAllSessions()
+			m.SaveAllSessionsWithMeta()
 		case <-m.stopChan:
 			return
 		}
@@ -239,7 +324,7 @@ func (m *PersistentSessionManager) Stop() {
 	close(m.stopChan)
 
 	// 最后一次保存
-	m.SaveAllSessions()
+	m.SaveAllSessionsWithMeta()
 }
 
 // GetAllSessions 获取所有 session（用于分析器）

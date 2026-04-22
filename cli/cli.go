@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"brambleclaw/agent"
 	"brambleclaw/bus"
 	"brambleclaw/channel"
 	"brambleclaw/config"
@@ -414,17 +413,7 @@ func runDebugSessions() error {
 		return err
 	}
 
-	// 创建分析器
-	analyzer := agent.NewSessionAnalyzer(cfg.Workspace)
-
-	// 分析所有 session
-	infos, err := analyzer.AnalyzeAll()
-	if err != nil {
-		return fmt.Errorf("分析 session 失败: %w", err)
-	}
-
-	// 打印结果
-	agent.PrintSessionInfo(infos)
+	// TODO:创建分析器
 
 	return nil
 }

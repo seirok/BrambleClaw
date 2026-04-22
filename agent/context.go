@@ -374,14 +374,11 @@ func (cb *ContextBuilder) Compact(ctx context.Context, session *Session, usage i
 
 	// 更新边界指针
 	session.Summarized += cb.compact.CompactRounds / 4
-	replyMsg := AgentMessage{
-		Role:      RoleAssistant,
-		Content:   []ContentBlock{TextContent{Text: resp.Choices[0].Message.Content}},
-		Timestamp: time.Now().UnixMilli(),
-	}
-	// 添加回复到会话并更新
-	session.AddMessage(replyMsg)
-	cb.agent.sessionMgr.Update(session)
+
+	// TODO
+
+	currentTokenUsed := resp.Usage.CompletionTokens + resp.Usage.PromptTokens
+	cb.agent.sessionMgr.Update(session, currentTokenUsed)
 
 	return nil
 }

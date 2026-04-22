@@ -120,6 +120,16 @@ type Session struct {
 	LastSavedChecksum string         `json:"last_saved_checksum"` // 上次保存时的校验和，用于检测变化
 }
 
+type SessionMetadata struct {
+	AgentName    string    `json:"agent_name"`
+	ChannelName  string    `json:"channel_name"`
+	ChatID       string    `json:"chat_id"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+	MessageCount int       `json:"message_count"`
+	TokenCount   int       `json:"token_count"`
+}
+
 func (s *Session) LoadHistory() []AgentMessage {
 	// TODO: 防御性编程
 	return s.Messages[s.Summarized:]

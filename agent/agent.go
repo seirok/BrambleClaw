@@ -37,7 +37,7 @@ func NewAgent(config *config.AgentConfig, bus *bus.MessageBus, mcpManager *mcp.M
 	orchestrator := NewOrchestrator(llmClient, toolRegistry)
 
 	var sessionMgr *PersistentSessionManager
-	sessionMgr = NewPersistentSessionManager(config.Name, config.Workspace)
+	sessionMgr = NewPersistentSessionManager(config.Workspace)
 
 	agent := &Agent{
 		config:       config,
@@ -138,11 +138,11 @@ func (a *Agent) HandleMessage(ctx context.Context, msg *bus.InBoundMessage) {
 	// 添加回复到会话
 	sess.AddMessage(replyMsg)
 	// 更新会话
-	a.sessionMgr.Update(sess)
+	currentTokenUsed := resp.Usage.CompletionTokens + resp.Usage.PromptTokens
+	a.sessionMgr.Update(sess, currentTokenUsed)
 
 	// TODO: 异步压缩上下文并更新summary
 	go func() {
-		currentTokenUsed := resp.Usage.CompletionTokens + resp.Usage.PromptTokens
 		if err = a.contextBuilder.Compact(ctx, sess, currentTokenUsed); err != nil {
 			logger.L().Error().Err(err).Msg("Failed to compact session")
 		}
@@ -184,7 +184,7 @@ func (a *Agent) SaveSession(sessionKey string) error {
 
 // SaveAllSessions 保存所有 session
 func (a *Agent) SaveAllSessions() {
-	a.sessionMgr.SaveAllSessions()
+	a.sessionMgr.SaveAllSessionsWithMeta()
 }
 
 // GetWorkspace 获取工作目录
@@ -200,7 +200,7 @@ func (a *Agent) GetMemoryDir() string {
 // Stop 停止Agent
 func (a *Agent) Stop() {
 	// 保存所有 sessions
-	a.sessionMgr.SaveAllSessions()
+	a.sessionMgr.SaveAllSessionsWithMeta()
 
 	// 停止 session manager
 	a.sessionMgr.Stop()
@@ -224,9 +224,4 @@ func (a *Agent) GetOrCreateSession(key string) *Session {
 // GetSession 获取会话（如果不存在则返回 nil）
 func (a *Agent) GetSession(key string) (*Session, bool) {
 	return a.sessionMgr.Get(key)
-}
-
-// UpdateSession 更新会话
-func (a *Agent) UpdateSession(session *Session) {
-	a.sessionMgr.Update(session)
 }
