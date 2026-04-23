@@ -161,6 +161,8 @@ func LoadFromFile(path string) (*Config, error) {
 	cfg = ensureLogDefaults(cfg)
 	// 设置 Workspace 默认值
 	cfg = ensureWorkspaceDefaults(cfg)
+	// 设置 Compact 默认值
+	cfg = ensureCompactDefaults(cfg)
 
 	return &cfg, nil
 }
@@ -181,6 +183,27 @@ func ensureLogDefaults(cfg Config) Config {
 func ensureWorkspaceDefaults(cfg Config) Config {
 	if cfg.Workspace == "" {
 		cfg.Workspace = "workspace"
+	}
+	return cfg
+}
+
+// ensureCompactDefaults 确保 Compact 配置具有合理的默认值
+func ensureCompactDefaults(cfg Config) Config {
+	// 设置 MaxSummaryLength 默认值
+	if cfg.Compact.MaxSummaryLength == 0 {
+		cfg.Compact.MaxSummaryLength = 10000
+	}
+	// 设置 HierarchicalDepth 默认值
+	if cfg.Compact.HierarchicalDepth == 0 {
+		cfg.Compact.HierarchicalDepth = 3
+	}
+	// 设置 CompactThreshold 默认值
+	if cfg.Compact.CompactThreshold == 0 {
+		cfg.Compact.CompactThreshold = 4000
+	}
+	// 设置 CompactRounds 默认值
+	if cfg.Compact.CompactRounds == 0 {
+		cfg.Compact.CompactRounds = 20
 	}
 	return cfg
 }
@@ -231,8 +254,13 @@ func Load(path string) (*Config, error) {
 }
 
 type CompactConfig struct {
-	CompactThreshold int `json:"compact_threshold"`
-	CompactRounds    int `json:"compact-rounds"`
+	CompactThreshold    int  `json:"compact_threshold"`     // Token threshold to trigger compaction
+	CompactRounds       int  `json:"compact_rounds"`        // Message interval to trigger compaction
+	MaxSummaryLength    int  `json:"max_summary_length"`    // Max chars per summary (default 10000)
+	EnableHierarchical  bool `json:"enable_hierarchical"`   // Enable summary-of-summaries
+	HierarchicalDepth   int  `json:"hierarchical_depth"`    // Max depth (default 3)
+	ArchiveOldSummaries bool `json:"archive_old_summaries"` // Archive vs delete old summaries
+	PreserveKeyContext  bool `json:"preserve_key_context"`  // Keep decisions/actions in compression
 }
 type Config struct {
 	Log        LogConfig `json:"log"`

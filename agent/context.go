@@ -17,8 +17,9 @@ import (
 )
 
 type ContextBuilder struct {
-	agent   *Agent
-	compact *config.CompactConfig
+	agent             *Agent
+	compact           *config.CompactConfig
+	summaryCompressor *SummaryCompressor
 }
 
 type SkillInfo struct {
@@ -385,6 +386,18 @@ func (cb *ContextBuilder) Compact(ctx context.Context, session *Session, usage i
 		summaryContent = resp.Choices[0].Message.Content
 	}
 
+	// 初始化 SummaryCompressor（如果未初始化）
+	if cb.summaryCompressor == nil {
+		cb.summaryCompressor = NewSummaryCompressor(*cb.compact, cb.agent.llmClient)
+	}
+
+	// 添加摘要到层级压缩器（AddSummary 会自动处理层级压缩）
+	_, err = cb.summaryCompressor.AddSummary(summaryContent, time.Now())
+	if err != nil {
+		logger.L().Error().Err(err).Str("sessionKey", session.Key).
+			Msg("compact: failed to add summary to compressor, but continuing")
+	}
+
 	// 更新 SessionSummary 到 metadata
 	if summaryContent != "" {
 		if err := cb.agent.sessionMgr.UpdateSessionSummary(session.Key, summaryContent); err != nil {
@@ -427,7 +440,34 @@ func (cb *ContextBuilder) Compact(ctx context.Context, session *Session, usage i
 }
 
 func (cb *ContextBuilder) GetSessionSummary() string {
-	return ""
+	if cb.summaryCompressor == nil {
+		return ""
+	}
+
+	hierarchy := cb.summaryCompressor.GetHierarchy()
+	if hierarchy == nil || len(hierarchy.Nodes) == 0 {
+		return ""
+	}
+
+	var sb strings.Builder
+	sb.WriteString("## Session Summary History\n\n")
+	for _, node := range hierarchy.Nodes {
+		cb.formatNodeView(&sb, node, 0)
+	}
+	return sb.String()
+}
+
+// formatNodeView 递归格式化节点视图
+func (cb *ContextBuilder) formatNodeView(sb *strings.Builder, node *NodeView, indent int) {
+	prefix := strings.Repeat("  ", indent)
+	if len(node.Preview) > 200 {
+		fmt.Fprintf(sb, "%s- %s...\n", prefix, node.Preview[:200])
+	} else {
+		fmt.Fprintf(sb, "%s- %s\n", prefix, node.Preview)
+	}
+	for _, child := range node.Children {
+		cb.formatNodeView(sb, child, indent+1)
+	}
 }
 
 func (cb *ContextBuilder) GetRecentlyDailyNotes(days int) (string, error) {
