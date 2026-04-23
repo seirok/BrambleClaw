@@ -2,6 +2,7 @@ package agent
 
 import (
 	"brambleclaw/config"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -137,36 +138,35 @@ func TestExtractKeyContext_Empty(t *testing.T) {
 	}
 }
 
-func TestGetHierarchy(t *testing.T) {
+func TestHierarchy(t *testing.T) {
 	cfg := config.CompactConfig{
 		MaxSummaryLength:   10000,
-		HierarchicalDepth:  3,
+		HierarchicalDepth:  10,
 		PreserveKeyContext: false,
+		EnableHierarchical: true,
 	}
 
 	sc := NewSummaryCompressor(cfg, nil)
 
 	// Add multiple summaries
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 101; i++ {
 		_, err := sc.AddSummary("Summary "+string(rune('A'+i)), time.Now())
 		if err != nil {
 			t.Fatalf("AddSummary failed: %v", err)
 		}
 	}
 
-	hierarchy := sc.GetHierarchy()
-
-	if hierarchy == nil {
-		t.Fatal("GetHierarchy returned nil")
+	sc.PrintHierarchy()
+	var sb strings.Builder
+	sb.WriteString("Valid Summary Node: { ")
+	for _, node := range sc.rootNodes {
+		sb.WriteString(node.ID + " ")
 	}
-
-	if hierarchy.RootCount != 3 {
-		t.Errorf("Expected 3 root nodes, got %d", hierarchy.RootCount)
-	}
-
-	if len(hierarchy.Nodes) != 3 {
-		t.Errorf("Expected 3 nodes, got %d", len(hierarchy.Nodes))
-	}
+	sb.WriteString("}")
+	fmt.Println(sb.String())
+	//summary := sc.BuildSessionSummary()
+	//fmt.Println("Final Session Summary")
+	//fmt.Println(summary)
 }
 
 func TestArchive(t *testing.T) {

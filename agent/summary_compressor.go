@@ -12,6 +12,39 @@ import (
 	"brambleclaw/logger"
 )
 
+// TODO：完善注释
+/*
+Summary Compressor 用于解决大模型对话中的“长期记忆”与“上下文窗口限制”之间的矛盾。它不简单地丢弃旧消息，而是通过类似 B-树的分裂与合并机制，将summary节点逐步向上压缩。
+
+效果：随着对话增长，旧记忆被递归抽象为高层级（Level）的浓缩文本，而近期的记忆（低层级summary node）保持更多细节。
+
+收益：根据压缩机制，任何一个Level 的节点数都不会超过4，所以理论上S
+
+SummaryNode：Summary 存储单元。不仅记录文本（Content），还通过 ParentID 和 ChildIDs 锁定自己在血缘树中的位置
+
+nodeIndex：全局索引， 一个扁平的哈希表，通过 ID 毫秒级检索任何节点
+
+rootNodes：当前所有未被进一步压缩的顶层节点，用于构建System Prompt中的Session Summary 部分
+[初始状态: 3个节点]
+rootNodes: [L0-a, L0-b, L0-c] (顺序：过去 -> 现在)
+
+[演变: 加入第4个 L0 触发合并]
+1. 选取 [L0-a, L0-b, L0-c, L0-d] 合并为父节点 [L1-A]
+2. rootNodes 移除 4 个 L0，加入 [L1-A]
+rootNodes: [L1-A]
+
+[演变: 继续加入 L0 直到触发 L1 合并]
+rootNodes: [L1-A, L1-B, L1-C, L0-x, L0-y]
+(此时 Prompt 会包含：3个高度浓缩的历史总结 + 2个最近的详细摘要)
+
+
+可视化 (GetHierarchy)：通过递归遍历 ChildIDs 将扁平索引还原为树状对象，用于 PrintHierarchy 在控制台打印物理拓扑
+
+想调整压缩率？ 修改 compressLevelIfNeeded 中 len(nodes) < 4 的阈值。
+
+想改变记忆深度？ 修改 HierarchicalDepth
+*/
+
 // SummaryNode represents a node in the hierarchical summary tree
 type SummaryNode struct {
 	ID         string    `json:"id"`
