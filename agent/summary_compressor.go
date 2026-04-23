@@ -417,3 +417,88 @@ func (sc *SummaryCompressor) buildNodeView(node *SummaryNode) *NodeView {
 
 	return view
 }
+
+// BuildSessionSummary 按照层级逻辑（从高层到底层，从旧到新）组装最终摘要
+func (sc *SummaryCompressor) BuildSessionSummary() string {
+	if len(sc.rootNodes) == 0 {
+		return ""
+	}
+
+	// 1. 将根节点按层级分组
+	levelMap := make(map[int][]*SummaryNode)
+	maxLevel := 0
+	for _, node := range sc.rootNodes {
+		levelMap[node.Level] = append(levelMap[node.Level], node)
+		if node.Level > maxLevel {
+			maxLevel = node.Level
+		}
+	}
+
+	var fullSummary strings.Builder
+	fullSummary.WriteString("### Hierarchical Session Summary ###\n")
+
+	// 2. 从最高层级（最久远/最概括）向下遍历到 Level 0（最近/最详细）
+	for l := maxLevel; l >= 0; l-- {
+		nodes, exists := levelMap[l]
+		if !exists || len(nodes) == 0 {
+			continue
+		}
+
+		// 同一 Level 内，我们假设在 rootNodes 中的原始顺序即为添加顺序
+		// 如果需要更精确，可以保留添加时的全局 Sequence ID
+		for _, node := range nodes {
+			// 根据层级添加缩进或前缀，帮助 LLM 理解结构
+			prefix := strings.Repeat("  ", maxLevel-l)
+			fullSummary.WriteString(fmt.Sprintf("%s* [Level %d]: %s\n", prefix, l, node.Content))
+
+			if len(node.KeyContext) > 0 {
+				fullSummary.WriteString(fmt.Sprintf("%s  Context: %s\n", prefix, strings.Join(node.KeyContext, " | ")))
+			}
+		}
+	}
+
+	return strings.TrimSpace(fullSummary.String())
+}
+
+// PrintHierarchy 将层级视图以树状结构打印到控制台
+func (sc *SummaryCompressor) PrintHierarchy() {
+	view := sc.GetHierarchy()
+	fmt.Printf("Summary Hierarchy (Roots: %d, Max Depth: %d)\n", view.RootCount, view.MaxDepth)
+	fmt.Println(strings.Repeat("=", 50))
+
+	for i, node := range view.Nodes {
+		isLast := i == len(view.Nodes)-1
+		sc.renderNode(node, "", isLast)
+	}
+}
+
+// renderNode 递归渲染节点及其子节点
+func (sc *SummaryCompressor) renderNode(node *NodeView, indent string, isLast bool) {
+	// 1. 处理预览内容：去掉换行符，让它只占一行
+	cleanPreview := strings.ReplaceAll(node.Preview, "\n", " ")
+	if len(cleanPreview) > 80 {
+		cleanPreview = cleanPreview[:77] + "..."
+	}
+
+	// 2. 选择连接符
+	marker := "├── "
+	if isLast {
+		marker = "└── "
+	}
+
+	// 3. 打印当前节点（增加颜色或高亮提示 Level 更好，这里用中括号区分）
+	fmt.Printf("%s%s[Level %d] ID: %s | %s\n", indent, marker, node.Level, node.ID[:6], cleanPreview)
+
+	// 4. 计算下一层的缩进
+	newIndent := indent
+	if isLast {
+		newIndent += "    "
+	} else {
+		newIndent += "│   "
+	}
+
+	// 5. 递归打印子节点
+	for i, child := range node.Children {
+		sc.renderNode(child, newIndent, i == len(node.Children)-1)
+	}
+}

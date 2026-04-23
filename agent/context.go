@@ -443,18 +443,7 @@ func (cb *ContextBuilder) GetSessionSummary() string {
 	if cb.summaryCompressor == nil {
 		return ""
 	}
-
-	hierarchy := cb.summaryCompressor.GetHierarchy()
-	if hierarchy == nil || len(hierarchy.Nodes) == 0 {
-		return ""
-	}
-
-	var sb strings.Builder
-	sb.WriteString("## Session Summary History\n\n")
-	for _, node := range hierarchy.Nodes {
-		cb.formatNodeView(&sb, node, 0)
-	}
-	return sb.String()
+	return cb.summaryCompressor.BuildSessionSummary()
 }
 
 // formatNodeView 递归格式化节点视图
