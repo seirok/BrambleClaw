@@ -1,9 +1,14 @@
 package gateway
 
 import (
+	"brambleclaw/config"
 	"brambleclaw/logger"
+	"brambleclaw/tools/mcp"
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -54,12 +59,58 @@ func NewGateway(
 }
 
 // RegisterAgent 注册 Agent 到 Gateway
-// 中间层职责：透传错误
-func (g *Gateway) RegisterAgent(name string, ag *agent.Agent, config agent.AgentConfig) error {
-	if err := g.registry.Register(name, ag, config); err != nil {
-		return err
+func (g *Gateway) RegisterAgents(config *config.Config) error {
+	mcpManager := mcp.NewManager(config.Tools.MCP)
+
+	// 标记是否有配置被修改，需要同步到 config.json
+	configModified := false
+
+	for i := range config.Agents {
+		cfg := &config.Agents[i]
+		if !cfg.Enabled {
+			continue
+		}
+
+		// 检查并修正 agent 的 workspace 路径
+		// 正确的路径应该为： $config.Workspace$ / $cfg.Name$ / workspace
+		expectedWorkspace := filepath.Join(config.Workspace, cfg.Name, "workspace")
+
+		// 检查当前路径是否与期望路径一致
+		if cfg.Workspace != expectedWorkspace {
+			logger.L().Debug().
+				Str("Agent", cfg.Name).
+				Str("OldWorkspace", cfg.Workspace).
+				Str("NewWorkspace", expectedWorkspace).
+				Msg("修正 agent workspace 路径")
+
+			cfg.Workspace = expectedWorkspace
+			configModified = true
+		}
+
+		contextBuilder, err := agent.NewContextBuilder(&config.Compact)
+		if err != nil {
+			return err
+		}
+
+		newAgent := agent.NewAgent(cfg, g.msgBus, mcpManager, contextBuilder)
+		if err := g.registry.Register(cfg.Name, newAgent, cfg); err != nil {
+			return err
+		}
+		logger.L().Debug().Str("Agent", cfg.Name).Msg("register agent")
 	}
-	logger.L().Info().Str("Agent", name).Msg("[Gateway] Agent 已注册")
+
+	// 如果有配置被修改，同步到 config.json
+	if configModified {
+		if err := g.saveConfigToFile(config); err != nil {
+			logger.L().Error().Err(err).Msg("[RegisterAgents] 保存配置到 config.json 失败")
+			// 继续执行，不因为保存失败而中断注册流程
+		}
+	}
+
+	if len(g.registry.List()) == 0 {
+		return fmt.Errorf("[RegisterAgents]No available agents")
+	}
+
 	return nil
 }
 
@@ -94,11 +145,10 @@ func (g *Gateway) Start(ctx context.Context) error {
 }
 
 // Stop 停止 Gateway
-func (g *Gateway) Stop() error {
+func (g *Gateway) Stop() {
 	g.mu.Lock()
 	if !g.running {
 		g.mu.Unlock()
-		return nil
 	}
 	g.running = false
 	g.cancel()
@@ -118,7 +168,6 @@ func (g *Gateway) Stop() error {
 		logger.L().Warn().Msg("[Gateway] 停止超时，强制结束")
 	}
 
-	return nil
 }
 
 // processMessageLoop 消息处理主循环
@@ -164,49 +213,8 @@ func (g *Gateway) handleMessage(ctx context.Context, msg *bus.InBoundMessage) er
 		return fmt.Errorf("Agent不存在(name=%s)", route.AgentName)
 	}
 
-	// 3. 获取或创建会话
-	sess := agentEntry.Agent.GetOrCreateSession(route.SessionKey)
-
-	// 4. 构建 AgentMessage
-	agentMsg := agent.AgentMessage{
-		Role:      "user",
-		Content:   []agent.ContentBlock{agent.TextContent{Text: msg.Content}},
-		Timestamp: time.Now().UnixMilli(),
-	}
-
-	// 5. 添加到会话
-	sess.AddMessage(agentMsg)
-
-	// 6. 获取历史消息
-	historyMsg := sess.GetHistory(agentEntry.Config.MaxHistory)
-
-	// 7. 调用 Agent 处理
-	resp, err := agentEntry.Agent.Process(ctx, historyMsg)
-	if err != nil {
-		return fmt.Errorf("Agent处理失败: %w", err)
-	}
-
-	// 8. 添加回复到会话
-	replyMsg := agent.AgentMessage{
-		Role:      "assistant",
-		Content:   []agent.ContentBlock{agent.TextContent{Text: resp}},
-		Timestamp: time.Now().UnixMilli(),
-	}
-	sess.AddMessage(replyMsg)
-
-	// 9. 发送响应
-	outbound := &bus.OutBoundMessage{
-		OutChannel: msg.InChannel,
-		ChatID:     msg.ChatID,
-		Content:    resp,
-		ReplyTo:    msg.ID,
-		TimeStamp:  time.Now(),
-	}
-
-	if err := g.msgBus.PublishOutBoundMessage(ctx, outbound); err != nil {
-		return fmt.Errorf("发布响应失败: %w", err)
-	}
-
+	// Agent 处理消息
+	agentEntry.Agent.HandleMessage(ctx, msg)
 	return nil
 }
 
@@ -266,7 +274,7 @@ func (g *Gateway) healthCheckLoop() {
 func (g *Gateway) performHealthCheck() {
 	// 检查所有通道状态
 	// 这里可以实现具体的健康检查逻辑
-	logger.L().Info().Msg("[Gateway] 执行健康检查")
+	// logger.L().Info().Msg("[Gateway] 执行健康检查")
 }
 
 // IsRunning 检查 Gateway 是否正在运行
@@ -284,4 +292,26 @@ func (g *Gateway) GetRegistry() *AgentRegistry {
 // GetConfig 获取 Gateway 配置
 func (g *Gateway) GetConfig() *GatewayConfig {
 	return g.config
+}
+
+// saveConfigToFile 将配置保存到 config.json 文件
+// 查找并更新现有的配置文件路径
+func (g *Gateway) saveConfigToFile(cfg *config.Config) error {
+	loader := config.NewLoader()
+	_, configPath, err := loader.Load()
+	if err != nil {
+		return fmt.Errorf("查找配置文件失败: %w", err)
+	}
+
+	data, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return fmt.Errorf("JSON序列化失败: %w", err)
+	}
+
+	if err := os.WriteFile(configPath, data, 0644); err != nil {
+		return fmt.Errorf("写入配置文件失败(%s): %w", configPath, err)
+	}
+
+	logger.L().Debug().Str("path", configPath).Msg("[Gateway] 配置已同步到文件")
+	return nil
 }

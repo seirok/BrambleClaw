@@ -12,7 +12,7 @@ import (
 	"brambleclaw/config"
 )
 
-// 创建测试用的 Gateway 配置
+// 鍒涘缓娴嬭瘯鐢ㄧ殑 Gateway 閰嶇疆
 func createTestConfig(t *testing.T) *GatewayConfig {
 	return &GatewayConfig{
 		Version:      "1.0",
@@ -35,17 +35,16 @@ func createTestConfig(t *testing.T) *GatewayConfig {
 			Timeout:    10,
 		},
 		HealthCheck: ChannelHealthCheck{
-			Enabled:  false, // 测试中禁用健康检查
-			Interval: 30,
+			Enabled:  false, // 娴嬭瘯涓鐢ㄥ仴搴锋鏌?			Interval: 30,
 			Timeout:  10,
 		},
 	}
 }
 
-// 创建测试用的 Agent
+// 鍒涘缓娴嬭瘯鐢ㄧ殑 Agent
 func createTestAgent(t *testing.T, name string, llmConfig config.LLMConfig) *agent.Agent {
 	msgBus := bus.NewMessageBus(100)
-	agentCfg := agent.AgentConfig{
+	agentCfg := config.AgentConfig{
 		Name:       name,
 		LLM:        llmConfig,
 		MaxHistory: 10,
@@ -53,7 +52,7 @@ func createTestAgent(t *testing.T, name string, llmConfig config.LLMConfig) *age
 	return agent.NewAgent(agentCfg, msgBus)
 }
 
-// 创建测试用的 Gateway
+// 鍒涘缓娴嬭瘯鐢ㄧ殑 Gateway
 func createTestGateway(t *testing.T) (*Gateway, *bus.MessageBus, *channel.Manager) {
 	cfg := createTestConfig(t)
 	msgBus := bus.NewMessageBus(100)
@@ -61,15 +60,15 @@ func createTestGateway(t *testing.T) (*Gateway, *bus.MessageBus, *channel.Manage
 
 	gateway := NewGateway(cfg, msgBus, channelManager)
 
-	// 注册测试 Agent
+	// 娉ㄥ唽娴嬭瘯 Agent
 	config, _ := config.Load("../config/config.json")
 	llmConfig := config.LLMConfig
 	mainAgent := createTestAgent(t, "main", llmConfig)
-	mainCfg := agent.AgentConfig{Name: "main", MaxHistory: 10}
+	mainCfg := config.AgentConfig{Name: "main", MaxHistory: 10}
 	gateway.RegisterAgent("main", mainAgent, mainCfg)
 
 	csAgent := createTestAgent(t, "customer_service", llmConfig)
-	csCfg := agent.AgentConfig{Name: "customer_service", MaxHistory: 10}
+	csCfg := config.AgentConfig{Name: "customer_service", MaxHistory: 10}
 	gateway.RegisterAgent("customer_service", csAgent, csCfg)
 
 	return gateway, msgBus, channelManager
@@ -83,56 +82,56 @@ func TestNewGateway(t *testing.T) {
 	gateway := NewGateway(cfg, msgBus, channelManager)
 
 	if gateway == nil {
-		t.Fatal("NewGateway() 返回 nil")
+		t.Fatal("NewGateway() 杩斿洖 nil")
 	}
 
 	if gateway.config != cfg {
-		t.Error("Gateway config 不匹配")
+		t.Error("Gateway config 涓嶅尮閰?)
 	}
 
 	if gateway.msgBus != msgBus {
-		t.Error("Gateway msgBus 不匹配")
+		t.Error("Gateway msgBus 涓嶅尮閰?)
 	}
 
 	if gateway.channelManager != channelManager {
-		t.Error("Gateway channelManager 不匹配")
+		t.Error("Gateway channelManager 涓嶅尮閰?)
 	}
 
 	if gateway.registry == nil {
-		t.Error("Gateway registry 未初始化")
+		t.Error("Gateway registry 鏈垵濮嬪寲")
 	}
 
 	if gateway.router == nil {
-		t.Error("Gateway router 未初始化")
+		t.Error("Gateway router 鏈垵濮嬪寲")
 	}
 
 	if gateway.running {
-		t.Error("新创建的 Gateway 不应该处于运行状态")
+		t.Error("鏂板垱寤虹殑 Gateway 涓嶅簲璇ュ浜庤繍琛岀姸鎬?)
 	}
 }
 
 func TestGateway_RegisterAgent(t *testing.T) {
 	gateway, _, _ := createTestGateway(t)
 
-	// 测试注册新 Agent
+	// 娴嬭瘯娉ㄥ唽鏂?Agent
 	config, _ := config.Load("../config/config.json")
 	llmConfig := config.LLMConfig
 	newAgent := createTestAgent(t, "new-agent", llmConfig)
-	newCfg := agent.AgentConfig{Name: "new-agent"}
+	newCfg := config.AgentConfig{Name: "new-agent"}
 
 	err := gateway.RegisterAgent("new-agent", newAgent, newCfg)
 	if err != nil {
-		t.Errorf("注册新 Agent 失败: %v", err)
+		t.Errorf("娉ㄥ唽鏂?Agent 澶辫触: %v", err)
 	}
 
-	if gateway.registry.Count() != 3 { // 2个测试Agent + 1个新Agent
-		t.Errorf("注册后应该有 3 个 Agent，但有 %d 个", gateway.registry.Count())
+	if gateway.registry.Count() != 3 { // 2涓祴璇旳gent + 1涓柊Agent
+		t.Errorf("娉ㄥ唽鍚庡簲璇ユ湁 3 涓?Agent锛屼絾鏈?%d 涓?, gateway.registry.Count())
 	}
 
-	// 测试重复注册
+	// 娴嬭瘯閲嶅娉ㄥ唽
 	err = gateway.RegisterAgent("new-agent", newAgent, newCfg)
 	if err == nil {
-		t.Error("重复注册应该返回错误")
+		t.Error("閲嶅娉ㄥ唽搴旇杩斿洖閿欒")
 	}
 }
 
@@ -140,39 +139,39 @@ func TestGateway_StartStop(t *testing.T) {
 	gateway, _, _ := createTestGateway(t)
 	ctx := context.Background()
 
-	// 测试启动
+	// 娴嬭瘯鍚姩
 	err := gateway.Start(ctx)
 	if err != nil {
-		t.Fatalf("启动 Gateway 失败: %v", err)
+		t.Fatalf("鍚姩 Gateway 澶辫触: %v", err)
 	}
 
 	if !gateway.IsRunning() {
-		t.Error("Gateway 应该处于运行状态")
+		t.Error("Gateway 搴旇澶勪簬杩愯鐘舵€?)
 	}
 
-	// 测试重复启动
+	// 娴嬭瘯閲嶅鍚姩
 	err = gateway.Start(ctx)
 	if err == nil {
-		t.Error("重复启动应该返回错误")
+		t.Error("閲嶅鍚姩搴旇杩斿洖閿欒")
 	}
 
-	// 测试停止
+	// 娴嬭瘯鍋滄
 	err = gateway.Stop()
 	if err != nil {
-		t.Errorf("停止 Gateway 失败: %v", err)
+		t.Errorf("鍋滄 Gateway 澶辫触: %v", err)
 	}
 
-	// 给一些时间让 goroutine 结束
+	// 缁欎竴浜涙椂闂磋 goroutine 缁撴潫
 	time.Sleep(100 * time.Millisecond)
 
 	if gateway.IsRunning() {
-		t.Error("Gateway 应该已停止")
+		t.Error("Gateway 搴旇宸插仠姝?)
 	}
 
-	// 测试重复停止
+	// 娴嬭瘯閲嶅鍋滄
 	err = gateway.Stop()
 	if err != nil {
-		t.Errorf("重复停止不应该返回错误: %v", err)
+		t.Errorf("閲嶅鍋滄涓嶅簲璇ヨ繑鍥為敊璇? %v", err)
 	}
 }
 
@@ -181,12 +180,11 @@ func TestGateway_GetRegistry(t *testing.T) {
 
 	registry := gateway.GetRegistry()
 	if registry == nil {
-		t.Error("GetRegistry() 不应该返回 nil")
+		t.Error("GetRegistry() 涓嶅簲璇ヨ繑鍥?nil")
 	}
 
-	// 验证注册表中的内容
-	if registry.Count() != 2 {
-		t.Errorf("注册表中应该有 2 个 Agent，但有 %d 个", registry.Count())
+	// 楠岃瘉娉ㄥ唽琛ㄤ腑鐨勫唴瀹?	if registry.Count() != 2 {
+		t.Errorf("娉ㄥ唽琛ㄤ腑搴旇鏈?2 涓?Agent锛屼絾鏈?%d 涓?, registry.Count())
 	}
 }
 
@@ -195,15 +193,15 @@ func TestGateway_GetConfig(t *testing.T) {
 
 	cfg := gateway.GetConfig()
 	if cfg == nil {
-		t.Fatal("GetConfig() 不应该返回 nil")
+		t.Fatal("GetConfig() 涓嶅簲璇ヨ繑鍥?nil")
 	}
 
 	if cfg.Version != "1.0" {
-		t.Errorf("Version 期望 '1.0'，得到 '%s'", cfg.Version)
+		t.Errorf("Version 鏈熸湜 '1.0'锛屽緱鍒?'%s'", cfg.Version)
 	}
 
 	if cfg.DefaultAgent != "main" {
-		t.Errorf("DefaultAgent 期望 'main'，得到 '%s'", cfg.DefaultAgent)
+		t.Errorf("DefaultAgent 鏈熸湜 'main'锛屽緱鍒?'%s'", cfg.DefaultAgent)
 	}
 }
 
@@ -211,14 +209,14 @@ func TestGateway_ConcurrentAccess(t *testing.T) {
 	gateway, _, _ := createTestGateway(t)
 	ctx := context.Background()
 
-	// 启动 Gateway
+	// 鍚姩 Gateway
 	if err := gateway.Start(ctx); err != nil {
-		t.Fatalf("启动 Gateway 失败: %v", err)
+		t.Fatalf("鍚姩 Gateway 澶辫触: %v", err)
 	}
 
 	defer gateway.Stop()
 
-	// 并发注册 Agent
+	// 骞跺彂娉ㄥ唽 Agent
 	done := make(chan bool, 5)
 	config, _ := config.Load("../config/config.json")
 	llmConfig := config.LLMConfig
@@ -226,20 +224,19 @@ func TestGateway_ConcurrentAccess(t *testing.T) {
 		go func(index int) {
 			name := fmt.Sprintf("concurrent-agent-%d", index)
 			testAgent := createTestAgent(t, name, llmConfig)
-			cfg := agent.AgentConfig{Name: name}
+			cfg := config.AgentConfig{Name: name}
 			gateway.RegisterAgent(name, testAgent, cfg)
 			done <- true
 		}(i)
 	}
 
-	// 等待所有 goroutine 完成
+	// 绛夊緟鎵€鏈?goroutine 瀹屾垚
 	for i := 0; i < 5; i++ {
 		<-done
 	}
 
-	// 验证所有 Agent 都已注册
-	expectedCount := 7 // 2个初始 + 5个并发
-	if gateway.registry.Count() != expectedCount {
-		t.Errorf("期望 %d 个 Agent，但有 %d 个", expectedCount, gateway.registry.Count())
+	// 楠岃瘉鎵€鏈?Agent 閮藉凡娉ㄥ唽
+	expectedCount := 7 // 2涓垵濮?+ 5涓苟鍙?	if gateway.registry.Count() != expectedCount {
+		t.Errorf("鏈熸湜 %d 涓?Agent锛屼絾鏈?%d 涓?, expectedCount, gateway.registry.Count())
 	}
 }

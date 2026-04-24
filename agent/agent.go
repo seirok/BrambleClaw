@@ -3,74 +3,124 @@ package agent
 import (
 	"brambleclaw/bus"
 	"brambleclaw/config"
+	util "brambleclaw/internal"
 	"brambleclaw/logger"
 	"brambleclaw/tools"
 	"brambleclaw/tools/mcp"
 	"context"
+	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
 )
 
 // AgentConfig Agent配置
-type AgentConfig struct {
-	Name       string             `json:"name"`
-	LLM        config.LLMConfig   `json:"llm"`
-	MaxHistory int                `json:"max_history"`
-	Tools      config.ToolsConfig `json:"tools"`
-}
 
 // Agent Agent核心
 type Agent struct {
-	config       AgentConfig
-	sessionMgr   *SessionManager
-	llmClient    *LLMClient
-	bus          *bus.MessageBus
-	toolRegistry *tools.ToolRegistry
-	orchestrator *Orchestrator
-	mcpManager   *mcp.Manager
+	config         *config.AgentConfig
+	sessionMgr     *PersistentSessionManager
+	llmClient      *LLMClient
+	bus            *bus.MessageBus
+	toolRegistry   *tools.ToolRegistry
+	orchestrator   *Orchestrator
+	mcpManager     *mcp.Manager
+	contextBuilder *ContextBuilder
+	workspace      string
 }
 
 // NewAgent 创建Agent
-func NewAgent(config AgentConfig, bus *bus.MessageBus) *Agent {
+// 如果 workspacePath 为空，则使用非持久化模式（用于测试和兼容旧代码）
+func NewAgent(config *config.AgentConfig, bus *bus.MessageBus, mcpManager *mcp.Manager, builder *ContextBuilder) *Agent {
 	llmClient := NewLLMClient(config.LLM)
 	toolRegistry := tools.NewToolRegistry()
 	orchestrator := NewOrchestrator(llmClient, toolRegistry)
-	return &Agent{
+
+	var sessionMgr *PersistentSessionManager
+	sessionMgr = NewPersistentSessionManager(config.Workspace)
+
+	agent := &Agent{
 		config:       config,
-		sessionMgr:   NewSessionManager(),
+		sessionMgr:   sessionMgr,
 		llmClient:    llmClient,
 		bus:          bus,
 		toolRegistry: toolRegistry,
 		orchestrator: orchestrator,
-		mcpManager:   mcp.NewManager(config.Tools.MCP),
+		mcpManager:   mcpManager,
+		workspace:    config.Workspace,
 	}
+
+	builder.agent = agent
+	agent.contextBuilder = builder
+
+	return agent
 }
 
 func (a *Agent) RegisterTool(tool tools.Tool) {
 	a.toolRegistry.Register(tool)
 }
 
-func shouldExecuteTool(content string) bool {
-	// 简单的工具调用检测
-	return strings.HasPrefix(content, "/tool")
-}
+// handleMessage 处理入站消息
+func (a *Agent) HandleMessage(ctx context.Context, msg *bus.InBoundMessage) {
+	// 构建系统提示
+	sessKey := util.BuildSessionKey(a.config.Name, msg.InChannel, msg.ChatID)
 
-// handleInboundMessage 处理入站消息
-func (a *Agent) handleInboundMessage(ctx context.Context, msg *bus.InBoundMessage) {
-	// 当前消息转化为AgentMessage格式
+	// 处理 /clear 命令
+	if strings.TrimSpace(msg.Content) == "/clear" {
+		count, err := a.sessionMgr.ClearSession(sessKey)
+		if err != nil {
+			// 发送错误响应
+			outbound := &bus.OutBoundMessage{
+				OutChannel: msg.InChannel,
+				ChatID:     msg.ChatID,
+				Content:    fmt.Sprintf("Session clear failed: %v", err),
+				ReplyTo:    msg.ID,
+				TimeStamp:  time.Now(),
+			}
+			if err := a.bus.PublishOutBoundMessage(ctx, outbound); err != nil {
+				logger.L().Error().Err(err).Msg("Error publishing clear error response")
+			}
+			return
+		}
+
+		// 发送成功响应
+		outbound := &bus.OutBoundMessage{
+			OutChannel: msg.InChannel,
+			ChatID:     msg.ChatID,
+			Content:    fmt.Sprintf("Session cleared. %d message(s) removed.", count),
+			ReplyTo:    msg.ID,
+			TimeStamp:  time.Now(),
+		}
+		if err := a.bus.PublishOutBoundMessage(ctx, outbound); err != nil {
+			logger.L().Error().Err(err).Msg("Error publishing clear success response")
+		}
+		return
+	}
+
+	sess, isNewSession := a.sessionMgr.GetOrCreate(sessKey)
+	if isNewSession || len(sess.Messages) == 0 {
+		fullSystemPrompt, err := a.contextBuilder.BuildFullSystemPrompt(msg.InChannel, msg.ChatID, msg.SenderID)
+		if err != nil {
+			logger.L().Error().Err(err).Msg("Failed to build full system prompt")
+			fullSystemPrompt = ""
+		} else {
+			sess.AddMessage(AgentMessage{
+				Role:      RoleSystem,
+				Content:   []ContentBlock{TextContent{fullSystemPrompt}},
+				Timestamp: time.Now().UnixMilli(),
+			})
+		}
+	}
+	// 添加当前消息
 	agentMsg := AgentMessage{
 		Role:      RoleUser,
 		Content:   []ContentBlock{TextContent{Text: msg.Content}},
 		Timestamp: time.Now().UnixMilli(),
 	}
-
-	// 添加当前消息到历史消息
-	sessKey := msg.SessionKey()
-	sess := a.sessionMgr.GetOrCreate(sessKey)
-	sess.Messages = append(sess.Messages, agentMsg)
+	sess.AddMessage(agentMsg)
 
 	// 加载历史消息
-	historyMsg := sess.GetHistory(a.config.MaxHistory)
+	historyMsg := sess.LoadHistory()
 
 	// 使用Orchestrator处理消息
 	resp, err := a.orchestrator.Run(ctx, historyMsg)
@@ -82,102 +132,96 @@ func (a *Agent) handleInboundMessage(ctx context.Context, msg *bus.InBoundMessag
 
 	replyMsg := AgentMessage{
 		Role:      RoleAssistant,
-		Content:   []ContentBlock{TextContent{Text: resp}},
+		Content:   []ContentBlock{TextContent{Text: resp.Choices[0].Message.Content}},
 		Timestamp: time.Now().UnixMilli(),
 	}
 	// 添加回复到会话
 	sess.AddMessage(replyMsg)
-
 	// 更新会话
-	a.sessionMgr.Update(sess)
+	currentTokenUsed := resp.Usage.CompletionTokens + resp.Usage.PromptTokens
+	a.sessionMgr.Update(sess, currentTokenUsed)
+
+	// TODO: 异步压缩上下文并更新summary
+	go func() {
+		if err = a.contextBuilder.Compact(ctx, sess, currentTokenUsed, msg.InChannel, msg.ChatID, msg.SenderID); err != nil {
+			logger.L().Error().Err(err).Msg("Failed to compact session")
+		}
+	}()
 
 	// 发布响应
 	outbound := &bus.OutBoundMessage{
 		OutChannel: msg.InChannel,
 		ChatID:     msg.ChatID,
-		Content:    resp,
+		Content:    resp.Choices[0].Message.Content,
 		ReplyTo:    msg.ID,
 		TimeStamp:  time.Now(),
 	}
-
 	if err := a.bus.PublishOutBoundMessage(ctx, outbound); err != nil {
 		logger.L().Error().Err(err).Msg("Error publishing response")
-	}
-
-}
-
-// processMessages 处理消息
-func (a *Agent) processMessages(ctx context.Context) {
-	for {
-		msg, err := a.bus.ConsumeInBoundMessage(ctx)
-		if err != nil {
-			logger.L().Error().Err(err).Msg("Error consuming message")
-			continue
-		}
-
-		// 处理消息
-		a.handleInboundMessage(ctx, msg)
-
 	}
 }
 
 // Start 启动Agent
 func (a *Agent) Start(ctx context.Context) error {
+	// 加载历史 sessions
+	logger.L().Info().Msg("Starting agent")
+	a.sessionMgr.LoadSessions()
+
+	// 启动 session 管理
+	a.sessionMgr.Start()
 	// 启动 MCP 管理器并注册工具
 	if err := a.mcpManager.Start(ctx, a.toolRegistry); err != nil {
 		logger.L().Error().Err(err).Msg("启动 MCP 管理器失败")
 		return err
 	}
-
-	// 注意：如果使用 Gateway 路由消息，这里不应该启动独立的 processMessages 循环，
-	// 因为 Gateway 会消费消息并调用 a.Process()。
-	// 但为了兼容独立运行模式，这里暂且保留或由上层决定是否启动。
-	// 为了避免和 Gateway 争抢消息，当作为 Gateway 的 Agent 注册时，不应调用此处的 processMessages。
 	return nil
 }
 
-// StartStandalone 独立模式启动Agent（自己消费消息）
-func (a *Agent) StartStandalone(ctx context.Context) error {
-	if err := a.Start(ctx); err != nil {
-		return err
-	}
-	go a.processMessages(ctx)
-	return nil
+// SaveSession 立即保存指定 session
+func (a *Agent) SaveSession(sessionKey string) error {
+	return a.sessionMgr.SaveSession(sessionKey)
+}
+
+// SaveAllSessions 保存所有 session
+func (a *Agent) SaveAllSessions() {
+	a.sessionMgr.SaveAllSessionsWithMeta()
+}
+
+// GetWorkspace 获取工作目录
+func (a *Agent) GetWorkspace() string {
+	return a.workspace
+}
+
+// GetMemoryDir 获取 memory 目录
+func (a *Agent) GetMemoryDir() string {
+	return filepath.Join(a.workspace, "memory")
 }
 
 // Stop 停止Agent
 func (a *Agent) Stop() {
+	// 保存所有 sessions
+	a.sessionMgr.SaveAllSessionsWithMeta()
+
+	// 停止 session manager
+	a.sessionMgr.Stop()
+
 	// 关闭 MCP 管理器，释放资源
 	a.mcpManager.Stop()
 }
 
 // GetConfig 获取 Agent 配置
-func (a *Agent) GetConfig() AgentConfig {
+func (a *Agent) GetConfig() *config.AgentConfig {
 	return a.config
 }
 
 // GetOrCreateSession 获取或创建会话
 // 这是提供给 Gateway 的公共方法
 func (a *Agent) GetOrCreateSession(key string) *Session {
-	return a.sessionMgr.GetOrCreate(key)
+	sess, _ := a.sessionMgr.GetOrCreate(key)
+	return sess
 }
 
 // GetSession 获取会话（如果不存在则返回 nil）
 func (a *Agent) GetSession(key string) (*Session, bool) {
 	return a.sessionMgr.Get(key)
-}
-
-// UpdateSession 更新会话
-func (a *Agent) UpdateSession(session *Session) {
-	a.sessionMgr.Update(session)
-}
-
-// Process 处理消息并返回响应
-// 这是提供给 Gateway 的同步处理方法
-func (a *Agent) Process(ctx context.Context, history []AgentMessage) (string, error) {
-	resp, err := a.orchestrator.Run(ctx, history)
-	if err != nil {
-		return "", err
-	}
-	return resp, nil
 }

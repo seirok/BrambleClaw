@@ -24,6 +24,10 @@ type LLMResponse struct {
 			ToolCalls []ToolCall `json:"tool_calls"`
 		} `json:"message"`
 	} `json:"choices"`
+	Usage struct {
+		CompletionTokens int `json:"completion_tokens"`
+		PromptTokens     int `json:"prompt_tokens"`
+	} `json:"usage"`
 }
 
 // LLMClient LLM客户端

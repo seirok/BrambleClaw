@@ -1,1 +1,5 @@
 ./config/config.json
+./.claude
+**/*_test.go
+./logs
+./CLAUDE.md

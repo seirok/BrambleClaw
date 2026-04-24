@@ -1,13 +1,11 @@
 package cli
 
 import (
-	"brambleclaw/agent"
 	"brambleclaw/bus"
 	"brambleclaw/channel"
 	"brambleclaw/config"
 	"brambleclaw/gateway"
 	"brambleclaw/logger"
-	"brambleclaw/tools"
 	"bufio"
 	"context"
 	"encoding/json"
@@ -47,8 +45,14 @@ var agentCmd = &cobra.Command{
 
 var debugCmd = &cobra.Command{
 	Use:   "debug",
-	Short: "输出并格式化最近的日志",
+	Short: "输出并格式化最近的日志和分析 session",
 	RunE:  runDebug,
+}
+
+var agentNewCmd = &cobra.Command{
+	Use:   "new",
+	Short: "创建新 Agent",
+	RunE:  runAgentNew,
 }
 
 // 选项
@@ -56,6 +60,7 @@ var (
 	agentMessage string
 	agentSession string
 	debugLines   int
+	debugSession bool
 )
 
 func init() {
@@ -63,10 +68,12 @@ func init() {
 	rootCmd.AddCommand(initCmd)
 
 	agentCmd.Flags().StringVarP(&agentMessage, "message", "m", "", "非交互式执行：发送一条消息后退出")
-	agentCmd.Flags().StringVarP(&agentSession, "session", "s", "cli:default", "指定 Session Key，保留上下文对话")
+	agentCmd.Flags().StringVarP(&agentSession, "session", "s", "default", "指定 Session Key，保留上下文对话")
+	agentCmd.AddCommand(agentNewCmd)
 	rootCmd.AddCommand(agentCmd)
 
 	debugCmd.Flags().IntVarP(&debugLines, "lines", "n", 100, "输出最近的日志行数")
+	debugCmd.Flags().BoolVarP(&debugSession, "session", "s", false, "分析 session")
 	rootCmd.AddCommand(debugCmd)
 }
 
@@ -166,6 +173,11 @@ func runInit(cmd *cobra.Command, args []string) error {
 }
 
 func runDebug(cmd *cobra.Command, args []string) error {
+	// 如果指定了 -s 或 --session，运行 session 分析器
+	if debugSession {
+		return runDebugSessions()
+	}
+
 	logger.L().Debug().Msg("加载配置并初始化日志分析器...")
 
 	loader := config.NewLoader()
@@ -200,8 +212,9 @@ func runAgent(cmd *cobra.Command, args []string) error {
 
 	// 根据配置重新初始化日志
 	logger.Setup(cfg.Log.Path, cfg.Log.Level, cfg.Log.ConsoleEnabled)
-
 	logger.L().Debug().Str("config_path", configPath).Msg("成功加载配置文件")
+
+	// 配置项检查
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -221,7 +234,9 @@ func runAgent(cmd *cobra.Command, args []string) error {
 		AllowedIDs: cfg.Channels.CLI.AllowedIDs,
 	}
 	cliChan := channel.NewCLIChannel(cliCfg, msgBus)
-	channelManager.Register(cliChan)
+	if err = channelManager.Register(cliChan); err != nil {
+		return err
+	}
 
 	// 4. 加载 Gateway 配置
 	logger.L().Debug().Msg("加载 Gateway 配置...")
@@ -234,41 +249,30 @@ func runAgent(cmd *cobra.Command, args []string) error {
 	logger.L().Debug().Msg("初始化 Gateway...")
 	gw := gateway.NewGateway(gwCfg, msgBus, channelManager)
 
-	// 6. 创建并注册 Agent
-	logger.L().Debug().Msg("创建并注册 Agent...")
-	agentCfg := agent.AgentConfig{
-		Name:       "main",
-		LLM:        cfg.LLMConfig,
-		MaxHistory: 5,
-		Tools:      cfg.Tools,
-	}
-	mainAgent := agent.NewAgent(agentCfg, msgBus)
-	mainAgent.RegisterTool(tools.NewFileSystemTool())
-	mainAgent.RegisterTool(tools.NewShellTool())
-	mainAgent.RegisterTool(tools.NewCodeSandboxTool())
-
-	if cfg.Tools.WebSearch.Enabled && cfg.Tools.WebSearch.APIKey != "" {
-		mainAgent.RegisterTool(tools.NewWebSearchTool(cfg.Tools.WebSearch.APIKey))
-	}
-	if cfg.Tools.UrlParse.Enabled {
-		mainAgent.RegisterTool(tools.NewUrlParseTool())
-	}
-
-	if err := mainAgent.Start(ctx); err != nil {
+	// 6. 恢复 Agent 并重新注册
+	logger.L().Debug().Msg("[runAgent] 恢复 Agent 并重新注册...")
+	if err = gw.RegisterAgents(cfg); err != nil {
 		return err
 	}
 
-	if err := gw.RegisterAgent("main", mainAgent, agentCfg); err != nil {
-		return err
+	// 启动 agents
+	agentRegistry := gw.GetRegistry()
+	agents := agentRegistry.List()
+	for _, agentName := range agents {
+		aGent, _ := agentRegistry.GetAgent(agentName)
+		err = aGent.Start(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
 	// 7. 启动 Gateway 和 Channel
 	logger.L().Debug().Msg("启动 Gateway 和 Channel...")
-	if err := gw.Start(ctx); err != nil {
+	if err = gw.Start(ctx); err != nil {
 		return err
 	}
 
-	if err := channelManager.Start(ctx); err != nil {
+	if err = channelManager.Start(ctx); err != nil {
 		return err
 	}
 
@@ -357,10 +361,59 @@ func runAgent(cmd *cobra.Command, args []string) error {
 		<-sigChan
 	}
 
-	fmt.Println("Shutting down...")
+	// 停止
+	fmt.Println("Shutting down... Hope to see you next time!😊")
 	gw.Stop()
-	channelManager.Stop()
-	mainAgent.Stop()
+	if err = channelManager.Stop(); err != nil {
+		return err
+	}
+	agentNames := agentRegistry.List()
+	for _, agentName := range agentNames {
+		aGent, _ := agentRegistry.GetAgent(agentName)
+		aGent.Stop()
+	}
+	return nil
+}
+
+// runAgentNew 运行 Agent 创建向导
+func runAgentNew(cmd *cobra.Command, args []string) error {
+	logger.L().Debug().Msg("加载配置...")
+
+	// 加载配置
+	loader := config.NewLoader()
+	cfg, cfgPath, err := loader.Load()
+	if err != nil {
+		return err
+	}
+
+	// 创建 Agent 创建向导
+	creator := NewAgentCreator(cfg, cfgPath)
+	return creator.Run()
+}
+
+// runDebugSessions 运行 session 分析器
+func runDebugSessions() error {
+	fmt.Println("============================================")
+	fmt.Println("        Session 分析器")
+	fmt.Println("============================================")
+	fmt.Println()
+
+	// 使用配置加载器，支持多路径搜索
+	loader := config.NewLoader()
+	cfg, _, err := loader.Load()
+	if err != nil {
+		return err // 底层已经包装，直接透传
+	}
+
+	// 根据配置重新初始化日志
+	logger.Setup(cfg.Log.Path, cfg.Log.Level, cfg.Log.ConsoleEnabled)
+
+	// 检查配置文件
+	if err = cfg.CheckConfig(); err != nil {
+		return err
+	}
+
+	// TODO:创建分析器
 
 	return nil
 }

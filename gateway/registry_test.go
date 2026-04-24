@@ -21,7 +21,7 @@ func createMockAgent(t *testing.T) *agent.Agent {
 		},
 		MaxHistory: 10,
 	}
-	return agent.NewAgent(agentCfg, msgBus)
+	return agent.NewAgent(agentCfg, msgBus, "", 0)
 }
 
 func TestNewAgentRegistry(t *testing.T) {
@@ -40,7 +40,7 @@ func TestNewAgentRegistry(t *testing.T) {
 func TestAgentRegistry_Register(t *testing.T) {
 	registry := NewAgentRegistry()
 	ag := createMockAgent(t)
-	cfg := agent.AgentConfig{Name: "test-agent"}
+	cfg := config.AgentConfig{Name: "test-agent"}
 
 	// 测试正常注册
 	err := registry.Register("test-agent", ag, cfg)
@@ -74,7 +74,7 @@ func TestAgentRegistry_Register(t *testing.T) {
 func TestAgentRegistry_Get(t *testing.T) {
 	registry := NewAgentRegistry()
 	ag := createMockAgent(t)
-	cfg := agent.AgentConfig{Name: "test-agent", MaxHistory: 10}
+	cfg := config.AgentConfig{Name: "test-agent", MaxHistory: 10}
 
 	// 注册 Agent
 	err := registry.Register("test-agent", ag, cfg)
@@ -107,7 +107,7 @@ func TestAgentRegistry_Get(t *testing.T) {
 func TestAgentRegistry_GetAgent(t *testing.T) {
 	registry := NewAgentRegistry()
 	ag := createMockAgent(t)
-	cfg := agent.AgentConfig{Name: "test-agent"}
+	cfg := config.AgentConfig{Name: "test-agent"}
 
 	// 注册 Agent
 	registry.Register("test-agent", ag, cfg)
@@ -131,7 +131,7 @@ func TestAgentRegistry_GetAgent(t *testing.T) {
 func TestAgentRegistry_Unregister(t *testing.T) {
 	registry := NewAgentRegistry()
 	ag := createMockAgent(t)
-	cfg := agent.AgentConfig{Name: "test-agent"}
+	cfg := config.AgentConfig{Name: "test-agent"}
 
 	// 注册 Agent
 	registry.Register("test-agent", ag, cfg)
@@ -160,7 +160,7 @@ func TestAgentRegistry_Unregister(t *testing.T) {
 func TestAgentRegistry_List(t *testing.T) {
 	registry := NewAgentRegistry()
 	ag := createMockAgent(t)
-	cfg := agent.AgentConfig{Name: "test-agent"}
+	cfg := config.AgentConfig{Name: "test-agent"}
 
 	// 初始状态应该为空
 	list := registry.List()
@@ -196,7 +196,7 @@ func TestAgentRegistry_List(t *testing.T) {
 func TestAgentRegistry_Count(t *testing.T) {
 	registry := NewAgentRegistry()
 	ag := createMockAgent(t)
-	cfg := agent.AgentConfig{Name: "test-agent"}
+	cfg := config.AgentConfig{Name: "test-agent"}
 
 	// 初始计数应该为 0
 	if registry.Count() != 0 {
@@ -224,7 +224,7 @@ func TestAgentRegistry_Count(t *testing.T) {
 func TestAgentRegistry_ConcurrentAccess(t *testing.T) {
 	registry := NewAgentRegistry()
 	ag := createMockAgent(t)
-	cfg := agent.AgentConfig{Name: "test-agent"}
+	cfg := config.AgentConfig{Name: "test-agent"}
 
 	// 并发注册
 	done := make(chan bool, 10)
