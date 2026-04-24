@@ -1,5 +1,7 @@
-./config/config.json
+internal/config/config.json
 ./.claude
 **/*_test.go
 ./logs
 ./CLAUDE.md
+**/*.log
+**/*.exe

@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//mnt/c/Users/93986/GolandProjects/**)",
+      "Bash(go build *)",
+      "Bash(head -n 485 agent/context.go)",
+      "Bash(mv agent/context.go.tmp agent/context.go)",
+      "Bash(head -n 485 /C/Users/93986/GolandProjects/brambleclaw/agent/context.go)",
+      "Bash(mv /tmp/context.go.tmp /C/Users/93986/GolandProjects/brambleclaw/agent/context.go)",
+      "Bash(gh search *)",
+      "Bash(curl -s \"https://raw.githubusercontent.com/asg017/sqlite-vec/main/README.md\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/asg017/sqlite-vec/main/bindings/go/cgo/sqlite_vec.go\")",
+      "Bash(curl -s \"https://alexgarcia.xyz/sqlite-vec/go.html\")",
+      "Bash(go get *)",
+      "Bash(CGO_LDFLAGS=\"-Wl,--disable-high-entropy-va\" go test -v ./rag/store/...)"
+    ]
+  }
+}

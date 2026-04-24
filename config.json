@@ -1,0 +1,140 @@
+{
+  "log": {
+    "path": "logs/brambleclaw.log",
+    "console_enabled": false,
+    "level": "debug"
+  },
+  "bus-buf-size": 500,
+  "sub-buf-size": 100,
+  "channels": {
+    "cli": {
+      "enabled": true,
+      "allowed_ids": [
+        "user"
+      ]
+    }
+  },
+  "llm": {
+    "api_key": "",
+    "base_url": "",
+    "model": ""
+  },
+  "tools": {
+    "mcp": {
+      "enabled": false,
+      "servers": {}
+    },
+    "web_search": {
+      "enabled": false,
+      "api_key": ""
+    },
+    "url_parse": {
+      "enabled": false
+    }
+  },
+  "gateway": {
+    "version": "1.0",
+    "default_agent": "main",
+    "routes": [
+      {
+        "channel": "cli",
+        "agent": "main",
+        "conditions": {},
+        "priority": 10
+      }
+    ],
+    "retry": {
+      "max_retries": 3,
+      "retry_delay": 5,
+      "timeout": 30
+    },
+    "health_check": {
+      "enabled": true,
+      "interval": 30,
+      "timeout": 10
+    }
+  },
+  "agents": [
+    {
+      "name": "main",
+      "description": "Main agent for general tasks",
+      "llm": {
+        "api_key": "sk-5bf82463ee7541998be695d038de50c6",
+        "base_url": "https://api.deepseek.com/v1/chat/completions",
+        "model": "deepseek-chat"
+      },
+      "tools": [
+        "filesystem",
+        "shell",
+        "code_sandbox"
+      ],
+      "workspace": "C:\\Users\\93986\\.brambleclaw\\workspace\\main\\workspace",
+      "max_history": 30,
+      "enabled": true
+    },
+    {
+      "name": "weixin",
+      "description": "Weixin agent for chat",
+      "llm": {
+        "api_key": "",
+        "base_url": "https://api.deepseek.com/v1/chat/completions",
+        "model": "deepseek-chat"
+      },
+      "tools": [
+        "filesystem",
+        "shell",
+        "web_search"
+      ],
+      "workspace": "C:\\Users\\93986\\.brambleclaw\\workspace\\weixin\\workspace",
+      "max_history": 30,
+      "enabled": true
+    }
+  ],
+  "session": {
+    "autosave": true,
+    "storage_format": "",
+    "max_history": 0
+  },
+  "workspace": "C:\\Users\\93986\\.brambleclaw\\workspace",
+  "compact": {
+    "compact_threshold": 0,
+    "compact-rounds": 10
+  },
+  "sandbox": {
+    "enabled": true,
+    "workspace": "./workspace",
+    "allow_read_outside": false,
+    "filesystem": {
+      "allow_write_paths": [
+        "^/tmp/",
+        "^/var/tmp/"
+      ],
+      "max_file_size": 104857600,
+      "max_total_size": 1073741824
+    },
+    "execution": {
+      "allowed_commands": [
+        "ls",
+        "cat",
+        "grep",
+        "head",
+        "tail",
+        "python3",
+        "python",
+        "node",
+        "npm",
+        "go",
+        "git",
+        "docker"
+      ],
+      "timeout": 30000000000,
+      "max_output_size": 1048576
+    },
+    "audit": {
+      "enabled": true,
+      "log_path": "./logs/sandbox_audit.log",
+      "max_size": 100,
+      "max_backups": 10
+    }
+  }
+}
