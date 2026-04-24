@@ -386,9 +386,9 @@ func (cb *ContextBuilder) Compact(ctx context.Context, session *Session, usage i
 		summaryContent = resp.Choices[0].Message.Content
 	}
 
-	// 初始化 SummaryCompressor（如果未初始化）
+	// 确保 SummaryCompressor 已初始化
 	if cb.summaryCompressor == nil {
-		cb.summaryCompressor = NewSummaryCompressor(*cb.compact, cb.agent.llmClient)
+		return fmt.Errorf("compact: summaryCompressor not initialized")
 	}
 
 	// 添加摘要到层级压缩器（AddSummary 会自动处理层级压缩）

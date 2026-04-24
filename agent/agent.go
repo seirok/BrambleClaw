@@ -5,6 +5,7 @@ import (
 	"brambleclaw/config"
 	util "brambleclaw/internal"
 	"brambleclaw/logger"
+	"brambleclaw/sandbox"
 	"brambleclaw/tools"
 	"brambleclaw/tools/mcp"
 	"context"
@@ -14,40 +15,127 @@ import (
 	"time"
 )
 
-// AgentConfig Agent配置
+// AgentOption 配置选项函数类型
+type AgentOption func(*agentOptions)
+
+// agentOptions 代理配置选项
+type agentOptions struct {
+	sandboxCfg *config.SandboxConfig
+	compactCfg *config.CompactConfig
+}
+
+// WithSandboxConfig 设置沙箱配置选项
+func WithSandboxConfig(cfg *config.SandboxConfig) AgentOption {
+	return func(opts *agentOptions) {
+		opts.sandboxCfg = cfg
+	}
+}
+
+// WithCompactConfig 设置压缩配置选项
+func WithCompactConfig(cfg *config.CompactConfig) AgentOption {
+	return func(opts *agentOptions) {
+		opts.compactCfg = cfg
+	}
+}
 
 // Agent Agent核心
 type Agent struct {
 	config         *config.AgentConfig
 	sessionMgr     *PersistentSessionManager
-	llmClient      *LLMClient
 	bus            *bus.MessageBus
 	toolRegistry   *tools.ToolRegistry
 	orchestrator   *Orchestrator
 	mcpManager     *mcp.Manager
 	contextBuilder *ContextBuilder
 	workspace      string
+	sandbox        *sandbox.Sandbox
 }
 
 // NewAgent 创建Agent
-// 如果 workspacePath 为空，则使用非持久化模式（用于测试和兼容旧代码）
-func NewAgent(config *config.AgentConfig, bus *bus.MessageBus, mcpManager *mcp.Manager, builder *ContextBuilder) *Agent {
-	llmClient := NewLLMClient(config.LLM)
+func NewAgent(cfg *config.AgentConfig, bus *bus.MessageBus, mcpManager *mcp.Manager, builder *ContextBuilder, opts ...AgentOption) *Agent {
+	// 默认配置选项
+	options := &agentOptions{}
+
+	// 应用所有选项函数
+	for _, opt := range opts {
+		opt(options)
+	}
+
+	// 验证必需配置
+	if options.sandboxCfg == nil {
+		logger.L().Warn().Msg("sandbox config not provided, using default settings")
+		options.sandboxCfg = &config.SandboxConfig{}
+	}
+
+	if options.compactCfg == nil {
+		logger.L().Warn().Msg("compact config not provided, using default settings")
+		options.compactCfg = &config.CompactConfig{}
+	}
+
+	llmClient := NewLLMClient(cfg.LLM)
 	toolRegistry := tools.NewToolRegistry()
 	orchestrator := NewOrchestrator(llmClient, toolRegistry)
 
+	// 初始化 SummaryCompressor 并注入到 ContextBuilder
+	compressor := NewSummaryCompressor(*options.compactCfg, llmClient)
+	builder.summaryCompressor = compressor
+
 	var sessionMgr *PersistentSessionManager
-	sessionMgr = NewPersistentSessionManager(config.Workspace)
+	sessionMgr = NewPersistentSessionManager(cfg.Workspace)
+
+	// 使用配置的命令白名单，如果为空则使用默认
+	allowedCommands := options.sandboxCfg.AllowedCommands
+	if len(allowedCommands) == 0 {
+		allowedCommands = []string{
+			"echo", "cat", "type", "dir", "ls", "pwd", "cd",
+			"mkdir", "rmdir", "rm", "cp", "mv", "copy", "move",
+			"grep", "find", "head", "tail", "more", "less",
+			"git", "go", "python", "python3", "node", "npm",
+			"powershell", "cmd", "bash",
+		}
+	}
+
+	timeout := time.Duration(options.sandboxCfg.TimeoutSeconds) * time.Second
+	if timeout <= 0 {
+		timeout = 30 * time.Second
+	}
+
+	maxOutputSize := options.sandboxCfg.MaxOutputSize
+	if maxOutputSize <= 0 {
+		maxOutputSize = 1024 * 1024 // 1MB
+	}
+
+	// 创建沙箱配置
+	sandboxConfig := &sandbox.SandboxConfig{
+		Enabled:          options.sandboxCfg.Enabled,
+		Workspace:        cfg.Workspace,
+		AllowReadOutside: false,
+		FileSystem: sandbox.FileSystemConfig{
+			MaxFileSize: 100 * 1024 * 1024, // 100MB
+		},
+		Execution: sandbox.ExecutionConfig{
+			Timeout:         timeout,
+			AllowedCommands: allowedCommands,
+			MaxOutputSize:   maxOutputSize,
+		},
+	}
+
+	// 创建沙箱（审计日志暂时为nil）
+	sbx, err := sandbox.NewSandbox(sandboxConfig, nil)
+	if err != nil {
+		logger.L().Error().Err(err).Msg("创建沙箱失败，将使用无沙箱模式")
+		sbx = nil
+	}
 
 	agent := &Agent{
-		config:       config,
+		config:       cfg,
 		sessionMgr:   sessionMgr,
-		llmClient:    llmClient,
 		bus:          bus,
 		toolRegistry: toolRegistry,
 		orchestrator: orchestrator,
 		mcpManager:   mcpManager,
-		workspace:    config.Workspace,
+		workspace:    cfg.Workspace,
+		sandbox:      sbx,
 	}
 
 	builder.agent = agent

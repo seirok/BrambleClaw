@@ -163,6 +163,8 @@ func LoadFromFile(path string) (*Config, error) {
 	cfg = ensureWorkspaceDefaults(cfg)
 	// 设置 Compact 默认值
 	cfg = ensureCompactDefaults(cfg)
+	// 设置 Sandbox 默认值
+	cfg = ensureSandboxDefaults(cfg)
 
 	return &cfg, nil
 }
@@ -204,6 +206,24 @@ func ensureCompactDefaults(cfg Config) Config {
 	// 设置 CompactRounds 默认值
 	if cfg.Compact.CompactRounds == 0 {
 		cfg.Compact.CompactRounds = 20
+	}
+	return cfg
+}
+
+// ensureSandboxDefaults 确保 Sandbox 配置具有合理的默认值
+func ensureSandboxDefaults(cfg Config) Config {
+	// 默认启用沙箱
+	if !cfg.Tools.Sandbox.Enabled && len(cfg.Tools.Sandbox.AllowedCommands) == 0 {
+		cfg.Tools.Sandbox.Enabled = true
+		cfg.Tools.Sandbox.AllowedCommands = []string{
+			"echo", "cat", "type", "dir", "ls", "pwd", "cd",
+			"mkdir", "rmdir", "rm", "cp", "mv", "copy", "move",
+			"grep", "find", "head", "tail", "more", "less",
+			"git", "go", "python", "python3", "node", "npm",
+			"powershell", "cmd", "bash",
+		}
+		cfg.Tools.Sandbox.TimeoutSeconds = 30
+		cfg.Tools.Sandbox.MaxOutputSize = 1024 * 1024 // 1MB
 	}
 	return cfg
 }
@@ -291,6 +311,15 @@ type ToolsConfig struct {
 	MCP       MCPConfig       `json:"mcp"`
 	WebSearch WebSearchConfig `json:"web_search"`
 	UrlParse  UrlParseConfig  `json:"url_parse"`
+	Sandbox   SandboxConfig   `json:"sandbox"`
+}
+
+// SandboxConfig 沙箱工具配置
+type SandboxConfig struct {
+	Enabled         bool     `json:"enabled"`          // 是否启用沙箱
+	AllowedCommands []string `json:"allowed_commands"` // 允许的命令白名单
+	TimeoutSeconds  int      `json:"timeout_seconds"`  // 命令执行超时（秒）
+	MaxOutputSize   int      `json:"max_output_size"`  // 最大输出大小（字节）
 }
 
 type UrlParseConfig struct {

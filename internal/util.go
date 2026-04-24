@@ -9,13 +9,13 @@ import (
 )
 
 func BuildSessionKey(agentName, channelName, chatID string) string {
-	sessionKey := channelName + "::" + agentName + "::" + chatID
+	sessionKey := channelName + "_" + agentName + "_" + chatID
 	return sessionKey
 }
 
 func ParseSessionKey(sessionKey string) (agentName, channelName, chatID string, err error) {
 	// 按 "::" 进行切割
-	parts := strings.Split(sessionKey, "::")
+	parts := strings.Split(sessionKey, "_")
 
 	// 严谨起见，先检查长度是否符合预期（应该有 3 部分）
 	if len(parts) == 3 {

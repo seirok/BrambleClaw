@@ -92,7 +92,10 @@ func (g *Gateway) RegisterAgents(config *config.Config) error {
 			return err
 		}
 
-		newAgent := agent.NewAgent(cfg, g.msgBus, mcpManager, contextBuilder)
+		newAgent := agent.NewAgent(cfg, g.msgBus, mcpManager, contextBuilder,
+			agent.WithSandboxConfig(&config.Tools.Sandbox),
+			agent.WithCompactConfig(&config.Compact),
+		)
 		if err := g.registry.Register(cfg.Name, newAgent, cfg); err != nil {
 			return err
 		}
