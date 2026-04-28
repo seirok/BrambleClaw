@@ -4,6 +4,7 @@ import (
 	util "brambleclaw/internal"
 	"brambleclaw/internal/bus"
 	"brambleclaw/internal/config"
+	"brambleclaw/internal/hook"
 	"brambleclaw/internal/interfaces"
 	"brambleclaw/internal/logger"
 	"brambleclaw/internal/session"
@@ -37,6 +38,9 @@ func NewAgent(name string, opts ...Option) *Agent {
 	for _, opt := range opts {
 		opt(agent)
 	}
+
+	// 触发 Agent 创建钩子
+	hook.Emit(context.Background(), "hook.point.agent.create", agent)
 
 	return agent
 }
@@ -113,6 +117,16 @@ func (a *Agent) Name() string { return a.name }
 
 // handleMessage 处理入站消息
 func (a *Agent) HandleMessage(ctx context.Context, msg *bus.InBoundMessage) {
+	// 触发消息处理前钩子
+	if processedMsg, err := hook.Emit(ctx, "hook.point.message.pre-process", msg); err != nil {
+		logger.L().Error().Err(err).Msg("Message pre-processing hook failed")
+		return
+	} else if processedMsg != nil {
+		if m, ok := processedMsg.(*bus.InBoundMessage); ok {
+			msg = m
+		}
+	}
+
 	// 构建系统提示
 	sessKey := util.BuildSessionKey(a.name, msg.InChannel, msg.ChatID)
 
@@ -201,9 +215,22 @@ func (a *Agent) HandleMessage(ctx context.Context, msg *bus.InBoundMessage) {
 		ReplyTo:    msg.ID,
 		TimeStamp:  time.Now(),
 	}
+	// 触发响应前钩子
+	if processedOutbound, err := hook.Emit(ctx, "hook.point.message.pre-response", outbound); err != nil {
+		logger.L().Error().Err(err).Msg("Pre-response hook failed")
+		return
+	} else if processedOutbound != nil {
+		if m, ok := processedOutbound.(*bus.OutBoundMessage); ok {
+			outbound = m
+		}
+	}
+
 	if err := a.Bus().PublishOutBoundMessage(ctx, outbound); err != nil {
 		logger.L().Error().Err(err).Msg("Error publishing response")
 	}
+
+	// 触发消息处理后钩子
+	hook.Emit(ctx, "hook.point.message.post-process", msg)
 }
 
 func (a *Agent) ClearSession(sessionKey string) (int, error) {
@@ -217,21 +244,33 @@ func (a *Agent) ClearSession(sessionKey string) (int, error) {
 }
 
 func (a *Agent) Start(ctx context.Context) error {
+	// 触发 Agent 启动前钩子
+	if _, err := hook.Emit(ctx, "hook.point.agent.pre-start", a); err != nil {
+		return err
+	}
+
 	err := a.SessionMgr().Initialize(context.Background(), config.Get())
 	if err != nil {
 		return err
 	}
+
 	err = a.SessionMgr().StartAll(ctx)
 	if err != nil {
 		return err
 	}
+
+	// 触发 Agent 启动后钩子
+	hook.Emit(ctx, "hook.point.agent.start", a)
+
 	return nil
 }
 
 // Stop 停止Agent
 func (a *Agent) Stop(ctx context.Context) error {
-	// 保存所有 sessions
-	//	a.sessionMgr.SaveAllSessionsWithMeta()
+	// 触发 Agent 停止前钩子
+	if _, err := hook.Emit(ctx, "hook.point.agent.pre-stop", a); err != nil {
+		logger.L().Error().Err(err).Msg("Failed to execute pre-stop hook")
+	}
 
 	// 停止 session manager
 	err := a.sessionManager.StopAll(context.Background())
@@ -241,6 +280,10 @@ func (a *Agent) Stop(ctx context.Context) error {
 
 	// 关闭 MCP 管理器，释放资源
 	a.mcp.Stop()
+
+	// 触发 Agent 停止后钩子
+	hook.Emit(ctx, "hook.point.agent.stop", a)
+
 	return nil
 }
 

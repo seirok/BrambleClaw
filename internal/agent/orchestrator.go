@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"brambleclaw/internal/hook"
 	"brambleclaw/internal/interfaces"
 	"brambleclaw/internal/tools"
 	"context"
@@ -99,9 +100,30 @@ func (o *Orchestrator) Run(ctx context.Context, messages []interfaces.Message) (
 		Messages: chatMsgs,
 		Tools:    toolDefs,
 	}
+
+	// 触发 LLM 请求前钩子
+	if processedReq, err := hook.Emit(ctx, "hook.point.llm.request", chatReq); err != nil {
+		return nil, err
+	} else if processedReq != nil {
+		if req, ok := processedReq.(ChatCompletionRequest); ok {
+			chatReq = req
+		}
+	}
+
 	response, err := o.llm.Chat(chatReq)
 	if err != nil {
+		// 触发 LLM 错误钩子
+		hook.Emit(ctx, "hook.point.llm.error", err)
 		return nil, err
+	}
+
+	// 触发 LLM 响应后钩子
+	if processedResp, err := hook.Emit(ctx, "hook.point.llm.response", response); err != nil {
+		return nil, err
+	} else if processedResp != nil {
+		if resp, ok := processedResp.(*LLMResponse); ok {
+			response = resp
+		}
 	}
 
 	// Update Chat History
@@ -165,9 +187,28 @@ func (o *Orchestrator) executeToolCall(ctx context.Context, toolCall ToolFunctio
 
 	// Execute Tool
 	args := toolCall.Arguments
+
+	// 触发工具执行前钩子
+	if processedArgs, err := hook.Emit(ctx, "hook.point.tool.pre-execute", args); err != nil {
+		return ToolResult{}, err
+	} else if processedArgs != nil {
+		if argStr, ok := processedArgs.(string); ok {
+			args = argStr
+		}
+	}
+
 	result, err := tool.Execute(ctx, args)
 	if err != nil {
+		// 触发工具错误钩子
+		hook.Emit(ctx, "hook.point.tool.error", err)
 		return ToolResult{}, err
+	}
+
+	// 触发工具执行后钩子
+	if processedResult, err := hook.Emit(ctx, "hook.point.tool.result", result); err != nil {
+		return ToolResult{}, err
+	} else if processedResult != nil {
+		result = processedResult
 	}
 
 	// 转换结果为字符串

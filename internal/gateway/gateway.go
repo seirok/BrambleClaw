@@ -5,6 +5,7 @@ import (
 	"brambleclaw/internal/bus"
 	"brambleclaw/internal/channel"
 	"brambleclaw/internal/config"
+	"brambleclaw/internal/hook"
 	"brambleclaw/internal/interfaces"
 	"brambleclaw/internal/logger"
 	"context"
@@ -173,6 +174,9 @@ func (g *Gateway) handleMessage(ctx context.Context, msg *bus.InBoundMessage) er
 	if err != nil {
 		return fmt.Errorf("路由解析失败: %w", err)
 	}
+
+	// 触发路由钩子
+	hook.Emit(ctx, "hook.point.message.route", route)
 
 	//  获取 Agent
 	agent_, err := g.agentManager.Get(ctx, route.AgentName)
