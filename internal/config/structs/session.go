@@ -1,4 +1,4 @@
-package config
+package structs
 
 // SessionConfig session 配置
 type SessionConfig struct {

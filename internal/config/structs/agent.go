@@ -1,4 +1,4 @@
-package config
+package structs
 
 // AgentConfig 定义单个 Agent 的配置
 type AgentConfig struct {

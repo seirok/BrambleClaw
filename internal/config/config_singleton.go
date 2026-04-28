@@ -20,9 +20,11 @@ var (
 // path: 显式配置文件路径，为空字符串时使用自动搜索
 func Init(path string) error {
 	once.Do(func() {
-		loader := NewLoader()
+		var loader *Loader
 		if path != "" {
-			loader.ExplicitPath = path
+			loader = NewLoaderWithPath(path)
+		} else {
+			loader = NewLoader()
 		}
 		globalConfig, globalPath, initErr = loader.Load()
 	})
@@ -56,9 +58,11 @@ func IsInitialized() bool {
 // Reload 重新加载配置（用于配置热更新场景）
 // 注意：此方法会重置 sync.Once，需要并发安全控制
 func Reload(path string) (*Config, error) {
-	loader := NewLoader()
+	var loader *Loader
 	if path != "" {
-		loader.ExplicitPath = path
+		loader = NewLoaderWithPath(path)
+	} else {
+		loader = NewLoader()
 	}
 
 	cfg, loadedPath, err := loader.Load()

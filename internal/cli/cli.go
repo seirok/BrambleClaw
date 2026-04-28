@@ -79,7 +79,7 @@ func init() {
 }
 
 func Execute() error {
-	// 初始化配置单例（在程序启动时只执行一次）
+	// 初始化配置单例
 	if err := config2.Init(""); err != nil {
 		logger2.L().Error().Err(err).Msg("配置初始化失败")
 		return err

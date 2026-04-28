@@ -8534,3 +8534,81 @@
 {"level":"error","error":"session meta不存在: cli_main_default","session_key":"cli_main_default","time":"2026-04-24T17:39:56+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/agent/session_manager.go:342","message":"保存 session meta 失败"}
 {"level":"error","time":"2026-04-24T17:39:56+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/agent/session_manager.go:231","message":"session 和 sessionMeta 状态不一致"}
 {"level":"error","error":"session meta不存在: cli_main_default","session_key":"cli_main_default","time":"2026-04-24T17:40:06+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/agent/session_manager.go:342","message":"保存 session meta 失败"}
+{"level":"debug","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config","time":"2026-04-28T14:02:22+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/config.go:108","message":"添加配置搜索路径"}
+{"level":"debug","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw","time":"2026-04-28T14:02:22+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/config.go:109","message":"添加配置搜索路径"}
+{"level":"debug","path":"C:\\Users\\93986\\AppData\\Roaming\\brambleclaw","time":"2026-04-28T14:02:22+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/config.go:116","message":"添加配置搜索路径"}
+{"level":"debug","path":"C:\\Users\\93986\\.brambleclaw","time":"2026-04-28T14:02:22+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/config.go:124","message":"添加配置搜索路径"}
+{"level":"debug","path":"C:\\Users\\93986","time":"2026-04-28T14:02:22+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/config.go:125","message":"添加配置搜索路径"}
+{"level":"debug","path":"C:\\Users\\93986\\AppData\\Local\\Temp\\go-build1400236588\\b001\\exe\\config","time":"2026-04-28T14:02:22+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/config.go:133","message":"添加配置搜索路径"}
+{"level":"debug","path":"C:\\Users\\93986\\AppData\\Local\\Temp\\go-build1400236588\\b001\\exe","time":"2026-04-28T14:02:22+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/config.go:134","message":"添加配置搜索路径"}
+{"level":"debug","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config","time":"2026-04-28T14:02:22+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/config.go:143","message":"添加配置搜索路径"}
+{"level":"debug","env":"BRAMBLECLAW_CONFIG","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config\\config.json","time":"2026-04-28T14:02:22+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/config.go:176","message":"尝试从环境变量加载配置"}
+{"level":"warn","env":"BRAMBLECLAW_CONFIG","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config\\config.json","time":"2026-04-28T14:02:22+08:00","message":"环境变量指定的配置文件不存在，尝试其他路径"}
+{"level":"debug","time":"2026-04-28T14:02:22+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/config.go:187","message":"尝试从默认搜索路径加载配置"}
+{"level":"debug","error":"open C:\\Users\\93986\\GolandProjects\\brambleclaw\\config\\config.json: The system cannot find the path specified.","time":"2026-04-28T14:02:22+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/config.go:192","message":"无法从默认路径读取配置"}
+{"level":"warn","time":"2026-04-28T14:02:22+08:00","message":"无法找到配置文件，使用默认配置"}
+{"level":"debug","path":"","time":"2026-04-28T14:02:22+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/cli/cli.go:87","message":"配置单例初始化成功"}
+{"level":"debug","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config","time":"2026-04-28T14:02:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/config.go:108","message":"添加配置搜索路径"}
+{"level":"debug","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw","time":"2026-04-28T14:02:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/config.go:109","message":"添加配置搜索路径"}
+{"level":"debug","path":"C:\\Users\\93986\\AppData\\Roaming\\brambleclaw","time":"2026-04-28T14:02:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/config.go:116","message":"添加配置搜索路径"}
+{"level":"debug","path":"C:\\Users\\93986\\.brambleclaw","time":"2026-04-28T14:02:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/config.go:124","message":"添加配置搜索路径"}
+{"level":"debug","path":"C:\\Users\\93986","time":"2026-04-28T14:02:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/config.go:125","message":"添加配置搜索路径"}
+{"level":"debug","path":"C:\\Users\\93986\\AppData\\Local\\go-build\\f3\\f319057ed4af50aad218ffba7bf3d493d30c6cbe30b39bf48144dbf20440c376-d\\config","time":"2026-04-28T14:02:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/config.go:133","message":"添加配置搜索路径"}
+{"level":"debug","path":"C:\\Users\\93986\\AppData\\Local\\go-build\\f3\\f319057ed4af50aad218ffba7bf3d493d30c6cbe30b39bf48144dbf20440c376-d","time":"2026-04-28T14:02:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/config.go:134","message":"添加配置搜索路径"}
+{"level":"debug","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config","time":"2026-04-28T14:02:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/config.go:143","message":"添加配置搜索路径"}
+{"level":"debug","env":"BRAMBLECLAW_CONFIG","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config\\config.json","time":"2026-04-28T14:02:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/config.go:176","message":"尝试从环境变量加载配置"}
+{"level":"warn","env":"BRAMBLECLAW_CONFIG","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config\\config.json","time":"2026-04-28T14:02:39+08:00","message":"环境变量指定的配置文件不存在，尝试其他路径"}
+{"level":"debug","time":"2026-04-28T14:02:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/config.go:187","message":"尝试从默认搜索路径加载配置"}
+{"level":"debug","error":"open C:\\Users\\93986\\GolandProjects\\brambleclaw\\config\\config.json: The system cannot find the path specified.","time":"2026-04-28T14:02:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/config.go:192","message":"无法从默认路径读取配置"}
+{"level":"warn","time":"2026-04-28T14:02:39+08:00","message":"无法找到配置文件，使用默认配置"}
+{"level":"debug","path":"","time":"2026-04-28T14:02:39+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/cli/cli.go:87","message":"配置单例初始化成功"}
+{"level":"debug","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config","time":"2026-04-28T14:02:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/config.go:108","message":"添加配置搜索路径"}
+{"level":"debug","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw","time":"2026-04-28T14:02:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/config.go:109","message":"添加配置搜索路径"}
+{"level":"debug","path":"C:\\Users\\93986\\AppData\\Roaming\\brambleclaw","time":"2026-04-28T14:02:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/config.go:116","message":"添加配置搜索路径"}
+{"level":"debug","path":"C:\\Users\\93986\\.brambleclaw","time":"2026-04-28T14:02:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/config.go:124","message":"添加配置搜索路径"}
+{"level":"debug","path":"C:\\Users\\93986","time":"2026-04-28T14:02:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/config.go:125","message":"添加配置搜索路径"}
+{"level":"debug","path":"C:\\Users\\93986\\AppData\\Local\\go-build\\f3\\f319057ed4af50aad218ffba7bf3d493d30c6cbe30b39bf48144dbf20440c376-d\\config","time":"2026-04-28T14:02:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/config.go:133","message":"添加配置搜索路径"}
+{"level":"debug","path":"C:\\Users\\93986\\AppData\\Local\\go-build\\f3\\f319057ed4af50aad218ffba7bf3d493d30c6cbe30b39bf48144dbf20440c376-d","time":"2026-04-28T14:02:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/config.go:134","message":"添加配置搜索路径"}
+{"level":"debug","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config","time":"2026-04-28T14:02:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/config.go:143","message":"添加配置搜索路径"}
+{"level":"debug","env":"BRAMBLECLAW_CONFIG","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config\\config.json","time":"2026-04-28T14:02:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/config.go:176","message":"尝试从环境变量加载配置"}
+{"level":"warn","env":"BRAMBLECLAW_CONFIG","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config\\config.json","time":"2026-04-28T14:02:49+08:00","message":"环境变量指定的配置文件不存在，尝试其他路径"}
+{"level":"debug","time":"2026-04-28T14:02:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/config.go:187","message":"尝试从默认搜索路径加载配置"}
+{"level":"debug","error":"open C:\\Users\\93986\\GolandProjects\\brambleclaw\\config\\config.json: The system cannot find the path specified.","time":"2026-04-28T14:02:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/config.go:192","message":"无法从默认路径读取配置"}
+{"level":"warn","time":"2026-04-28T14:02:49+08:00","message":"无法找到配置文件，使用默认配置"}
+{"level":"debug","path":"","time":"2026-04-28T14:02:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/cli/cli.go:87","message":"配置单例初始化成功"}
+{"level":"debug","time":"2026-04-28T14:02:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/cli/cli.go:211","message":"加载系统配置..."}
+{"level":"debug","config_path":"","time":"2026-04-28T14:02:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/cli/cli.go:219","message":"成功加载配置文件"}
+{"level":"debug","time":"2026-04-28T14:02:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/cli/cli.go:225","message":"初始化消息总线..."}
+{"level":"debug","time":"2026-04-28T14:02:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/cli/cli.go:229","message":"初始化通道管理器..."}
+{"level":"debug","time":"2026-04-28T14:02:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/cli/cli.go:231","message":"Initializing channel manager with config..."}
+{"level":"debug","time":"2026-04-28T14:02:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/channel/channel_manager.go:35","message":"Starting ChannelManager initialization"}
+{"level":"debug","channels_config":{"cli":{"enabled":false,"allowed_ids":null}},"time":"2026-04-28T14:02:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/channel/channel_manager.go:43","message":"Channel configuration"}
+{"level":"debug","channel":"cli","time":"2026-04-28T14:02:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/channel/types.go:41","message":"channel registered"}
+{"level":"debug","enabled":false,"allowed_ids":[],"time":"2026-04-28T14:02:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/channel/channel_manager.go:57","message":"CLI channel registered"}
+{"level":"debug","registered_channels":1,"time":"2026-04-28T14:02:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/channel/channel_manager.go:75","message":"ChannelManager initialization completed"}
+{"level":"debug","time":"2026-04-28T14:02:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/cli/cli.go:237","message":"加载 Gateway 配置..."}
+{"level":"debug","time":"2026-04-28T14:02:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/cli/cli.go:244","message":"初始化 AgentManager..."}
+{"level":"debug","time":"2026-04-28T14:02:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/cli/cli.go:248","message":"初始化 Gateway..."}
+{"level":"debug","time":"2026-04-28T14:02:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/cli/cli.go:257","message":"启动 Gateway 和 Channel..."}
+{"level":"info","time":"2026-04-28T14:02:49+08:00","message":"[Gateway] 已启动"}
+{"level":"debug","time":"2026-04-28T14:02:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/gateway/gateway.go:144","message":"[Gateway] 消息处理循环启动"}
+{"level":"debug","time":"2026-04-28T14:02:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/gateway/gateway.go:193","message":"[Gateway] 订阅分发启动"}
+{"level":"debug","time":"2026-04-28T14:02:49+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/gateway/gateway.go:196","message":"[Gateway] 响应分发启动"}
+{"level":"debug","Message received":"Hello","time":"2026-04-28T14:02:50+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/bus/queue.go:130"}
+{"level":"error","error":"路由解析失败: default agent main unavailable: agent not found: main","time":"2026-04-28T14:02:50+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/gateway/gateway.go:164","message":"[Gateway] 处理消息失败"}
+{"level":"debug","time":"2026-04-28T14:03:20+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/bus/queue.go:133","message":"Context cancelled"}
+{"level":"error","error":"执行超时","time":"2026-04-28T14:03:20+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/cli/cli.go:91","message":"命令执行失败"}
+{"level":"fatal","error":"执行超时","time":"2026-04-28T14:03:20+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/cmd/brambleclaw/main.go:12","message":"CLI执行失败"}
+{"level":"debug","env":"BRAMBLECLAW_CONFIG","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config\\config.json","time":"2026-04-28T14:41:08+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/loader.go:68","message":"尝试从环境变量加载配置"}
+{"level":"warn","env":"BRAMBLECLAW_CONFIG","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config\\config.json","time":"2026-04-28T14:41:08+08:00","message":"环境变量指定的配置文件不存在，尝试其他路径"}
+{"level":"warn","time":"2026-04-28T14:41:08+08:00","message":"无法找到配置文件，使用默认配置"}
+{"level":"debug","path":"","time":"2026-04-28T14:41:08+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/cli/cli.go:87","message":"配置单例初始化成功"}
+{"level":"debug","env":"BRAMBLECLAW_CONFIG","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config\\config.json","time":"2026-04-28T14:41:35+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/loader.go:68","message":"尝试从环境变量加载配置"}
+{"level":"warn","env":"BRAMBLECLAW_CONFIG","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config\\config.json","time":"2026-04-28T14:41:35+08:00","message":"环境变量指定的配置文件不存在，尝试其他路径"}
+{"level":"warn","time":"2026-04-28T14:41:35+08:00","message":"无法找到配置文件，使用默认配置"}
+{"level":"debug","env":"BRAMBLECLAW_CONFIG","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config\\config.json","time":"2026-04-28T14:43:27+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/loader.go:68","message":"尝试从环境变量加载配置"}
+{"level":"warn","env":"BRAMBLECLAW_CONFIG","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config\\config.json","time":"2026-04-28T14:43:27+08:00","message":"环境变量指定的配置文件不存在，尝试其他路径"}
+{"level":"warn","time":"2026-04-28T14:43:27+08:00","message":"无法找到配置文件，使用默认配置"}
+{"level":"debug","env":"BRAMBLECLAW_CONFIG","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config\\config.json","time":"2026-04-28T14:44:12+08:00","caller":"C:/Users/93986/GolandProjects/brambleclaw/internal/config/loader.go:68","message":"尝试从环境变量加载配置"}
+{"level":"warn","env":"BRAMBLECLAW_CONFIG","path":"C:\\Users\\93986\\GolandProjects\\brambleclaw\\config\\config.json","time":"2026-04-28T14:44:12+08:00","message":"环境变量指定的配置文件不存在，尝试其他路径"}
+{"level":"warn","time":"2026-04-28T14:44:12+08:00","message":"无法找到配置文件，使用默认配置"}

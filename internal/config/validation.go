@@ -1,6 +1,7 @@
 package config
 
 import (
+	"brambleclaw/internal/config/structs"
 	"brambleclaw/internal/logger"
 	"bytes"
 	"context"
@@ -8,6 +9,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -52,7 +55,79 @@ type LLMValidationResult struct {
 	TokenUsed int           `json:"token_used"`
 }
 
-// ValidateLLMConfig 验证 LLM 配置
+type Validator interface {
+	Validate() error
+}
+
+func (c *Config) Validate() error {
+	if err := validateWorkspace(c.Workspace); err != nil {
+		return err
+	}
+
+	if err := validateLogConfig(structs.LogConfig(c.Log)); err != nil {
+		return err
+	}
+
+	if err := validateSessionConfig(structs.SessionConfig(c.Session)); err != nil {
+		return err
+	}
+
+	if err := validateLLMConfig(structs.LLMConfig(c.LLMConfig)); err != nil {
+		return err
+	}
+
+	if err := validateSandboxConfig(structs.SandboxConfig(c.Sandbox)); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func validateWorkspace(workspace string) error {
+	if !filepath.IsAbs(workspace) {
+		return fmt.Errorf("工作空间路径必须是绝对路径: %s", workspace)
+	}
+
+	info, err := os.Stat(workspace)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("工作空间目录不存在: %s", workspace)
+		}
+		return err
+	}
+
+	if !info.IsDir() {
+		return fmt.Errorf("工作空间路径必须是一个目录: %s", workspace)
+	}
+
+	return nil
+}
+
+func validateLogConfig(log structs.LogConfig) error {
+	if log.Path == "" {
+		return fmt.Errorf("日志路径不能为空")
+	}
+
+	if log.Level == "" {
+		return fmt.Errorf("日志级别不能为空")
+	}
+
+	return nil
+}
+
+func validateSessionConfig(session structs.SessionConfig) error {
+	if session.StorageFormat != "jsonl" {
+		return fmt.Errorf("不支持的存储格式: %s", session.StorageFormat)
+	}
+
+	if session.MaxHistory < 0 {
+		return fmt.Errorf("最大历史消息数不能小于0")
+	}
+
+	return nil
+}
+
+// ValidateLLMConfig 验证 LLM 配置（详细测试）
 func ValidateLLMConfig(ctx context.Context, config LLMConfig) (*LLMValidationResult, error) {
 	logger.L().Debug().
 		Str("base_url", config.BaseURL).
@@ -153,4 +228,34 @@ func ValidateLLMConfig(ctx context.Context, config LLMConfig) (*LLMValidationRes
 		Latency:   latency,
 		TokenUsed: tokenUsed,
 	}, nil
+}
+
+// validateLLMConfig LLM 配置的基本验证
+func validateLLMConfig(llm structs.LLMConfig) error {
+	// LLM API Key 可以为空，因为可能通过其他方式提供（如环境变量）
+	if llm.BaseURL == "" {
+		return fmt.Errorf("LLM Base URL 不能为空")
+	}
+
+	if llm.Model == "" {
+		return fmt.Errorf("LLM 模型名称不能为空")
+	}
+
+	return nil
+}
+
+func validateSandboxConfig(sandbox structs.SandboxConfig) error {
+	if sandbox.Workspace == "" {
+		return fmt.Errorf("沙箱工作目录不能为空")
+	}
+
+	if sandbox.Execution.Timeout <= 0 {
+		return fmt.Errorf("执行超时时间必须大于0")
+	}
+
+	if sandbox.Execution.MaxOutputSize <= 0 {
+		return fmt.Errorf("最大输出大小必须大于0")
+	}
+
+	return nil
 }
