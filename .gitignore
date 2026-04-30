@@ -1,0 +1,11 @@
+.claude/
+**/*_test.go
+logs/
+./CLAUDE.md
+**/*.log
+**/*.exe
+**/config.json
+.idea/
+**/*.pdf
+docs
+**/*.md
