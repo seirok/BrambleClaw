@@ -7,6 +7,7 @@ import (
 	"brambleclaw/internal/hook"
 	"brambleclaw/internal/interfaces"
 	"brambleclaw/internal/logger"
+	"brambleclaw/internal/messages"
 	"brambleclaw/internal/session"
 	"brambleclaw/internal/tools"
 	"brambleclaw/internal/tools/mcp"
@@ -17,6 +18,7 @@ import (
 
 type Agent struct {
 	name           string
+	description    string
 	workspace      string
 	bus            *bus.MessageBus
 	orche          *Orchestrator
@@ -25,6 +27,7 @@ type Agent struct {
 	mcp            *mcp.Manager
 	builder        *ContextBuilder
 	commands       interfaces.Registry[interfaces.Command]
+	base           *BaseChatAgent
 }
 
 // Option 是用于配置 Agent 的函数类型
@@ -38,6 +41,9 @@ func NewAgent(name string, opts ...Option) *Agent {
 	for _, opt := range opts {
 		opt(agent)
 	}
+
+	// 初始化 BaseChatAgent
+	agent.base = NewBaseChatAgent(agent.name, agent.description)
 
 	// 触发 Agent 创建钩子
 	hook.Emit(context.Background(), "hook.point.agent.create", agent)
@@ -101,6 +107,13 @@ func WithWorkspace(workspace string) Option {
 	}
 }
 
+// WithDescription 设置描述
+func WithDescription(desc string) Option {
+	return func(a *Agent) {
+		a.description = desc
+	}
+}
+
 func (a *Agent) Bus() *bus.MessageBus { return a.bus }
 
 func (a *Agent) SessionMgr() *session.PersistentSessionManager { return a.sessionManager }
@@ -115,7 +128,164 @@ func (a *Agent) Workspace() string { return a.workspace }
 
 func (a *Agent) Name() string { return a.name }
 
-// handleMessage 处理入站消息
+// Description 返回 Agent 描述（ChatAgent 接口）
+func (a *Agent) Description() string { return a.description }
+
+// ProducedMessageTypes 返回 Agent 可产生的消息类型（ChatAgent 接口）
+func (a *Agent) ProducedMessageTypes() []messages.MessageType {
+	return []messages.MessageType{
+		messages.MessageTypeText,
+		messages.MessageTypeToolCallSum,
+		messages.MessageTypeHandoff,
+	}
+}
+
+// OnMessages 处理 ChatMessage 列表，返回 Agent 响应（ChatAgent 接口核心方法）
+func (a *Agent) OnMessages(ctx context.Context, msgs []messages.ChatMessage) (*Response, error) {
+	// 将 ChatMessage 转换为 AgentMessage 并收集到 session
+	agentMsgs := make([]AgentMessage, 0, len(msgs))
+	for _, msg := range msgs {
+		agentMsgs = append(agentMsgs, AgentMessage{
+			Role:      RoleUser,
+			Content:   []ContentBlock{TextContent{Text: msg.ToModelText()}},
+			Timestamp: time.Now().UnixMilli(),
+		})
+	}
+
+	// 如果有 system prompt 需要，从第一条消息的 metadata 获取上下文信息
+	channel := ""
+	chatID := ""
+	senderID := ""
+	if len(msgs) > 0 {
+		if meta := msgs[0].GetMetadata(); meta != nil {
+			channel = meta["channel"]
+			chatID = meta["chat_id"]
+			senderID = msgs[0].GetSource()
+		}
+	}
+
+	sessKey := util.BuildSessionKey(a.name, channel, chatID)
+	sess, isNewSession := a.SessionMgr().GetOrCreate(sessKey)
+
+	dynamicInfo := &DynamicInfo{
+		channel:  channel,
+		chatID:   chatID,
+		senderID: senderID,
+	}
+
+	if isNewSession || len(sess.Messages) == 0 {
+		fullSystemPrompt, err := a.ContextBuilder().BuildFullSystemPrompt(dynamicInfo)
+		if err != nil {
+			logger.L().Error().Err(err).Msg("Failed to build full system prompt")
+			fullSystemPrompt = ""
+		} else {
+			sess.AddMessage(AgentMessage{
+				Role:      RoleSystem,
+				Content:   []ContentBlock{TextContent{fullSystemPrompt}},
+				Timestamp: time.Now().UnixMilli(),
+			})
+		}
+	}
+
+	// 添加用户消息到 session
+	for _, am := range agentMsgs {
+		sess.AddMessage(am)
+	}
+
+	historyMsg := sess.LoadHistory()
+
+	// 使用 Orchestrator 处理
+	resp, err := a.Orchestrator().Run(ctx, historyMsg)
+	if err != nil {
+		return nil, err
+	}
+
+	replyContent := ""
+	if len(resp.Choices) > 0 {
+		replyContent = resp.Choices[0].Message.Content
+	}
+
+	// 添加回复到 session
+	replyMsg := AgentMessage{
+		Role:      RoleAssistant,
+		Content:   []ContentBlock{TextContent{Text: replyContent}},
+		Timestamp: time.Now().UnixMilli(),
+	}
+	sess.AddMessage(replyMsg)
+
+	// 更新 session
+	currentTokenUsed := resp.Usage.CompletionTokens + resp.Usage.PromptTokens
+	a.SessionMgr().Update(sess, currentTokenUsed)
+
+	go func() {
+		dynamicInfo.usage = currentTokenUsed
+		if err := a.ContextBuilder().Compact(ctx, sess, dynamicInfo); err != nil {
+			logger.L().Error().Err(err).Msg("Failed to compact session")
+		}
+	}()
+
+	// 构建 ChatMessage 响应
+	chatResp := messages.NewTextMessage(a.name, replyContent)
+	return &Response{ChatMessage: chatResp}, nil
+}
+
+// OnMessagesStream 流式处理消息（ChatAgent 接口）
+func (a *Agent) OnMessagesStream(ctx context.Context, msgs []messages.ChatMessage) (<-chan StreamItem, error) {
+	ch := make(chan StreamItem, 1)
+	go func() {
+		defer close(ch)
+		resp, err := a.OnMessages(ctx, msgs)
+		if err != nil {
+			ch <- StreamItem{Err: err}
+			return
+		}
+		ch <- StreamItem{
+			Message:  resp.ChatMessage,
+			Response: resp,
+		}
+	}()
+	return ch, nil
+}
+
+// OnReset 重置 Agent 状态（ChatAgent 接口）
+func (a *Agent) OnReset(ctx context.Context) error {
+	return a.base.OnReset(ctx)
+}
+
+// OnPause 暂停 Agent（ChatAgent 接口）
+func (a *Agent) OnPause(ctx context.Context) error {
+	return a.base.OnPause(ctx)
+}
+
+// OnResume 恢复 Agent（ChatAgent 接口）
+func (a *Agent) OnResume(ctx context.Context) error {
+	return a.base.OnResume(ctx)
+}
+
+// Close 关闭 Agent（ChatAgent 接口）
+func (a *Agent) Close() error {
+	return a.Stop(context.Background())
+}
+
+// SaveState 保存 Agent 状态（ChatAgent 接口）
+func (a *Agent) SaveState() (map[string]any, error) {
+	return a.base.SaveState()
+}
+
+// LoadState 加载 Agent 状态（ChatAgent 接口）
+func (a *Agent) LoadState(state map[string]any) error {
+	return a.base.LoadState(state)
+}
+
+// IsPaused 检查是否暂停
+func (a *Agent) IsPaused() bool {
+	return a.base.IsPaused()
+}
+
+// 编译时检查：确保 Agent 实现了 ChatAgent 接口
+var _ ChatAgent = (*Agent)(nil)
+
+// HandleMessage 处理入站消息（外部入口，包含 Hook/Command 等横切关注点）
 func (a *Agent) HandleMessage(ctx context.Context, msg *bus.InBoundMessage) {
 	// 触发消息处理前钩子
 	if processedMsg, err := hook.Emit(ctx, "hook.point.message.pre-process", msg); err != nil {
@@ -126,9 +296,6 @@ func (a *Agent) HandleMessage(ctx context.Context, msg *bus.InBoundMessage) {
 			msg = m
 		}
 	}
-
-	// 构建系统提示
-	sessKey := util.BuildSessionKey(a.name, msg.InChannel, msg.ChatID)
 
 	content := strings.TrimSpace(msg.Content)
 
@@ -148,73 +315,32 @@ func (a *Agent) HandleMessage(ctx context.Context, msg *bus.InBoundMessage) {
 		}
 	}
 
-	sess, isNewSession := a.SessionMgr().GetOrCreate(sessKey)
-
-	dynamicInfo := &DynamicInfo{
-		channel:  msg.InChannel,
-		chatID:   msg.ChatID,
-		senderID: msg.SenderID,
+	// 转换为 ChatMessage 并委托给 OnMessages（内层核心）
+	inBoundData := messages.InBoundData{
+		ID:        msg.ID,
+		SenderID:  msg.SenderID,
+		ChatID:    msg.ChatID,
+		InChannel: msg.InChannel,
+		Content:   msg.Content,
 	}
+	chatMsg := messages.FromInBoundData(inBoundData)
 
-	if isNewSession || len(sess.Messages) == 0 {
-		fullSystemPrompt, err := a.ContextBuilder().BuildFullSystemPrompt(dynamicInfo)
-		if err != nil {
-			logger.L().Error().Err(err).Msg("Failed to build full system prompt")
-			fullSystemPrompt = ""
-		} else {
-			sess.AddMessage(AgentMessage{
-				Role:      RoleSystem,
-				Content:   []ContentBlock{TextContent{fullSystemPrompt}},
-				Timestamp: time.Now().UnixMilli(),
-			})
-		}
-	}
-	// 添加当前消息
-	agentMsg := AgentMessage{
-		Role:      RoleUser,
-		Content:   []ContentBlock{TextContent{Text: msg.Content}},
-		Timestamp: time.Now().UnixMilli(),
-	}
-	sess.AddMessage(agentMsg)
-
-	// 加载历史消息
-	historyMsg := sess.LoadHistory()
-
-	// 使用Orchestrator处理消息
-	resp, err := a.Orchestrator().Run(ctx, historyMsg)
-
+	response, err := a.OnMessages(ctx, []messages.ChatMessage{chatMsg})
 	if err != nil {
-		logger.L().Error().Err(err).Msg("Failed to complete communication with LLM")
+		logger.L().Error().Err(err).Msg("Failed to process message via OnMessages")
 		return
 	}
 
-	replyMsg := AgentMessage{
-		Role:      RoleAssistant,
-		Content:   []ContentBlock{TextContent{Text: resp.Choices[0].Message.Content}},
-		Timestamp: time.Now().UnixMilli(),
-	}
-	// 添加回复到会话
-	sess.AddMessage(replyMsg)
-
-	// 更新会话
-	currentTokenUsed := resp.Usage.CompletionTokens + resp.Usage.PromptTokens
-	a.SessionMgr().Update(sess, currentTokenUsed)
-
-	go func() {
-		dynamicInfo.usage = currentTokenUsed
-		if err = a.ContextBuilder().Compact(ctx, sess, dynamicInfo); err != nil {
-			logger.L().Error().Err(err).Msg("Failed to compact session")
-		}
-	}()
-
-	// 发布响应
+	// 将 ChatMessage 响应转换为 OutBoundMessage
+	outData := messages.ToOutBoundData(response.ChatMessage, msg.ChatID, msg.InChannel, msg.ID)
 	outbound := &bus.OutBoundMessage{
-		OutChannel: msg.InChannel,
-		ChatID:     msg.ChatID,
-		Content:    resp.Choices[0].Message.Content,
-		ReplyTo:    msg.ID,
-		TimeStamp:  time.Now(),
+		ChatID:     outData.ChatID,
+		OutChannel: outData.Channel,
+		Content:    outData.Content,
+		ReplyTo:    outData.ReplyTo,
+		TimeStamp:  outData.TimeStamp,
 	}
+
 	// 触发响应前钩子
 	if processedOutbound, err := hook.Emit(ctx, "hook.point.message.pre-response", outbound); err != nil {
 		logger.L().Error().Err(err).Msg("Pre-response hook failed")

@@ -109,6 +109,7 @@ func (a *AgentManager) Initialize(ctx context.Context, cfg any) error {
 			WithTools(agentToolRegistry),
 			WithOrchestrator(orche),
 			WithSessionManager(sm),
+			WithDescription(agentCfg.Description),
 		)
 
 		// 将 Agent 设置到 ContextBuilder（解决循环依赖）
