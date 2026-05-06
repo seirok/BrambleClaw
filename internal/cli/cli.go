@@ -8,6 +8,7 @@ import (
 	"brambleclaw/internal/config"
 	"brambleclaw/internal/gateway"
 	"brambleclaw/internal/logger"
+	"brambleclaw/internal/runtime"
 	"bufio"
 	"context"
 	"fmt"
@@ -125,7 +126,7 @@ func runAgent(cmd *cobra.Command, args []string) error {
 
 	// 5. 初始化 AgentManager
 	logger.L().Debug().Msg("初始化 AgentManager...")
-	agentManager := agent.NewAgentManager(msgBus)
+	agentManager := agent.NewAgentManager(msgBus, runtime.NewAgentRuntime())
 
 	// 6. 初始化 Gateway
 	logger.L().Debug().Msg("初始化 Gateway...")

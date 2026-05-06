@@ -28,6 +28,7 @@ type Agent struct {
 	builder        *ContextBuilder
 	commands       interfaces.Registry[interfaces.Command]
 	base           *BaseChatAgent
+	runtime        messages.RuntimeProvider
 }
 
 // Option 是用于配置 Agent 的函数类型
@@ -100,17 +101,17 @@ func WithCommands(cmds interfaces.Registry[interfaces.Command]) Option {
 	}
 }
 
-// WithWorkspace 设置工作区
-func WithWorkspace(workspace string) Option {
-	return func(a *Agent) {
-		a.workspace = workspace
-	}
-}
-
 // WithDescription 设置描述
 func WithDescription(desc string) Option {
 	return func(a *Agent) {
 		a.description = desc
+	}
+}
+
+// WithRuntime 设置运行时
+func WithRuntime(r messages.RuntimeProvider) Option {
+	return func(a *Agent) {
+		a.runtime = r
 	}
 }
 
@@ -127,6 +128,8 @@ func (a *Agent) Commands() interfaces.Registry[interfaces.Command] { return a.co
 func (a *Agent) Workspace() string { return a.workspace }
 
 func (a *Agent) Name() string { return a.name }
+
+func (a *Agent) Runtime() messages.RuntimeProvider { return a.runtime }
 
 // Description 返回 Agent 描述（ChatAgent 接口）
 func (a *Agent) Description() string { return a.description }

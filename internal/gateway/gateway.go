@@ -8,6 +8,7 @@ import (
 	"brambleclaw/internal/hook"
 	"brambleclaw/internal/interfaces"
 	"brambleclaw/internal/logger"
+	"brambleclaw/internal/runtime"
 	"context"
 	"fmt"
 	"sync"
@@ -19,6 +20,7 @@ type Gateway struct {
 	agentManager   interfaces.Manager[*agent.Agent]
 	channelManager interfaces.Manager[channel.BaseChannel]
 	msgBus         *bus.MessageBus
+	agentRuntime   *runtime.AgentRuntime
 
 	// 运行时状态
 	mu      sync.RWMutex
@@ -39,6 +41,10 @@ func NewGateway(opts ...Option) *Gateway {
 	// 应用所有选项
 	for _, opt := range opts {
 		opt(g)
+	}
+
+	if g.agentRuntime == nil {
+		g.agentRuntime = runtime.NewAgentRuntime()
 	}
 
 	return g
@@ -69,6 +75,13 @@ func WithChannelManager(cm interfaces.Manager[channel.BaseChannel]) Option {
 func WithMessageBus(msgBus *bus.MessageBus) Option {
 	return func(g *Gateway) {
 		g.msgBus = msgBus
+	}
+}
+
+// WithAgentRuntime 设置 Agent 运行时
+func WithAgentRuntime(rt *runtime.AgentRuntime) Option {
+	return func(g *Gateway) {
+		g.agentRuntime = rt
 	}
 }
 

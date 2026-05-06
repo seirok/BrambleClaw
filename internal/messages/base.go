@@ -1,6 +1,9 @@
 package messages
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 // MessageType 消息类型
 type MessageType string
@@ -34,4 +37,17 @@ type ChatMessage interface {
 // AgentEvent 事件通知接口，用于事件广播而非 Agent 间通信
 type AgentEvent interface {
 	BaseMessage
+}
+
+// RuntimeProvider 定义运行时发布/订阅的最小接口
+// 放在 messages 包中以避免 agent ↔ runtime 循环导入
+type RuntimeProvider interface {
+	Publish(ctx context.Context, topicID string, msg BaseMessage)
+	Subscribe(ctx context.Context, topicID string) RuntimeSubscription
+}
+
+// RuntimeSubscription 运行时订阅句柄的最小接口
+type RuntimeSubscription interface {
+	Ch() <-chan BaseMessage
+	Cancel()
 }

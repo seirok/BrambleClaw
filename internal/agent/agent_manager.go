@@ -6,6 +6,7 @@ import (
 	"brambleclaw/internal/config"
 	"brambleclaw/internal/interfaces"
 	"brambleclaw/internal/logger"
+	"brambleclaw/internal/messages"
 	"brambleclaw/internal/sandbox"
 	"brambleclaw/internal/session"
 	"brambleclaw/internal/tools"
@@ -20,14 +21,16 @@ type AgentManager struct {
 	agentRegistry interfaces.Registry[*Agent]
 	toolRegistry  interfaces.Registry[tools.Tool]
 	msgBus        *bus.MessageBus
+	runtime       messages.RuntimeProvider
 	mu            sync.RWMutex
 	status        interfaces.ManagerStatus
 }
 
-func NewAgentManager(msgBus *bus.MessageBus) *AgentManager {
+func NewAgentManager(msgBus *bus.MessageBus, rt messages.RuntimeProvider) *AgentManager {
 	return &AgentManager{
 		agentRegistry: NewAgentRegistry(),
 		msgBus:        msgBus,
+		runtime:       rt,
 		status:        interfaces.StatusIdle,
 	}
 }
@@ -46,7 +49,6 @@ func (a *AgentManager) Initialize(ctx context.Context, cfg any) error {
 	// MCP Manager
 	mcpManager := mcp.NewManager(fullCfg.Tools.MCP)
 
-	// 遍历配置并注册 Agent
 	for i := range fullCfg.Agents {
 		agentCfg := &fullCfg.Agents[i]
 		if !agentCfg.Enabled {
@@ -110,12 +112,12 @@ func (a *AgentManager) Initialize(ctx context.Context, cfg any) error {
 			WithOrchestrator(orche),
 			WithSessionManager(sm),
 			WithDescription(agentCfg.Description),
+			WithRuntime(a.runtime),
 		)
 
 		// 将 Agent 设置到 ContextBuilder（解决循环依赖）
 		contextBuilder.SetAgent(agent)
 
-		//
 		if err := a.agentRegistry.Register(ctx, agent.Name(), agent); err != nil {
 			logger.L().Error().Err(err).Str("agent", agent.Name()).Msg("注册 Agent 失败")
 			continue
@@ -146,7 +148,6 @@ func (a *AgentManager) Add(ctx context.Context, id string, item *Agent) error {
 
 // Remove 移除并停止 Agent
 func (a *AgentManager) Remove(ctx context.Context, id string) error {
-	// 可以在这里增加优雅关闭逻辑
 	return a.agentRegistry.Unregister(ctx, id)
 }
 
