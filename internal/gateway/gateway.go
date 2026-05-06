@@ -235,7 +235,7 @@ func (g *Gateway) dispatchOutboundLoop(ctx context.Context) {
 				continue
 			}
 
-			if err := ch.Send(msg); err != nil {
+			if err := ch.Send(ctx, msg); err != nil {
 				logger.L().Error().Err(err).Str("Channel", msg.OutChannel).Msg("[Gateway] 发送消息失败")
 			}
 		}

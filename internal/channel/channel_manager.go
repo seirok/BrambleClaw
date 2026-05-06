@@ -56,6 +56,16 @@ func (m *ChannelManager) Initialize(ctx context.Context, cfg any) error {
 	}
 	logger.L().Debug().Bool("enabled", cfgObj.Channels.CLI.Enabled).Strs("allowed_ids", cfgObj.Channels.CLI.AllowedIDs).Msg("CLI channel registered")
 
+	// 初始化 DingTalk 通道
+	dingtalkCfg := cfgObj.Channels.DingTalk
+	dingtalkChannel, err := NewDingTalkChannel(dingtalkCfg, m.msgBus)
+	if err != nil {
+		return err
+	}
+	if err = m.channelRegistry.Register(ctx, "dingtalk", dingtalkChannel); err != nil {
+		logger.L().Error().Err(err).Msg("Failed to register CLI channel")
+		return fmt.Errorf("failed to register CLI channel: %w", err)
+	}
 	// 可以在这里添加其他通道类型的初始化，如微信、Telegram等
 	// 例如：
 	// if config.Channels.Weixin.Enabled {
@@ -163,7 +173,7 @@ func (m *ChannelManager) DispatchOutbound(ctx context.Context) error {
 			logger.L().Error().Err(err).Str("channel", msg.OutChannel).Msg("channel not found")
 			continue
 		}
-		if err := channel.Send(msg); err != nil {
+		if err := channel.Send(ctx, msg); err != nil {
 			logger.L().Error().Err(err).Str("channel", msg.OutChannel).Msg("send message error")
 		}
 	}
