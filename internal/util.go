@@ -10,13 +10,13 @@ import (
 )
 
 func BuildSessionKey(agentName, channelName, chatID string) string {
-	sessionKey := channelName + "_" + agentName + "_" + chatID
+	sessionKey := channelName + "::" + agentName + "::" + chatID
 	return sessionKey
 }
 
 func ParseSessionKey(sessionKey string) (agentName, channelName, chatID string, err error) {
-	// 按 "::" 进行切割
-	parts := strings.Split(sessionKey, "_")
+	// 按 "_" 进行切割
+	parts := strings.Split(sessionKey, "::")
 
 	// 严谨起见，先检查长度是否符合预期（应该有 3 部分）
 	if len(parts) == 3 {
@@ -28,6 +28,14 @@ func ParseSessionKey(sessionKey string) (agentName, channelName, chatID string, 
 	}
 
 	return agentName, channelName, chatID, nil
+}
+
+func SessionKeyToFile(sessionKey string) string {
+	agentName, channelName, chatID, err := ParseSessionKey(sessionKey)
+	if err != nil {
+		return ""
+	}
+	return agentName + "_" + channelName + "_" + chatID
 }
 
 func GetSessionFile(sessionKey string) string {

@@ -136,10 +136,10 @@ func (m *PersistentSessionManager) Remove(ctx context.Context, id string) error 
 	defer m.mu.Unlock()
 
 	// 删除存储文件
-	if err := m.sessionStore.Delete(m.ctx, util.GetSessionFile(id)); err != nil {
+	if err := m.sessionStore.Delete(m.ctx, util.GetSessionFile(util.SessionKeyToFile(id))); err != nil {
 		logger.L().Error().Err(err).Str("session_key", id).Msg("删除 session 文件失败")
 	}
-	if err := m.sessionMetaStore.Delete(m.ctx, util.GetSessionMetaFile(id)); err != nil {
+	if err := m.sessionMetaStore.Delete(m.ctx, util.GetSessionMetaFile(util.SessionKeyToFile(id))); err != nil {
 		logger.L().Error().Err(err).Str("session_key", id).Msg("删除 session meta 文件失败")
 	}
 
@@ -252,6 +252,7 @@ func (m *PersistentSessionManager) GetOrCreate(sessionkey string) (*Session, boo
 			MessageCount: 0,
 			TokenCount:   0,
 		}); err != nil {
+
 			logger.L().Error().Err(err).Str("session_key", sessionkey).Msg("注册 session meta 失败")
 		}
 		// 将 meta 关联到 session
@@ -280,10 +281,10 @@ func (m *PersistentSessionManager) ClearSessionWithMeta(sessionKey string) (int,
 
 	count := len(sess.Messages)
 
-	if err := m.sessionStore.Delete(m.ctx, util.GetSessionFile(sessionKey)); err != nil {
+	if err := m.sessionStore.Delete(m.ctx, util.GetSessionFile(util.SessionKeyToFile(sessionKey))); err != nil {
 		return 0, err
 	}
-	if err := m.sessionMetaStore.Delete(m.ctx, util.GetSessionMetaFile(sessionKey)); err != nil {
+	if err := m.sessionMetaStore.Delete(m.ctx, util.GetSessionMetaFile(util.SessionKeyToFile(sessionKey))); err != nil {
 		return 0, err
 	}
 
@@ -366,7 +367,7 @@ func (m *PersistentSessionManager) SaveSessionMeta(sessionKey string) error {
 		return fmt.Errorf("session meta 不存在: %s", sessionKey)
 	}
 
-	if err := m.sessionMetaStore.Save(m.ctx, util.GetSessionMetaFile(sessionKey), sessMeta); err != nil {
+	if err := m.sessionMetaStore.Save(m.ctx, util.GetSessionMetaFile(util.SessionKeyToFile(sessionKey)), sessMeta); err != nil {
 		return err
 	}
 
@@ -385,7 +386,7 @@ func (m *PersistentSessionManager) SaveSession(sessionKey string) error {
 	saveStartedAt := sess.UpdatedAt
 	m.mu.RUnlock()
 
-	if err := m.sessionStore.Save(m.ctx, util.GetSessionFile(sessionKey), sess); err != nil {
+	if err := m.sessionStore.Save(m.ctx, util.GetSessionFile(util.SessionKeyToFile(sessionKey)), sess); err != nil {
 		return err
 	}
 

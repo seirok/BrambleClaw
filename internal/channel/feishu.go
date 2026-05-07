@@ -163,15 +163,15 @@ func (c *FeishuChannel) Start(ctx context.Context) error {
 	if c.config.AppID == "" || c.config.AppSecret == "" {
 		return fmt.Errorf("feishu app_id or app_secret is empty")
 	}
-	dispatcher := larkdispatcher.NewEventDispatcher(c.config.VerificationToken, c.config.EncryptKey).
+	dispatcher := larkdispatcher.NewEventDispatcher("", "").
 		OnP2MessageReceiveV1(c.handleMessageReceive)
 
-	domain := lark.FeishuBaseUrl
+	//	domain := lark.FeishuBaseUrl
 	c.wsClient = larkws.NewClient(
 		c.config.AppID,
 		c.config.AppSecret,
 		larkws.WithEventHandler(dispatcher),
-		larkws.WithDomain(domain),
+		//		larkws.WithDomain(domain),
 	)
 	wsClient := c.wsClient
 	runCtx, runCancel := context.WithCancel(ctx)
@@ -185,6 +185,7 @@ func (c *FeishuChannel) Start(ctx context.Context) error {
 }
 
 func (c *FeishuChannel) handleMessageReceive(ctx context.Context, event *larkim.P2MessageReceiveV1) error {
+	logger.L().Debug().Msg("feishu channel get info")
 	if event == nil || event.Event == nil || event.Event.Message == nil {
 		return nil
 	}
