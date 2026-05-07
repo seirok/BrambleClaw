@@ -42,7 +42,6 @@ func (m *ChannelManager) Initialize(ctx context.Context, cfg any) error {
 
 	logger.L().Debug().Interface("channels_config", cfgObj.Channels).Msg("Channel configuration")
 
-	// 根据配置初始化通道注册表
 	// 初始化 CLI 通道
 	cliConfig := &BaseChannelConfig{
 		Enabled:    cfgObj.Channels.CLI.Enabled,
@@ -66,20 +65,17 @@ func (m *ChannelManager) Initialize(ctx context.Context, cfg any) error {
 		logger.L().Error().Err(err).Msg("Failed to register CLI channel")
 		return fmt.Errorf("failed to register CLI channel: %w", err)
 	}
-	// 可以在这里添加其他通道类型的初始化，如微信、Telegram等
-	// 例如：
-	// if config.Channels.Weixin.Enabled {
-	//     weixinConfig := &channel.BaseChannelConfig{
-	//         Enabled:    config.Channels.Weixin.Enabled,
-	//         AllowedIDs: config.Channels.Weixin.AllowedIDs,
-	//     }
-	//     weixinChannel := channel.NewWeixinChannel(weixinConfig, m.msgBus, config.Channels.Weixin.AppID, config.Channels.Weixin.AppSecret)
-	//     if err := m.channelRegistry.Register(ctx, "weixin", weixinChannel); err != nil {
-	//         logger.L().Error().Err(err).Msg("Failed to register Weixin channel")
-	//         return fmt.Errorf("failed to register Weixin channel: %w", err)
-	//     }
-	//     logger.L().Debug().Bool("enabled", config.Channels.Weixin.Enabled).Strs("allowed_ids", config.Channels.Weixin.AllowedIDs).Msg("Weixin channel registered")
-	// }
+
+	// 初始化 Feishu 通道
+	feishuCfg := cfgObj.Channels.Feishu
+	feishuChannel, err := NewFeishuChannel(feishuCfg, m.msgBus)
+	if err != nil {
+		return err
+	}
+	if err = m.channelRegistry.Register(ctx, "feishu", feishuChannel); err != nil {
+		logger.L().Error().Err(err).Msg("Failed to register Feishu channel")
+		return fmt.Errorf("failed to register Feishu channel: %w", err)
+	}
 
 	m.status = interfaces.StatusRunning
 	logger.L().Debug().Int("registered_channels", len(m.channelRegistry.List(ctx))).Msg("ChannelManager initialization completed")
