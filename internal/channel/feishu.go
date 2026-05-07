@@ -87,6 +87,9 @@ func (c *FeishuChannel) Name() string {
 
 func (c *FeishuChannel) Stop(ctx context.Context) error {
 	c.running = false
+	if c.cancel != nil {
+		c.cancel()
+	}
 	return nil
 }
 
@@ -114,7 +117,7 @@ func (c *FeishuChannel) Send(ctx context.Context, message *bus.OutBoundMessage) 
 	isCardLimitError := strings.Contains(errMsg, "11310")
 
 	if isCardLimitError {
-		logger.L().Error().Msg("feishu: Card send failed (table limit), falling back to text message")
+		logger.L().Warn().Str("chat_id", message.ChatID).Err(err).Msg("feishu: Card send failed (table limit), falling back to text message")
 
 		// Second attempt: fall back to plain text message
 		textErr := c.sendText(ctx, message.ChatID, message.Content)
@@ -130,8 +133,7 @@ func (c *FeishuChannel) Send(ctx context.Context, message *bus.OutBoundMessage) 
 }
 
 func (c *FeishuChannel) IsAllowed(s string) bool {
-	//TODO implement me
-	panic("implement me")
+	return c.base.IsAllowed(s)
 }
 
 func NewFeishuChannel(cfg structs.FeishuConfig, bus *bus.MessageBus) (*FeishuChannel, error) {
@@ -172,7 +174,8 @@ func (c *FeishuChannel) Start(ctx context.Context) error {
 		larkws.WithDomain(domain),
 	)
 	wsClient := c.wsClient
-	runCtx, _ := context.WithCancel(ctx)
+	runCtx, runCancel := context.WithCancel(ctx)
+	c.cancel = runCancel
 	go func() {
 		if err := wsClient.Start(runCtx); err != nil {
 			logger.L().Error().Err(err).Msg("failed to start feishu client")
@@ -374,6 +377,6 @@ func (c *FeishuChannel) sendCard(ctx context.Context, chatID, cardContent string
 func (c *FeishuChannel) invalidateTokenOnAuthError(code int) {
 	if code == errCodeTenantTokenInvalid {
 		c.tokenCache.InvalidateAll()
-		logger.L().Error().Msg("feishu: Invalidated cached token due to auth error")
+		logger.L().Error().Str("app_id", c.config.AppID).Msg("feishu: Invalidated cached token due to auth error")
 	}
 }

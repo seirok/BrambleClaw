@@ -40,7 +40,11 @@ func (m *ChannelManager) Initialize(ctx context.Context, cfg any) error {
 		return fmt.Errorf("invalid config type: expected *config.Config, got %T", cfg)
 	}
 
-	logger.L().Debug().Interface("channels_config", cfgObj.Channels).Msg("Channel configuration")
+	logger.L().Debug().
+		Bool("cli_enabled", cfgObj.Channels.CLI.Enabled).
+		Bool("dingtalk_enabled", cfgObj.Channels.DingTalk.Enabled).
+		Bool("feishu_enabled", cfgObj.Channels.Feishu.Enabled).
+		Msg("Channel configuration")
 
 	// 初始化 CLI 通道
 	cliConfig := &BaseChannelConfig{
@@ -62,8 +66,8 @@ func (m *ChannelManager) Initialize(ctx context.Context, cfg any) error {
 		return err
 	}
 	if err = m.channelRegistry.Register(ctx, "dingtalk", dingtalkChannel); err != nil {
-		logger.L().Error().Err(err).Msg("Failed to register CLI channel")
-		return fmt.Errorf("failed to register CLI channel: %w", err)
+		logger.L().Error().Err(err).Msg("Failed to register DingTalk channel")
+		return fmt.Errorf("failed to register DingTalk channel: %w", err)
 	}
 
 	// 初始化 Feishu 通道
@@ -95,15 +99,19 @@ func (m *ChannelManager) StartAll(ctx context.Context) error {
 		return nil
 	}
 
+	var errs []error
 	for _, channel := range channels {
 		err := channel.Start(ctx)
 		if err != nil {
 			logger.L().Error().Err(err).Str("channel", channel.Name()).Msg("channel start error")
-			continue
+			errs = append(errs, fmt.Errorf("channel %q start failed: %w", channel.Name(), err))
 		}
 	}
 
 	m.status = interfaces.StatusRunning
+	if len(errs) > 0 {
+		return fmt.Errorf("channels start errors: %v", errs)
+	}
 	return nil
 }
 
@@ -119,15 +127,19 @@ func (m *ChannelManager) StopAll(ctx context.Context) error {
 		return nil
 	}
 
+	var errs []error
 	for _, channel := range channels {
 		err := channel.Stop(ctx)
 		if err != nil {
 			logger.L().Error().Err(err).Str("channel", channel.Name()).Msg("channel stop error")
-			continue
+			errs = append(errs, fmt.Errorf("channel %q stop failed: %w", channel.Name(), err))
 		}
 	}
 
 	m.status = interfaces.StatusStopped
+	if len(errs) > 0 {
+		return fmt.Errorf("channels stop errors: %v", errs)
+	}
 	return nil
 }
 

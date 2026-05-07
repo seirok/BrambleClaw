@@ -3,7 +3,6 @@ package cron
 import (
 	"brambleclaw/internal/logger"
 	"container/heap"
-	"fmt"
 	"sync"
 	"time"
 )
@@ -141,7 +140,7 @@ func (ct *CronTool) AddJob(job *CronJob) error {
 }
 
 func (ct *CronTool) ExecuteJob(job *CronJob) (string, error) {
-	fmt.Println(job.Name + "Execute job!")
+	logger.L().Info().Str("job", job.ID).Str("name", job.Name).Msg("Execute job")
 	return "", nil
 }
 

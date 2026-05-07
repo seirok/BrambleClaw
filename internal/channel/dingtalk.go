@@ -149,7 +149,7 @@ func (c *DingTalkChannel) onChatBotMessageReceived(
 	}
 
 	if err := c.base.PublishInBoundMessage(ctx, inboundMsg); err != nil {
-		logger.L().Error().Err(err).Msg("发送消息失败")
+		logger.L().Error().Err(err).Str("chat_id", chatID).Str("sender_id", senderID).Msg("发送消息失败")
 	}
 
 	return []byte{}, nil

@@ -59,12 +59,12 @@ func (t *FileSystemTool) Execute(ctx context.Context, argStr string) (interface{
 	var args map[string]interface{}
 	err := json.Unmarshal([]byte(argStr), &args)
 	if err != nil {
-		logger.L().Fatal().Err(err).Msg("解析失败")
+		logger.L().Error().Err(err).Msg("解析失败")
 		return nil, fmt.Errorf("解析失败: %w", err)
 	}
 	cmd, ok := args["command"].(string)
 	if !ok {
-		logger.L().Fatal().Msg("参数解析有误")
+		logger.L().Error().Msg("参数解析有误")
 		return nil, fmt.Errorf("参数解析有误")
 	}
 

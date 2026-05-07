@@ -73,9 +73,11 @@ func (m *PersistentSessionManager) StartAll(ctx context.Context) error {
 	m.ctx = ctx
 
 	sessions := m.sessions.List(ctx)
+	var errs []error
 	for _, sess := range sessions {
 		if err := sess.Start(ctx); err != nil {
-			logger.L().Error().Err(err).Str("session", sess.Key).Msg("启动 session 失败")
+			logger.L().Error().Err(err).Str("session_key", sess.Key).Msg("启动 session 失败")
+			errs = append(errs, fmt.Errorf("session %q 启动失败: %w", sess.Key, err))
 		}
 	}
 
@@ -84,6 +86,9 @@ func (m *PersistentSessionManager) StartAll(ctx context.Context) error {
 	}
 
 	m.status = interfaces.StatusRunning
+	if len(errs) > 0 {
+		return fmt.Errorf("sessions 启动出错: %v", errs)
+	}
 	return nil
 }
 
@@ -132,10 +137,10 @@ func (m *PersistentSessionManager) Remove(ctx context.Context, id string) error 
 
 	// 删除存储文件
 	if err := m.sessionStore.Delete(m.ctx, util.GetSessionFile(id)); err != nil {
-		logger.L().Error().Err(err).Str("session", id).Msg("删除 session 文件失败")
+		logger.L().Error().Err(err).Str("session_key", id).Msg("删除 session 文件失败")
 	}
 	if err := m.sessionMetaStore.Delete(m.ctx, util.GetSessionMetaFile(id)); err != nil {
-		logger.L().Error().Err(err).Str("session", id).Msg("删除 session meta 文件失败")
+		logger.L().Error().Err(err).Str("session_key", id).Msg("删除 session meta 文件失败")
 	}
 
 	if err := m.sessions.Unregister(ctx, id); err != nil {
@@ -173,7 +178,7 @@ func (m *PersistentSessionManager) Status() interfaces.ManagerStatus {
 
 // autosaveLoop 自动保存循环
 func (m *PersistentSessionManager) autosaveLoop() {
-	logger.L().Debug().Msg("[Session] autosave loop start")
+	logger.L().Debug().Str("component", "Session").Msg("autosave loop start")
 	ticker := time.NewTicker(m.autosaveInterval)
 	defer ticker.Stop()
 
@@ -228,7 +233,7 @@ func (m *PersistentSessionManager) GetOrCreate(sessionkey string) (*Session, boo
 	}
 	sess.setStores(m.sessionStore, m.sessionMetaStore)
 	if err := m.sessions.Register(m.ctx, sessionkey, sess); err != nil {
-		logger.L().Error().Err(err).Str("sessionkey", sessionkey).Msg("注册 session 失败")
+		logger.L().Error().Err(err).Str("session_key", sessionkey).Msg("注册 session 失败")
 	}
 
 	// 检查 session meta 是否存在
@@ -236,7 +241,7 @@ func (m *PersistentSessionManager) GetOrCreate(sessionkey string) (*Session, boo
 	if err != nil {
 		agentName, channelName, chatID, err := util.ParseSessionKey(sessionkey)
 		if err != nil {
-			logger.L().Error().Err(err).Str("sessionkey", sessionkey).Msg("解析 session key 失败")
+			logger.L().Error().Err(err).Str("session_key", sessionkey).Msg("解析 session key 失败")
 		}
 
 		if err := m.sessionsMeta.Register(m.ctx, sessionkey, &SessionMetadata{
@@ -247,7 +252,7 @@ func (m *PersistentSessionManager) GetOrCreate(sessionkey string) (*Session, boo
 			MessageCount: 0,
 			TokenCount:   0,
 		}); err != nil {
-			logger.L().Error().Err(err).Str("sessionkey", sessionkey).Msg("注册 session meta 失败")
+			logger.L().Error().Err(err).Str("session_key", sessionkey).Msg("注册 session meta 失败")
 		}
 		// 将 meta 关联到 session
 		if meta, err := m.sessionsMeta.Get(m.ctx, sessionkey); err == nil {
@@ -306,7 +311,7 @@ func (m *PersistentSessionManager) Update(session *Session, tokenUsed int) {
 
 	sessionMeta, err := m.sessionsMeta.Get(m.ctx, session.Key)
 	if err != nil {
-		logger.L().Error().Err(err).Msg("session 和 sessionMeta 状态不一致")
+		logger.L().Error().Err(err).Str("session_key", session.Key).Msg("session 和 sessionMeta 状态不一致")
 		return
 	}
 

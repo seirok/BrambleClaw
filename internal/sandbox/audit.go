@@ -2,6 +2,7 @@ package sandbox
 
 import (
 	"brambleclaw/internal/config"
+	"brambleclaw/internal/logger"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -146,8 +147,7 @@ func (al *AuditLogger) writeEvent(event *AuditEvent) {
 	// 序列化为 JSON
 	data, err := json.Marshal(event)
 	if err != nil {
-		// 记录序列化错误，但不中断流程
-		fmt.Fprintf(os.Stderr, "审计事件序列化失败: %v\n", err)
+		logger.L().Error().Err(err).Msg("审计事件序列化失败")
 		return
 	}
 
@@ -174,7 +174,7 @@ func (al *AuditLogger) Log(event *AuditEvent) {
 		// 成功发送
 	default:
 		// 通道已满，记录丢弃事件
-		fmt.Fprintf(os.Stderr, "审计事件通道已满，丢弃事件: %s\n", event.EventType)
+		logger.L().Warn().Str("event_type", string(event.EventType)).Msg("审计事件通道已满，丢弃事件")
 	}
 }
 

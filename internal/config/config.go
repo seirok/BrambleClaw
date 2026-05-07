@@ -3,7 +3,7 @@ package config
 import (
 	util "brambleclaw/internal"
 	"brambleclaw/internal/config/structs"
-	"fmt"
+	"brambleclaw/internal/logger"
 	"os"
 	"sync"
 )
@@ -82,13 +82,13 @@ func initInternal() {
 	configPath := util.GetGlobalConfigPath()
 	// 3. 文件存在性检查
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		fmt.Printf("Config file missing at %s, creating default...", configPath)
+		logger.L().Warn().Str("path", configPath).Msg("Config file missing, creating default")
 		globalConfig = createDefaultConfig()
 		// 持久化默认配置文件
 		savePath := util.GetGlobalConfigPath()
 		err := util.SaveStructToJSON(savePath, globalConfig)
 		if err != nil {
-			fmt.Println("Failed to save default config")
+			logger.L().Error().Err(err).Msg("Failed to save default config")
 			return
 		}
 	} else {
@@ -101,7 +101,7 @@ func initInternal() {
 func loadAndValidateConfig() {
 	// 加载配置文件
 	if err := util.LoadJSONToStruct(util.GetGlobalConfigPath(), globalConfig); err != nil {
-		fmt.Printf("Failed to load global config: %s", err.Error())
+		logger.L().Error().Err(err).Msg("Failed to load global config")
 	}
 
 	ValidateGlobalConfig()

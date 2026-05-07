@@ -43,6 +43,7 @@ func CheckEnviromentVirable() bool {
 	missing := false
 	for _, env := range envs {
 		if os.Getenv(env) == "" {
+			// NOTE: Cannot use logger.L() here due to circular import (logger -> util -> logger)
 			fmt.Printf("[ERROR] Environment variable %s is not set.\n", env)
 			missing = true
 		}
