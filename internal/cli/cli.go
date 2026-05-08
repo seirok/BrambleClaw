@@ -15,6 +15,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -120,6 +122,8 @@ type appModel struct {
 	textInput    textinput.Model
 	viewport     viewport.Model
 	spinner      spinner.Model
+	help         help.Model
+	keys         keyMap
 	messages     []chatMessage
 	waiting      bool
 	showBanner   bool
@@ -129,6 +133,32 @@ type appModel struct {
 	agentSession string
 	quitting     bool
 	err          error
+}
+
+type keyMap struct {
+	Up    key.Binding
+	Down  key.Binding
+	Enter key.Binding
+	Quit  key.Binding
+}
+
+var keys = keyMap{
+	Up:    key.NewBinding(key.WithKeys("up"), key.WithHelp("↑", "滚动")),
+	Down:  key.NewBinding(key.WithKeys("down"), key.WithHelp("↓", "滚动")),
+	Enter: key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "发送")),
+	Quit:  key.NewBinding(key.WithKeys("ctrl+c"), key.WithHelp("ctrl+c", "退出")),
+}
+
+func (k keyMap) ShortHelp() []key.Binding {
+	return []key.Binding{k.Up, k.Down, k.Enter, k.Quit}
+}
+
+// 3. 实现 FullHelp 方法 (通常用于扩展视图，这里可以直接返回一样的内容)
+func (k keyMap) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{k.Up, k.Down},    // 第一行
+		{k.Enter, k.Quit}, // 第二行
+	}
 }
 
 // 样式定义
@@ -176,6 +206,7 @@ func newAppModel(msgBus *bus.MessageBus, session string) appModel {
 		showBanner:   true,
 		msgBus:       msgBus,
 		agentSession: session,
+		help:         help.New(),
 	}
 }
 
@@ -311,15 +342,17 @@ func (m appModel) renderMessages() string {
 
 	// 渲染消息列表
 	for _, msg := range m.messages {
+		var line string
 		if msg.IsUser {
-			messagesView += userStyle.Render("You: "+msg.Content) + "\n"
+			line = userStyle.Render("You: "+msg.Content) + "\n"
 		} else {
-			messagesView += agentStyle.Render("Agent: "+msg.Content) + "\n"
+			line = agentStyle.Render("🐱: "+msg.Content) + "\n"
 		}
+		messagesView += line + "\n\n"
 	}
 
 	if m.waiting {
-		messagesView += m.spinner.View() + " Agent 正在思考...\n"
+		messagesView += m.spinner.View() + " 🐱 正在思考...\n"
 	}
 
 	return messagesView
@@ -335,14 +368,15 @@ func (m appModel) View() string {
 
 	// 输入区域
 	inputView := m.textInput.View()
-	helpView := subtleStyle.Render("Enter 发送 | ↑↓ 滚动 | Ctrl+C 退出")
+	helpView := m.help.View(keys)
+	helpStyle := lipgloss.NewStyle().MarginTop(1)
 
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
 		m.viewport.View(),
 		"",
 		inputView,
-		helpView,
+		helpStyle.Render(helpView),
 	)
 }
 
