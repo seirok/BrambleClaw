@@ -123,7 +123,7 @@ func (g *Gateway) Start(ctx context.Context) error {
 	g.wg.Add(1)
 	go g.healthCheckLoop(ctx)
 
-	logger.L().Info().Msg("[Gateway] 已启动")
+	logger.L().Info().Str("component", "Gateway").Msg("已启动")
 	// 触发 Gateway 启动钩子（fire-and-forget）
 	hook.Emit(ctx, "hook.point.gateway.start", g)
 	return nil
@@ -152,20 +152,20 @@ func (g *Gateway) Stop(ctx context.Context) error {
 	select {
 	case <-done:
 	case <-ctx.Done():
-		logger.L().Warn().Msg("[Gateway] goroutine 停止超时，继续关闭组件")
+		logger.L().Warn().Str("component", "Gateway").Msg("goroutine 停止超时，继续关闭组件")
 	}
 
 	// 3. 关闭通道管理器（停止所有出站通道）
 	if err := g.channelManager.StopAll(ctx); err != nil {
-		logger.L().Error().Err(err).Msg("[Gateway] 关闭通道管理器失败")
+		logger.L().Error().Err(err).Str("component", "Gateway").Msg("关闭通道管理器失败")
 	}
 
 	// 4. 关闭 Agent 管理器（停止所有 Agent、Session、MCP）
 	if err := g.agentManager.StopAll(ctx); err != nil {
-		logger.L().Error().Err(err).Msg("[Gateway] 关闭 Agent 管理器失败")
+		logger.L().Error().Err(err).Str("component", "Gateway").Msg("关闭 Agent 管理器失败")
 	}
 
-	logger.L().Info().Msg("[Gateway] 已停止")
+	logger.L().Info().Str("component", "Gateway").Msg("已停止")
 	return nil
 }
 
@@ -173,7 +173,7 @@ func (g *Gateway) Stop(ctx context.Context) error {
 func (g *Gateway) processMessageLoop(ctx context.Context) {
 	defer g.wg.Done()
 
-	logger.L().Debug().Msg("[Gateway] 消息处理循环启动")
+	logger.L().Debug().Str("component", "Gateway").Msg("消息处理循环启动")
 	for {
 		select {
 		case <-ctx.Done():
@@ -187,13 +187,13 @@ func (g *Gateway) processMessageLoop(ctx context.Context) {
 			if ctx.Err() != nil {
 				return
 			}
-			logger.L().Error().Err(err).Msg("[Gateway] 消费消息失败")
+			logger.L().Error().Err(err).Str("component", "Gateway").Msg("消费消息失败，context 可能已取消")
 			continue
 		}
 
 		// 处理消息
 		if err := g.handleMessage(ctx, msg); err != nil {
-			logger.L().Error().Err(err).Msg("[Gateway] 处理消息失败")
+			logger.L().Error().Err(err).Str("component", "Gateway").Msg("处理消息失败")
 		}
 	}
 }
@@ -225,10 +225,10 @@ func (g *Gateway) dispatchOutboundLoop(ctx context.Context) {
 	defer g.wg.Done()
 
 	// 启动订阅消息分发
-	logger.L().Debug().Msg("[Gateway] 订阅分发启动")
+	logger.L().Debug().Str("component", "Gateway").Msg("订阅分发启动")
 	go g.msgBus.DistributeOutBoundMessage(ctx)
 
-	logger.L().Debug().Msg("[Gateway] 响应分发启动")
+	logger.L().Debug().Str("component", "Gateway").Msg("响应分发启动")
 	sub := g.msgBus.Subscribe()
 	defer g.msgBus.Unsubscribe(sub.ID)
 
@@ -244,12 +244,12 @@ func (g *Gateway) dispatchOutboundLoop(ctx context.Context) {
 			// 通过 Channel Manager 发送消息
 			ch, err := g.channelManager.Get(ctx, msg.OutChannel)
 			if err != nil {
-				logger.L().Error().Err(err).Str("Channel", msg.OutChannel).Msg("[Gateway] 通道不存在")
+				logger.L().Error().Err(err).Str("component", "Gateway").Str("channel", msg.OutChannel).Msg("通道不存在")
 				continue
 			}
 
-			if err := ch.Send(msg); err != nil {
-				logger.L().Error().Err(err).Str("Channel", msg.OutChannel).Msg("[Gateway] 发送消息失败")
+			if err := ch.Send(ctx, msg); err != nil {
+				logger.L().Error().Err(err).Str("component", "Gateway").Str("channel", msg.OutChannel).Msg("发送消息失败")
 			}
 		}
 	}
@@ -276,7 +276,6 @@ func (g *Gateway) healthCheckLoop(ctx context.Context) {
 func (g *Gateway) performHealthCheck() {
 	// 检查所有通道状态
 	// 这里可以实现具体的健康检查逻辑
-	// logger.L().Info().Msg("[Gateway] 执行健康检查")
 }
 
 // IsRunning 检查 Gateway 是否正在运行

@@ -495,8 +495,7 @@ func (sc *SummaryCompressor) BuildSessionSummary() string {
 // PrintHierarchy 将层级视图以树状结构打印到控制台
 func (sc *SummaryCompressor) PrintHierarchy() {
 	view := sc.GetHierarchy()
-	fmt.Printf("Summary Hierarchy (Roots: %d, Max Depth: %d)\n", view.RootCount, view.MaxDepth)
-	fmt.Println(strings.Repeat("=", 50))
+	logger.L().Debug().Int("roots", view.RootCount).Int("max_depth", view.MaxDepth).Msg("Summary Hierarchy")
 
 	for i, node := range view.Nodes {
 		isLast := i == len(view.Nodes)-1
@@ -512,16 +511,10 @@ func (sc *SummaryCompressor) renderNode(node *NodeView, indent string, isLast bo
 		cleanPreview = cleanPreview[:77] + "..."
 	}
 
-	// 2. 选择连接符
-	marker := "├── "
-	if isLast {
-		marker = "└── "
-	}
+	// 2. 打印当前节点
+	logger.L().Debug().Int("level", node.Level).Str("id", node.ID[:6]).Str("preview", cleanPreview).Msg("Summary node")
 
-	// 3. 打印当前节点（增加颜色或高亮提示 Level 更好，这里用中括号区分）
-	fmt.Printf("%s%s[Level %d] ID: %s | %s\n", indent, marker, node.Level, node.ID[:6], cleanPreview)
-
-	// 4. 计算下一层的缩进
+	// 3. 计算下一层的缩进
 	newIndent := indent
 	if isLast {
 		newIndent += "    "
@@ -529,7 +522,7 @@ func (sc *SummaryCompressor) renderNode(node *NodeView, indent string, isLast bo
 		newIndent += "│   "
 	}
 
-	// 5. 递归打印子节点
+	// 4. 递归打印子节点
 	for i, child := range node.Children {
 		sc.renderNode(child, newIndent, i == len(node.Children)-1)
 	}

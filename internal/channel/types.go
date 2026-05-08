@@ -81,7 +81,7 @@ type BaseChannel interface {
 	Name() string
 	Start(context.Context) error
 	Stop(context.Context) error
-	Send(*bus.OutBoundMessage) error
+	Send(context.Context, *bus.OutBoundMessage) error
 	IsAllowed(string) bool
 }
 

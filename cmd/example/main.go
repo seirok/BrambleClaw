@@ -3,11 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 
 	"brambleclaw/internal/config/structs"
 	"brambleclaw/internal/hook"
+	"brambleclaw/internal/logger"
 )
 
 func main() {
@@ -58,7 +58,7 @@ func main() {
 	// 2. 获取全局引擎并加载配置
 	engine := hook.GetEngine()
 	if err := engine.LoadConfig(hookConfig); err != nil {
-		log.Fatalf("Failed to load hook config: %v", err)
+		logger.L().Fatal().Err(err).Msg("Failed to load hook config")
 	}
 
 	// 3. 注册内部 Hook（向后兼容）

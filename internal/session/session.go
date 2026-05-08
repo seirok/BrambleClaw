@@ -45,7 +45,7 @@ func (s *Session) Name() string {
 // Start 从磁盘加载 session 和 metadata（Service 接口）
 func (s *Session) Start(ctx context.Context) error {
 	// 加载 session 数据
-	sessionFile := util.GetSessionFile(s.Key)
+	sessionFile := util.GetSessionFile(util.SessionKeyToFile(s.Key))
 	if session, err := s.store.Load(ctx, sessionFile); err == nil {
 		s.Messages = session.Messages
 		s.CreatedAt = session.CreatedAt
@@ -58,7 +58,7 @@ func (s *Session) Start(ctx context.Context) error {
 	}
 
 	// 加载 metadata
-	metaFile := util.GetSessionMetaFile(s.Key)
+	metaFile := util.GetSessionMetaFile(util.SessionKeyToFile(s.Key))
 	if meta, err := s.metaStore.Load(ctx, metaFile); err == nil {
 		s.meta = meta
 	} else if os.IsNotExist(err) {
@@ -83,7 +83,7 @@ func (s *Session) Start(ctx context.Context) error {
 // Stop 将 session 和 metadata 保存到磁盘（Service 接口）
 func (s *Session) Stop(ctx context.Context) error {
 	// 保存 session 数据
-	if err := s.store.Save(ctx, util.GetSessionFile(s.Key), s); err != nil {
+	if err := s.store.Save(ctx, util.GetSessionFile(util.SessionKeyToFile(s.Key)), s); err != nil {
 		return fmt.Errorf("保存 session 失败(%s): %w", s.Key, err)
 	}
 

@@ -76,32 +76,33 @@ func (a *AgentManager) Initialize(ctx context.Context, cfg any) error {
 		urlparsetool := tools.NewUrlParseTool()
 		sandBox, err := sandbox.NewSandbox(&fullCfg.Sandbox, nil)
 		if err != nil {
-			logger.L().Error().Err(err).Msg("")
+			return fmt.Errorf("创建 Sandbox 失败: %w", err)
 		}
 		filesystemTool := sandbox.NewFileSystemTool(sandBox)
 		shellTool := sandbox.NewShellTool(sandBox)
 		a.toolRegistry = tools.NewToolRegistry()
 		if err := a.toolRegistry.Register(ctx, "web_search", websearchTool); err != nil {
-			logger.L().Error().Err(err).Msg("注册 web_search 工具失败")
+			return fmt.Errorf("注册 web_search 工具失败: %w", err)
 		}
 		if err := a.toolRegistry.Register(ctx, "shell", shellTool); err != nil {
-			logger.L().Error().Err(err).Msg("注册 shell 工具失败")
+			return fmt.Errorf("注册 shell 工具失败: %w", err)
 		}
 		if err := a.toolRegistry.Register(ctx, "filesystem", filesystemTool); err != nil {
-			logger.L().Error().Err(err).Msg("注册 filesystem 工具失败")
+			return fmt.Errorf("注册 filesystem 工具失败: %w", err)
 		}
 		if err := a.toolRegistry.Register(ctx, "url_parse", urlparsetool); err != nil {
-			logger.L().Error().Err(err).Msg("注册 url_parse 工具失败")
+			return fmt.Errorf("注册 url_parse 工具失败: %w", err)
 		}
 
 		agentToolRegistry := tools.NewToolRegistry()
 		for _, tool := range agentCfg.Tools {
 			toolTerm, err := a.toolRegistry.Get(ctx, tool)
 			if err != nil {
-				logger.L().Error().Err(err).Msg("不合理的Agent Tool 配置项")
+				logger.L().Error().Err(err).Str("tool", tool).Msg("不合理的Agent Tool 配置项")
+				continue
 			}
 			if err = agentToolRegistry.Register(ctx, tool, toolTerm); err != nil {
-				logger.L().Error().Err(err).Msg("")
+				return fmt.Errorf("注册 Agent 工具 %s 失败: %w", tool, err)
 			}
 		}
 

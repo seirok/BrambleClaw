@@ -181,7 +181,7 @@ func (a *Agent) OnMessages(ctx context.Context, msgs []messages.ChatMessage) (*R
 	if isNewSession || len(sess.Messages) == 0 {
 		fullSystemPrompt, err := a.ContextBuilder().Build(dynamicInfo)
 		if err != nil {
-			logger.L().Error().Err(err).Msg("Failed to build full system prompt")
+			logger.L().Error().Err(err).Str("agent", a.name).Str("channel", msg.InChannel).Msg("Failed to build full system prompt")
 			fullSystemPrompt = ""
 		} else {
 			sess.AddMessage(AgentMessage{
@@ -224,8 +224,8 @@ func (a *Agent) OnMessages(ctx context.Context, msgs []messages.ChatMessage) (*R
 
 	go func() {
 		dynamicInfo.usage = currentTokenUsed
-		if err := a.ContextBuilder().Compact(ctx, sess, dynamicInfo); err != nil {
-			logger.L().Error().Err(err).Msg("Failed to compact session")
+		if err = a.ContextBuilder().Compact(ctx, sess, dynamicInfo); err != nil {
+			logger.L().Error().Err(err).Str("session_key", sessKey).Msg("Failed to compact session")
 		}
 	}()
 
@@ -335,7 +335,7 @@ func (a *Agent) HandleMessage(ctx context.Context, msg *bus.InBoundMessage) {
 
 	// 触发响应前钩子
 	if processedOutbound, err := hook.Emit(ctx, "hook.point.message.pre-response", outbound); err != nil {
-		logger.L().Error().Err(err).Msg("Pre-response hook failed")
+		logger.L().Error().Err(err).Str("channel", msg.InChannel).Msg("Pre-response hook failed")
 		return
 	} else if processedOutbound != nil {
 		if m, ok := processedOutbound.(*bus.OutBoundMessage); ok {
@@ -344,11 +344,13 @@ func (a *Agent) HandleMessage(ctx context.Context, msg *bus.InBoundMessage) {
 	}
 
 	if err := a.Bus().PublishOutBoundMessage(ctx, outbound); err != nil {
-		logger.L().Error().Err(err).Msg("Error publishing response")
+		logger.L().Error().Err(err).Str("channel", outbound.OutChannel).Str("chat_id", outbound.ChatID).Msg("Error publishing response")
 	}
 
 	// 触发消息处理后钩子
-	hook.Emit(ctx, "hook.point.message.post-process", msg)
+	if _, err := hook.Emit(ctx, "hook.point.message.post-process", msg); err != nil {
+		logger.L().Warn().Err(err).Str("channel", msg.InChannel).Msg("Post-process hook failed")
+	}
 }
 
 func (a *Agent) ClearSession(sessionKey string) (int, error) {
@@ -379,7 +381,9 @@ func (a *Agent) Start(ctx context.Context) error {
 	}
 
 	// 触发 Agent 启动后钩子
-	hook.Emit(ctx, "hook.point.agent.start", a)
+	if _, err := hook.Emit(ctx, "hook.point.agent.start", a); err != nil {
+		logger.L().Warn().Err(err).Msg("Agent start hook failed")
+	}
 
 	return nil
 }
@@ -401,7 +405,9 @@ func (a *Agent) Stop(ctx context.Context) error {
 	a.mcp.Stop()
 
 	// 触发 Agent 停止后钩子
-	hook.Emit(ctx, "hook.point.agent.stop", a)
+	if _, err := hook.Emit(ctx, "hook.point.agent.stop", a); err != nil {
+		logger.L().Warn().Err(err).Msg("Agent stop hook failed")
+	}
 
 	return nil
 }

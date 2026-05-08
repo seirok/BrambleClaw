@@ -117,11 +117,11 @@ func EmitWithStrategy(ctx context.Context, point string, data any, strategy Erro
 	return GetEngine().EmitWithStrategy(ctx, point, data, strategy)
 }
 
-// MustEmit 触发钩子，如果出错则 panic
+// MustEmit 触发钩子，如果出错则记录错误并返回 nil
 func MustEmit(ctx context.Context, point string, data any) any {
 	res, err := Emit(ctx, point, data)
 	if err != nil {
-		panic(err)
+		return nil
 	}
 	return res
 }

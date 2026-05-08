@@ -40,9 +40,12 @@ func (m *ChannelManager) Initialize(ctx context.Context, cfg any) error {
 		return fmt.Errorf("invalid config type: expected *config.Config, got %T", cfg)
 	}
 
-	logger.L().Debug().Interface("channels_config", cfgObj.Channels).Msg("Channel configuration")
+	logger.L().Debug().
+		Bool("cli_enabled", cfgObj.Channels.CLI.Enabled).
+		Bool("dingtalk_enabled", cfgObj.Channels.DingTalk.Enabled).
+		Bool("feishu_enabled", cfgObj.Channels.Feishu.Enabled).
+		Msg("Channel configuration")
 
-	// 根据配置初始化通道注册表
 	// 初始化 CLI 通道
 	cliConfig := &BaseChannelConfig{
 		Enabled:    cfgObj.Channels.CLI.Enabled,
@@ -56,20 +59,27 @@ func (m *ChannelManager) Initialize(ctx context.Context, cfg any) error {
 	}
 	logger.L().Debug().Bool("enabled", cfgObj.Channels.CLI.Enabled).Strs("allowed_ids", cfgObj.Channels.CLI.AllowedIDs).Msg("CLI channel registered")
 
-	// 可以在这里添加其他通道类型的初始化，如微信、Telegram等
-	// 例如：
-	// if config.Channels.Weixin.Enabled {
-	//     weixinConfig := &channel.BaseChannelConfig{
-	//         Enabled:    config.Channels.Weixin.Enabled,
-	//         AllowedIDs: config.Channels.Weixin.AllowedIDs,
-	//     }
-	//     weixinChannel := channel.NewWeixinChannel(weixinConfig, m.msgBus, config.Channels.Weixin.AppID, config.Channels.Weixin.AppSecret)
-	//     if err := m.channelRegistry.Register(ctx, "weixin", weixinChannel); err != nil {
-	//         logger.L().Error().Err(err).Msg("Failed to register Weixin channel")
-	//         return fmt.Errorf("failed to register Weixin channel: %w", err)
-	//     }
-	//     logger.L().Debug().Bool("enabled", config.Channels.Weixin.Enabled).Strs("allowed_ids", config.Channels.Weixin.AllowedIDs).Msg("Weixin channel registered")
-	// }
+	// 初始化 DingTalk 通道
+	dingtalkCfg := cfgObj.Channels.DingTalk
+	dingtalkChannel, err := NewDingTalkChannel(dingtalkCfg, m.msgBus)
+	if err != nil {
+		return err
+	}
+	if err = m.channelRegistry.Register(ctx, "dingtalk", dingtalkChannel); err != nil {
+		logger.L().Error().Err(err).Msg("Failed to register DingTalk channel")
+		return fmt.Errorf("failed to register DingTalk channel: %w", err)
+	}
+
+	// 初始化 Feishu 通道
+	feishuCfg := cfgObj.Channels.Feishu
+	feishuChannel, err := NewFeishuChannel(feishuCfg, m.msgBus)
+	if err != nil {
+		return err
+	}
+	if err = m.channelRegistry.Register(ctx, "feishu", feishuChannel); err != nil {
+		logger.L().Error().Err(err).Msg("Failed to register Feishu channel")
+		return fmt.Errorf("failed to register Feishu channel: %w", err)
+	}
 
 	m.status = interfaces.StatusRunning
 	logger.L().Debug().Int("registered_channels", len(m.channelRegistry.List(ctx))).Msg("ChannelManager initialization completed")
@@ -89,15 +99,19 @@ func (m *ChannelManager) StartAll(ctx context.Context) error {
 		return nil
 	}
 
+	var errs []error
 	for _, channel := range channels {
 		err := channel.Start(ctx)
 		if err != nil {
 			logger.L().Error().Err(err).Str("channel", channel.Name()).Msg("channel start error")
-			continue
+			errs = append(errs, fmt.Errorf("channel %q start failed: %w", channel.Name(), err))
 		}
 	}
 
 	m.status = interfaces.StatusRunning
+	if len(errs) > 0 {
+		return fmt.Errorf("channels start errors: %v", errs)
+	}
 	return nil
 }
 
@@ -113,15 +127,19 @@ func (m *ChannelManager) StopAll(ctx context.Context) error {
 		return nil
 	}
 
+	var errs []error
 	for _, channel := range channels {
 		err := channel.Stop(ctx)
 		if err != nil {
 			logger.L().Error().Err(err).Str("channel", channel.Name()).Msg("channel stop error")
-			continue
+			errs = append(errs, fmt.Errorf("channel %q stop failed: %w", channel.Name(), err))
 		}
 	}
 
 	m.status = interfaces.StatusStopped
+	if len(errs) > 0 {
+		return fmt.Errorf("channels stop errors: %v", errs)
+	}
 	return nil
 }
 
@@ -163,7 +181,7 @@ func (m *ChannelManager) DispatchOutbound(ctx context.Context) error {
 			logger.L().Error().Err(err).Str("channel", msg.OutChannel).Msg("channel not found")
 			continue
 		}
-		if err := channel.Send(msg); err != nil {
+		if err := channel.Send(ctx, msg); err != nil {
 			logger.L().Error().Err(err).Str("channel", msg.OutChannel).Msg("send message error")
 		}
 	}

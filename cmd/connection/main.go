@@ -6,14 +6,25 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"time"
 )
 
 func main() {
 	// 配置信息
-	apiKey := "9a44c2e7-40a3-4a89-a209-49c1cdcf6c6f"
-	baseURL := "https://ark.cn-beijing.volces.com/api/coding/v3"
-	model := "kimi-k2.5"
+	apiKey := os.Getenv("BRAMBLE_KEY")
+	if apiKey == "" {
+		fmt.Println("BRAMBLE_KEY environment variable is not set")
+		os.Exit(1)
+	}
+	baseURL := os.Getenv("BRAMBLE_URL")
+	if baseURL == "" {
+		baseURL = "https://ark.cn-beijing.volces.com/api/coding/v3"
+	}
+	model := os.Getenv("BRAMBLE_MODEL")
+	if model == "" {
+		model = "kimi-k2.5"
+	}
 
 	// 构造请求体 (OpenAI 兼容格式)
 	requestBody, _ := json.Marshal(map[string]interface{}{
