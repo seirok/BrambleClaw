@@ -8,7 +8,6 @@ import (
 	"brambleclaw/internal/config"
 	"brambleclaw/internal/gateway"
 	"brambleclaw/internal/logger"
-	"bufio"
 	"context"
 	"fmt"
 	"os"
@@ -16,6 +15,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/bubbles/textinput"
+	"github.com/charmbracelet/bubbles/viewport"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 )
 
@@ -97,6 +101,253 @@ func runDebug(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// ========== Bubble Tea TUI Model ==========
+
+// chatMessage 一条聊天消息
+type chatMessage struct {
+	Content   string
+	IsUser    bool
+	Timestamp time.Time
+}
+
+// agentResponseMsg 用于传递 Agent 回复
+type agentResponseMsg struct {
+	Content string
+}
+
+// appModel TUI 状态
+type appModel struct {
+	textInput    textinput.Model
+	viewport     viewport.Model
+	spinner      spinner.Model
+	messages     []chatMessage
+	waiting      bool
+	showBanner   bool
+	width        int
+	height       int
+	msgBus       *bus.MessageBus
+	agentSession string
+	quitting     bool
+	err          error
+}
+
+// 样式定义
+var (
+	userStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("135")) // 紫色
+
+	agentStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("86")) // 青色
+
+	spinnerStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("205")) // 粉色
+
+	subtleStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("240"))
+
+	inputPromptStyle = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("86"))
+
+	inputTextStyle = lipgloss.NewStyle()
+)
+
+func newAppModel(msgBus *bus.MessageBus, session string) appModel {
+	ti := textinput.New()
+	ti.Placeholder = "输入消息..."
+	ti.Focus()
+	ti.Prompt = "> "
+	ti.PromptStyle = inputPromptStyle
+	ti.TextStyle = inputTextStyle
+	ti.CharLimit = 1000
+	ti.Width = 50
+
+	s := spinner.New()
+	s.Spinner = spinner.Dot
+	s.Style = spinnerStyle
+
+	vp := viewport.New(80, 20)
+
+	return appModel{
+		textInput:    ti,
+		viewport:     vp,
+		spinner:      s,
+		messages:     []chatMessage{},
+		waiting:      false,
+		showBanner:   true,
+		msgBus:       msgBus,
+		agentSession: session,
+	}
+}
+
+func (m appModel) Init() tea.Cmd {
+	return tea.Batch(
+		textinput.Blink,
+		m.spinner.Tick,
+	)
+}
+
+func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var (
+		tiCmd tea.Cmd
+		vpCmd tea.Cmd
+		spCmd tea.Cmd
+	)
+
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.Type {
+		case tea.KeyCtrlC, tea.KeyEsc:
+			m.quitting = true
+			return m, tea.Quit
+
+		case tea.KeyEnter:
+			if m.waiting {
+				return m, nil
+			}
+			input := m.textInput.Value()
+			if input == "" {
+				return m, nil
+			}
+			if input == "exit" || input == "quit" {
+				m.quitting = true
+				return m, tea.Quit
+			}
+
+			// 发送用户消息
+			m.messages = append(m.messages, chatMessage{
+				Content:   input,
+				IsUser:    true,
+				Timestamp: time.Now(),
+			})
+			m.showBanner = false
+			m.textInput.SetValue("")
+
+			// 发布到总线
+			go func() {
+				inboundMsg := &bus.InBoundMessage{
+					InChannel: "cli",
+					SenderID:  "cli",
+					ChatID:    m.agentSession,
+					Content:   input,
+					TimeStamp: time.Now(),
+				}
+				ctx := context.Background()
+				if err := m.msgBus.PublishInBoundMessage(ctx, inboundMsg); err != nil {
+					logger.L().Error().Err(err).Msg("发送消息失败")
+				}
+			}()
+
+			m.waiting = true
+			return m, m.spinner.Tick
+
+		case tea.KeyUp:
+			m.viewport.ScrollUp(1)
+		case tea.KeyDown:
+			m.viewport.ScrollDown(1)
+		}
+		switch msg.String() {
+		case "pgup":
+			m.viewport.PageUp()
+		case "pgdown":
+			m.viewport.PageDown()
+		}
+
+	case tea.WindowSizeMsg:
+		m.width, m.height = msg.Width, msg.Height
+		m.viewport.Width = msg.Width
+		m.viewport.Height = msg.Height - 4
+		return m, nil
+
+	case spinner.TickMsg:
+		if m.waiting {
+			m.spinner, spCmd = m.spinner.Update(msg)
+		}
+
+	case agentResponseMsg:
+		// Agent 回复到达
+		m.messages = append(m.messages, chatMessage{
+			Content:   msg.Content,
+			IsUser:    false,
+			Timestamp: time.Now(),
+		})
+		m.waiting = false
+		m.showBanner = false
+		m.viewport.SetContent(m.renderMessages())
+		m.viewport.GotoBottom()
+
+	case errMsg:
+		m.err = msg.err
+		return m, tea.Quit
+	}
+
+	m.textInput, tiCmd = m.textInput.Update(msg)
+	m.viewport, vpCmd = m.viewport.Update(msg)
+
+	return m, tea.Batch(tiCmd, vpCmd, spCmd)
+}
+
+// renderMessages 渲染消息列表为字符串
+func (m appModel) renderMessages() string {
+	var messagesView string
+
+	if m.showBanner && len(m.messages) == 0 {
+		// Banner
+		color1 := lipgloss.NewStyle().Foreground(lipgloss.Color("8;2;138;43;226"))
+		color2 := lipgloss.NewStyle().Foreground(lipgloss.Color("8;2;112;60;212"))
+		color3 := lipgloss.NewStyle().Foreground(lipgloss.Color("8;2;87;77;199"))
+		color4 := lipgloss.NewStyle().Foreground(lipgloss.Color("8;2;62;93;185"))
+
+		banner :=
+			color1.Render(`██████╗ ██████╗  █████╗ ███╗   ███╗██████╗ ██╗     ███████╗    ██████╗██╗       █████╗ ██╗    ██╗`) + "\n" +
+				color2.Render(`██╔══██╗██╔══██╗██╔══██╗████╗ ████║██╔══██╗██║     ██╔════╝   ██╔════╝██║      ██╔══██╗██║    ██║`) + "\n" +
+				color2.Render(`██████╔╝██████╔╝███████║██╔████╔██║██████╔╝██║     █████╗     ██║     ██║      ███████║██║ █╗ ██║`) + "\n" +
+				color3.Render(`██╔══██╗██╔══██╗██╔══██║██║╚██╔╝██║██╔══██╗██║     ██╔══╝     ██║     ██║      ██╔══██║██║███╗██║`) + "\n" +
+				color3.Render(`██████╔╝██║  ██║██║  ██║██║ ╚═╝ ██║██████╔╝███████╗███████╗    ╚██████╗███████╗██║  ██║╚███╔███╔╝`) + "\n" +
+				color4.Render(`╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝╚═════╝ ╚══════╝╚══════╝     ╚═════╝╚══════╝╚═╝  ╚═╝ ╚══╝╚══╝ `)
+
+		messagesView = banner + "\n\n" +
+			subtleStyle.Render("> 你好，请问有什么可以帮您？") + "\n\n"
+	}
+
+	// 渲染消息列表
+	for _, msg := range m.messages {
+		if msg.IsUser {
+			messagesView += userStyle.Render("You: "+msg.Content) + "\n"
+		} else {
+			messagesView += agentStyle.Render("Agent: "+msg.Content) + "\n"
+		}
+	}
+
+	if m.waiting {
+		messagesView += m.spinner.View() + " Agent 正在思考...\n"
+	}
+
+	return messagesView
+}
+
+func (m appModel) View() string {
+	if m.quitting {
+		return "Bye! 👋\n"
+	}
+
+	// 设置 viewport 内容
+	m.viewport.SetContent(m.renderMessages())
+
+	// 输入区域
+	inputView := m.textInput.View()
+	helpView := subtleStyle.Render("Enter 发送 | ↑↓ 滚动 | Ctrl+C 退出")
+
+	return lipgloss.JoinVertical(
+		lipgloss.Left,
+		m.viewport.View(),
+		"",
+		inputView,
+		helpView,
+	)
+}
+
+// ========== runAgent ==========
+
 func runAgent(cmd *cobra.Command, args []string) error {
 	logger.L().Debug().Msg("加载系统配置...")
 
@@ -154,9 +405,9 @@ func runAgent(cmd *cobra.Command, args []string) error {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
-	// 交互式与非交互式模式
+	// 交互式与非交互式执行
 	if agentMessage != "" {
-		// 非交互式执行
+		// 非交互式执行（保持不变）
 		inboundMsg := &bus.InBoundMessage{
 			InChannel: "cli",
 			SenderID:  "cli",
@@ -187,65 +438,35 @@ func runAgent(cmd *cobra.Command, args []string) error {
 			fmt.Println("\n收到退出信号...")
 		}
 	} else {
-		// 交互式执行
-		color1 := "\033[38;2;138;43;226m"
-		color2 := "\033[38;2;112;60;212m"
-		color3 := "\033[38;2;87;77;199m"
-		color4 := "\033[38;2;62;93;185m"
-		resetColor := "\033[0m"
-		banner :=
-			color1 + `██████╗ ██████╗  █████╗ ███╗   ███╗██████╗ ██╗     ███████╗    ██████╗██╗       █████╗ ██╗    ██╗` + "\n" +
-				color2 + `██╔══██╗██╔══██╗██╔══██╗████╗ ████║██╔══██╗██║     ██╔════╝   ██╔════╝██║      ██╔══██╗██║    ██║` + "\n" +
-				color2 + `██████╔╝██████╔╝███████║██╔████╔██║██████╔╝██║     █████╗     ██║     ██║      ███████║██║ █╗ ██║` + "\n" +
-				color3 + `██╔══██╗██╔══██╗██╔══██║██║╚██╔╝██║██╔══██╗██║     ██╔══╝     ██║     ██║      ██╔══██║██║███╗██║` + "\n" +
-				color3 + `██████╔╝██║  ██║██║  ██║██║ ╚═╝ ██║██████╔╝███████╗███████╗    ╚██████╗███████╗██║  ██║╚███╔███╔╝` + "\n" +
-				color4 + `╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝╚═════╝ ╚══════╝╚══════╝     ╚═════╝╚══════╝╚═╝  ╚═╝ ╚══╝╚══╝ ` + resetColor
-		fmt.Println(banner)
-		fmt.Println("\n" + color4 + "    >>> Welcome to brambleclaw System. <<<" + resetColor)
-		fmt.Println("> 你好，请问有什么可以帮您？")
+		// ========== 交互式执行：用 Bubble Tea 替换 bufio.Scanner ==========
 
-		// 使用 goroutine 处理输入
-		inputChan := make(chan string, 1)
-		go func() {
-			scanner := bufio.NewScanner(os.Stdin)
-			for scanner.Scan() {
-				inputChan <- scanner.Text()
-			}
-			close(inputChan)
-		}()
+		model := newAppModel(msgBus, agentSession)
+		p := tea.NewProgram(model, tea.WithAltScreen())
 
-		// 主循环：处理输入和信号
-	mainLoop:
-		for {
-			select {
-			case input, ok := <-inputChan:
-				if !ok {
-					break mainLoop
-				}
-				if input == "exit" || input == "quit" {
-					break mainLoop
-				}
-				if input == "" {
-					continue
-				}
-
-				inboundMsg := &bus.InBoundMessage{
-					InChannel: "cli",
-					SenderID:  "cli",
-					ChatID:    agentSession,
-					Content:   input,
-					TimeStamp: time.Now(),
-				}
-
-				if err := msgBus.PublishInBoundMessage(ctx, inboundMsg); err != nil {
-					logger.L().Error().Err(err).Msg("发送消息失败")
-					continue
-				}
-			case <-sigChan:
-				fmt.Println("\n收到退出信号...")
-				break mainLoop
+		// 获取 CLIChannel 并设置回调
+		var responseChan chan string = make(chan string, 1)
+		cliChan, err := channelManager.Get(ctx, "cli")
+		if err == nil {
+			if c, ok := cliChan.(*channel.CLIChannel); ok {
+				c.SetOnResponse(func(content string) {
+					responseChan <- content
+				})
 			}
 		}
+
+		// 启动 TUI
+		// 用 goroutine 从 responseChan 读并发送到 TUI
+		go func() {
+			for content := range responseChan {
+				p.Send(agentResponseMsg{Content: content})
+			}
+		}()
+
+		if _, err := p.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "TUI 错误: %v\n", err)
+		}
+
+		close(responseChan)
 	}
 
 	// 停止
@@ -284,4 +505,9 @@ func runDebugSessions() error {
 	// TODO:创建分析器
 
 	return nil
+}
+
+// errMsg 用于错误传递
+type errMsg struct {
+	err error
 }
