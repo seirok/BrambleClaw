@@ -1,0 +1,53 @@
+package messages
+
+import (
+	"encoding/json"
+	"fmt"
+	"time"
+
+	"github.com/google/uuid"
+)
+
+// AgentErrorMessage Agent错误消息
+type AgentErrorMessage struct {
+	ID        string            `json:"id"`
+	Source    string            `json:"source"`
+	Type      MessageType       `json:"type"`
+	Error     string            `json:"error"`
+	ErrorType string            `json:"error_type,omitempty"`
+	Metadata  map[string]string `json:"metadata,omitempty"`
+	CreatedAt time.Time         `json:"created_at"`
+}
+
+// NewAgentErrorMessage 创建Agent错误消息
+func NewAgentErrorMessage(source, errMsg string) *AgentErrorMessage {
+	return &AgentErrorMessage{
+		ID:        uuid.NewString(),
+		Source:    source,
+		Type:      MessageTypeError,
+		Error:     errMsg,
+		Metadata:  make(map[string]string),
+		CreatedAt: time.Now().UTC(),
+	}
+}
+
+// WithErrorType 设置错误类型（可选）
+func (m *AgentErrorMessage) WithErrorType(errType string) *AgentErrorMessage {
+	m.ErrorType = errType
+	return m
+}
+
+func (m *AgentErrorMessage) GetID() string                  { return m.ID }
+func (m *AgentErrorMessage) GetSource() string              { return m.Source }
+func (m *AgentErrorMessage) GetType() MessageType           { return m.Type }
+func (m *AgentErrorMessage) GetCreatedAt() time.Time        { return m.CreatedAt }
+func (m *AgentErrorMessage) GetMetadata() map[string]string { return m.Metadata }
+func (m *AgentErrorMessage) ToText() string                 { return m.Error }
+func (m *AgentErrorMessage) ToModelText() string {
+	return fmt.Sprintf("ERROR from %s: %s", m.Source, m.Error)
+}
+
+func (m *AgentErrorMessage) MarshalJSON() ([]byte, error) {
+	type Alias AgentErrorMessage
+	return json.Marshal((*Alias)(m))
+}

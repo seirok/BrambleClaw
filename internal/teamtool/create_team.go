@@ -2,6 +2,7 @@ package teamtool
 
 import (
 	"brambleclaw/internal/agent"
+	"brambleclaw/internal/logger"
 	"brambleclaw/internal/messages"
 	"brambleclaw/internal/team"
 	"brambleclaw/internal/tools"
@@ -71,6 +72,11 @@ func (t *CreateTeamTool) Parameters() map[string]interface{} {
 				"type":        "integer",
 				"description": "Maximum number of message turns before termination (default: 10)",
 			},
+			"error_policy": map[string]interface{}{
+				"type":        "string",
+				"enum":        []string{"terminate", "skip"},
+				"description": "Error handling policy: terminate (stop team on error, default) or skip (skip failed member and continue)",
+			},
 		},
 		"required": []string{"task", "participants"},
 	}
@@ -81,6 +87,7 @@ type createTeamArgs struct {
 	Participants []participantArg `json:"participants"`
 	TeamType     string           `json:"team_type"`
 	MaxTurns     int              `json:"max_turns"`
+	ErrorPolicy  string           `json:"error_policy"`
 }
 
 type participantArg struct {
@@ -91,6 +98,7 @@ type participantArg struct {
 }
 
 func (t *CreateTeamTool) Execute(ctx context.Context, args string) (interface{}, error) {
+	logger.L().Debug().Msg("using CreateTeam Tool...")
 	var req createTeamArgs
 	if err := json.Unmarshal([]byte(args), &req); err != nil {
 		return nil, fmt.Errorf("create_team: invalid arguments: %w", err)
@@ -106,6 +114,17 @@ func (t *CreateTeamTool) Execute(ctx context.Context, args string) (interface{},
 		req.TeamType = "round_robin"
 	}
 
+	// 解析错误策略
+	var errorPolicy team.ErrorPolicy
+	switch req.ErrorPolicy {
+	case "skip":
+		errorPolicy = team.ErrorPolicySkip
+	case "terminate", "":
+		errorPolicy = team.ErrorPolicyTerminate
+	default:
+		return nil, fmt.Errorf("create_team: invalid error_policy %q, must be 'terminate' or 'skip'", req.ErrorPolicy)
+	}
+
 	llmClient := t.parentAgent.Orchestrator().LLM()
 	parentTools := t.parentAgent.Tools()
 
@@ -118,10 +137,11 @@ func (t *CreateTeamTool) Execute(ctx context.Context, args string) (interface{},
 		if err != nil {
 			return nil, fmt.Errorf("create_team: failed to create sub-agent %q: %w", p.Name, err)
 		}
+		logger.L().Debug().Str("sub-agent", p.Name).Msg("created sub-agent")
 		participants = append(participants, sub)
 	}
 
-	groupChat, err := team.NewRoundRobinGroupChat("team", participants, req.MaxTurns)
+	groupChat, err := team.NewRoundRobinGroupChat("team", participants, req.MaxTurns, errorPolicy)
 	if err != nil {
 		return nil, fmt.Errorf("create_team: failed to create team: %w", err)
 	}
@@ -136,7 +156,15 @@ func (t *CreateTeamTool) Execute(ctx context.Context, args string) (interface{},
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("Team completed with %d messages:\n\n", len(result.Messages)))
 	for i, msg := range result.Messages {
-		sb.WriteString(fmt.Sprintf("[%d] %s: %s\n", i+1, msg.GetSource(), msg.ToText()))
+		if messages.IsErrorMessage(msg) {
+			sb.WriteString(fmt.Sprintf("[%d] ERROR - %s: %s\n", i+1, msg.GetSource(), messages.GetErrorDetail(msg)))
+		} else {
+			sb.WriteString(fmt.Sprintf("[%d] %s: %s\n", i+1, msg.GetSource(), msg.ToText()))
+		}
+	}
+
+	if result.Error != "" {
+		sb.WriteString(fmt.Sprintf("\nTeam encountered errors: %s\n", result.Error))
 	}
 
 	return sb.String(), nil

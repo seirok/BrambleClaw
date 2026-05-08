@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -23,6 +24,7 @@ type GroupChatManagerContext struct {
 	ParticipantTopics []string // 群聊中每一个Agent专属的消息主题
 	OutputTopic       string   // 向外部报告群聊进展和结果
 	Participants      []agent.ChatAgent
+	ErrorPolicy       ErrorPolicy
 }
 
 // GroupChatManager 群聊管理器接口，控制消息流转和参与者选择
@@ -41,6 +43,7 @@ type BaseGroupChatConfig struct {
 	Participants []agent.ChatAgent
 	Manager      GroupChatManager
 	Termination  TerminationCondition
+	ErrorPolicy  ErrorPolicy
 	Runtime      *runtime.AgentRuntime
 }
 
@@ -50,6 +53,7 @@ type BaseGroupChat struct {
 	participants []agent.ChatAgent
 	manager      GroupChatManager
 	termination  TerminationCondition
+	errorPolicy  ErrorPolicy
 	rt           *runtime.AgentRuntime
 
 	mu      sync.Mutex
@@ -80,6 +84,23 @@ func NewBaseGroupChat(cfg BaseGroupChatConfig) (*BaseGroupChat, error) {
 		names[p.Name()] = true
 	}
 
+	// 设置默认错误策略
+	errorPolicy := cfg.ErrorPolicy
+	if errorPolicy == "" {
+		errorPolicy = ErrorPolicyTerminate
+	}
+
+	// 如果使用 terminate 策略，自动添加 StopMessageTermination
+	termination := cfg.Termination
+	if errorPolicy == ErrorPolicyTerminate {
+		stopTerm := NewStopMessageTermination()
+		if termination != nil {
+			termination = NewAllTermination(termination, stopTerm)
+		} else {
+			termination = stopTerm
+		}
+	}
+
 	teamID := uuid.NewString()
 	rt := cfg.Runtime
 	if rt == nil {
@@ -95,7 +116,8 @@ func NewBaseGroupChat(cfg BaseGroupChatConfig) (*BaseGroupChat, error) {
 		base:              agent.NewBaseChatAgent(cfg.Name, cfg.Description),
 		participants:      cfg.Participants,
 		manager:           cfg.Manager,
-		termination:       cfg.Termination,
+		termination:       termination,
+		errorPolicy:       errorPolicy,
 		rt:                rt,
 		teamID:            teamID,
 		groupTopic:        fmt.Sprintf("group_topic_%s", teamID),
@@ -120,18 +142,33 @@ func (c *BaseGroupChat) Run(ctx context.Context, task messages.ChatMessage) (*Ta
 	if err := c.manager.Start(ctx); err != nil {
 		return nil, err
 	}
-
+	logger.L().Debug().Msg("group chat manager started")
 	c.rt.Publish(ctx, c.managerTopic, task)
 
 	sub := c.rt.Subscribe(ctx, c.outputTopic)
 	result := &TaskResult{Messages: make([]messages.ChatMessage, 0)}
 
+	// 填充错误信息的辅助函数
+	populateError := func() {
+		var errs []string
+		for _, msg := range result.Messages {
+			if messages.IsErrorMessage(msg) {
+				errs = append(errs, msg.GetSource()+": "+messages.GetErrorDetail(msg))
+			}
+		}
+		if len(errs) > 0 {
+			result.Error = strings.Join(errs, "; ")
+		}
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
+			populateError()
 			return result, ctx.Err()
 		case msg, ok := <-sub.Ch():
 			if !ok {
+				populateError()
 				return result, nil
 			}
 			chatMsg, ok := msg.(messages.ChatMessage)
@@ -139,8 +176,10 @@ func (c *BaseGroupChat) Run(ctx context.Context, task messages.ChatMessage) (*Ta
 				continue
 			}
 			result.Messages = append(result.Messages, chatMsg)
+			logger.L().Debug().Msg("group chat message received")
 
 			if c.termination != nil && c.termination.ShouldTerminate(chatMsg) {
+				populateError()
 				return result, nil
 			}
 		}
@@ -294,6 +333,7 @@ func (c *BaseGroupChat) initialize(ctx context.Context) error {
 		ParticipantTopics: c.participantTopics,
 		OutputTopic:       c.outputTopic,
 		Participants:      c.participants,
+		ErrorPolicy:       c.errorPolicy,
 	}
 	if err := c.manager.Initialize(ctx, mgrCtx); err != nil {
 		return err

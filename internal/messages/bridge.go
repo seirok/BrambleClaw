@@ -63,6 +63,20 @@ func GetHandoffTarget(msg ChatMessage) string {
 	return ""
 }
 
+// IsErrorMessage 检查消息是否为Agent错误消息
+func IsErrorMessage(msg ChatMessage) bool {
+	_, ok := msg.(*AgentErrorMessage)
+	return ok
+}
+
+// GetErrorDetail 获取错误详情，如果不是错误消息返回空字符串
+func GetErrorDetail(msg ChatMessage) string {
+	if errMsg, ok := msg.(*AgentErrorMessage); ok {
+		return errMsg.Error
+	}
+	return ""
+}
+
 // ChatMessageFromText 便捷函数：从文本创建 ChatMessage
 func ChatMessageFromText(source, content string) ChatMessage {
 	return NewTextMessage(source, content)

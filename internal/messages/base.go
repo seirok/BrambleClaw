@@ -15,6 +15,7 @@ const (
 	MessageTypeHandoff     MessageType = "handoff"
 	MessageTypeToolCallSum MessageType = "tool_call_summary"
 	MessageTypeStructured  MessageType = "structured"
+	MessageTypeError       MessageType = "error"
 )
 
 // BaseMessage 所有消息的基础接口

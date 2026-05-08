@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"brambleclaw/internal/agent"
+	"brambleclaw/internal/logger"
 	"brambleclaw/internal/messages"
 )
 
@@ -94,6 +95,32 @@ func (m *RoundRobinManager) handleResponse(ctx context.Context, msg messages.Cha
 		return
 	}
 
+	if messages.IsErrorMessage(msg) {
+		switch m.ctx.ErrorPolicy {
+		case ErrorPolicyTerminate:
+			stopMsg := messages.NewStopMessage(
+				"manager",
+				"team terminated due to error from "+msg.GetSource()+": "+messages.GetErrorDetail(msg),
+			)
+			m.ctx.Runtime.Publish(ctx, m.ctx.OutputTopic, stopMsg)
+			return
+		case ErrorPolicySkip:
+			logger.L().Warn().
+				Str("agent", msg.GetSource()).
+				Str("error", messages.GetErrorDetail(msg)).
+				Msg("Agent error, skipping to next participant")
+			m.selectAndPublish(ctx, msg)
+			return
+		default:
+			stopMsg := messages.NewStopMessage(
+				"manager",
+				"team terminated due to error from "+msg.GetSource()+": "+messages.GetErrorDetail(msg),
+			)
+			m.ctx.Runtime.Publish(ctx, m.ctx.OutputTopic, stopMsg)
+			return
+		}
+	}
+
 	if messages.IsHandoffMessage(msg) {
 		target := messages.GetHandoffTarget(msg)
 		if idx := m.findParticipant(target); idx >= 0 {
@@ -133,7 +160,7 @@ type RoundRobinGroupChat struct {
 }
 
 // NewRoundRobinGroupChat 创建轮询群组聊天
-func NewRoundRobinGroupChat(name string, participants []agent.ChatAgent, maxTurns int) (*RoundRobinGroupChat, error) {
+func NewRoundRobinGroupChat(name string, participants []agent.ChatAgent, maxTurns int, errorPolicy ErrorPolicy) (*RoundRobinGroupChat, error) {
 	mgr := NewRoundRobinManager()
 
 	var term TerminationCondition
@@ -147,11 +174,13 @@ func NewRoundRobinGroupChat(name string, participants []agent.ChatAgent, maxTurn
 		Participants: participants,
 		Manager:      mgr,
 		Termination:  term,
+		ErrorPolicy:  errorPolicy,
 	})
 	if err != nil {
 		return nil, err
 	}
 
+	logger.L().Info().Str("group chat", name).Msg("successfully launch group chat")
 	return &RoundRobinGroupChat{
 		BaseGroupChat: base,
 		manager:       mgr,

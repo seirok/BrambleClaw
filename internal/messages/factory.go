@@ -18,6 +18,7 @@ func NewMessageFactory() *MessageFactory {
 	f.Register(MessageTypeText, func() ChatMessage { return &TextMessage{} })
 	f.Register(MessageTypeStop, func() ChatMessage { return &StopMessage{} })
 	f.Register(MessageTypeHandoff, func() ChatMessage { return &HandoffMessage{} })
+	f.Register(MessageTypeError, func() ChatMessage { return &AgentErrorMessage{} })
 	return f
 }
 

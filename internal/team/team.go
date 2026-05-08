@@ -8,9 +8,18 @@ import (
 	"brambleclaw/internal/messages"
 )
 
+// ErrorPolicy 错误处理策略
+type ErrorPolicy string
+
+const (
+	ErrorPolicyTerminate ErrorPolicy = "terminate"
+	ErrorPolicySkip      ErrorPolicy = "skip"
+)
+
 // TaskResult 任务执行结果
 type TaskResult struct {
 	Messages []messages.ChatMessage
+	Error    string // 非空表示团队有成员报错（快速检查字段）
 }
 
 // Team 团队接口，嵌套 ChatAgent 以支持 Team 作为 Agent 参与另一个 Team
