@@ -31,6 +31,9 @@ func NewOrchestrator(llm LLMProcessor, tools interfaces.Registry[tools.Tool]) *O
 	}
 }
 
+// LLM 返回 LLM 处理器
+func (o *Orchestrator) LLM() LLMProcessor { return o.llm }
+
 // prepareToolDefinitions 准备工具定义
 func (o *Orchestrator) prepareToolDefinitions() []map[string]interface{} {
 	toolList := o.tools.List(o.ctx)

@@ -63,3 +63,25 @@ func (b *BaseChatAgent) LoadState(state map[string]any) error { return nil }
 func (b *BaseChatAgent) IsPaused() bool {
 	return b.isPaused.Load()
 }
+
+// streamFromOnMessages 将同步的 OnMessages 调用包装为流式通道
+func streamFromOnMessages(
+	ctx context.Context,
+	msgs []messages.ChatMessage,
+	fn func(context.Context, []messages.ChatMessage) (*Response, error),
+) <-chan StreamItem {
+	ch := make(chan StreamItem, 1)
+	go func() {
+		defer close(ch)
+		resp, err := fn(ctx, msgs)
+		if err != nil {
+			ch <- StreamItem{Err: err}
+			return
+		}
+		ch <- StreamItem{
+			Message:  resp.ChatMessage,
+			Response: resp,
+		}
+	}()
+	return ch
+}

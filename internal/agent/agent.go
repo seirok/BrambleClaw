@@ -125,6 +125,8 @@ func (a *Agent) ContextBuilder() *ContextBuilder { return a.builder }
 
 func (a *Agent) Commands() interfaces.Registry[interfaces.Command] { return a.commands }
 
+func (a *Agent) Tools() interfaces.Registry[tools.Tool] { return a.tools }
+
 func (a *Agent) Workspace() string { return a.workspace }
 
 func (a *Agent) Name() string { return a.name }
@@ -177,7 +179,7 @@ func (a *Agent) OnMessages(ctx context.Context, msgs []messages.ChatMessage) (*R
 	}
 
 	if isNewSession || len(sess.Messages) == 0 {
-		fullSystemPrompt, err := a.ContextBuilder().BuildFullSystemPrompt(dynamicInfo)
+		fullSystemPrompt, err := a.ContextBuilder().Build(dynamicInfo)
 		if err != nil {
 			logger.L().Error().Err(err).Msg("Failed to build full system prompt")
 			fullSystemPrompt = ""
@@ -234,20 +236,7 @@ func (a *Agent) OnMessages(ctx context.Context, msgs []messages.ChatMessage) (*R
 
 // OnMessagesStream 流式处理消息（ChatAgent 接口）
 func (a *Agent) OnMessagesStream(ctx context.Context, msgs []messages.ChatMessage) (<-chan StreamItem, error) {
-	ch := make(chan StreamItem, 1)
-	go func() {
-		defer close(ch)
-		resp, err := a.OnMessages(ctx, msgs)
-		if err != nil {
-			ch <- StreamItem{Err: err}
-			return
-		}
-		ch <- StreamItem{
-			Message:  resp.ChatMessage,
-			Response: resp,
-		}
-	}()
-	return ch, nil
+	return streamFromOnMessages(ctx, msgs, a.OnMessages), nil
 }
 
 // OnReset 重置 Agent 状态（ChatAgent 接口）

@@ -9,6 +9,8 @@ import (
 	"brambleclaw/internal/gateway"
 	"brambleclaw/internal/logger"
 	"brambleclaw/internal/runtime"
+	"brambleclaw/internal/teamtool"
+	"brambleclaw/internal/tools"
 	"bufio"
 	"context"
 	"fmt"
@@ -127,6 +129,9 @@ func runAgent(cmd *cobra.Command, args []string) error {
 	// 5. 初始化 AgentManager
 	logger.L().Debug().Msg("初始化 AgentManager...")
 	agentManager := agent.NewAgentManager(msgBus, runtime.NewAgentRuntime())
+	agentManager.SetToolFactory(func(a *agent.Agent) []tools.Tool {
+		return []tools.Tool{teamtool.NewCreateTeamTool(a)}
+	})
 
 	// 6. 初始化 Gateway
 	logger.L().Debug().Msg("初始化 Gateway...")

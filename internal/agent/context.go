@@ -435,7 +435,7 @@ func (cb *ContextBuilder) Compact(ctx context.Context, sess *session.Session, in
 		}
 
 		// 重新构建 System Prompt 并替换 Messages[0]
-		newSystemPrompt, err := cb.BuildFullSystemPrompt(info)
+		newSystemPrompt, err := cb.Build(info)
 		if err != nil {
 			logger.L().Error().Err(err).Str("sessionKey", sess.Key).
 				Msg("compact: failed to rebuild system prompt, but continuing")
@@ -522,7 +522,7 @@ Your workspace is at: %s
 		workspacePath, workspacePath, workspacePath, workspacePath, workspacePath, workspacePath, toolDiscovery)
 }
 
-func (cb *ContextBuilder) BuildFullSystemPrompt(info *DynamicInfo) (string, error) {
+func (cb *ContextBuilder) Build(info *DynamicInfo) (string, error) {
 	var systemPrompt []string
 	staticCtx := cb.BuildStaticCtx()
 	systemPrompt = append(systemPrompt, staticCtx)

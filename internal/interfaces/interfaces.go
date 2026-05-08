@@ -73,3 +73,7 @@ type Storage[T any] interface {
 	Delete(ctx context.Context, key string) error
 	Exists(ctx context.Context, key string) (bool, error)
 }
+
+type Builder interface {
+	Build() (string, error)
+}

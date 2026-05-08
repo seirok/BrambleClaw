@@ -24,6 +24,9 @@ type AgentManager struct {
 	runtime       messages.RuntimeProvider
 	mu            sync.RWMutex
 	status        interfaces.ManagerStatus
+
+	// toolFactory 注入额外的工具到每个 Agent（由外部设置，避免循环依赖）
+	toolFactory func(*Agent) []tools.Tool
 }
 
 func NewAgentManager(msgBus *bus.MessageBus, rt messages.RuntimeProvider) *AgentManager {
@@ -33,6 +36,11 @@ func NewAgentManager(msgBus *bus.MessageBus, rt messages.RuntimeProvider) *Agent
 		runtime:       rt,
 		status:        interfaces.StatusIdle,
 	}
+}
+
+// SetToolFactory 设置工具工厂，用于向每个 Agent 注入额外工具
+func (a *AgentManager) SetToolFactory(factory func(*Agent) []tools.Tool) {
+	a.toolFactory = factory
 }
 
 // Initialize 从配置中注册所有启用的 Agent
@@ -117,6 +125,15 @@ func (a *AgentManager) Initialize(ctx context.Context, cfg any) error {
 
 		// 将 Agent 设置到 ContextBuilder（解决循环依赖）
 		contextBuilder.SetAgent(agent)
+
+		// 通过工厂注入额外工具（如 create_team）
+		if a.toolFactory != nil {
+			for _, tool := range a.toolFactory(agent) {
+				if err := agentToolRegistry.Register(ctx, tool.Name(), tool); err != nil {
+					logger.L().Error().Err(err).Str("tool", tool.Name()).Msg("注册工厂工具失败")
+				}
+			}
+		}
 
 		if err := a.agentRegistry.Register(ctx, agent.Name(), agent); err != nil {
 			logger.L().Error().Err(err).Str("agent", agent.Name()).Msg("注册 Agent 失败")
