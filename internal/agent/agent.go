@@ -181,7 +181,7 @@ func (a *Agent) OnMessages(ctx context.Context, msgs []messages.ChatMessage) (*R
 	if isNewSession || len(sess.Messages) == 0 {
 		fullSystemPrompt, err := a.ContextBuilder().Build(dynamicInfo)
 		if err != nil {
-			logger.L().Error().Err(err).Str("agent", a.name).Str("channel", msg.InChannel).Msg("Failed to build full system prompt")
+			logger.L().Error().Err(err).Str("agent", a.name).Str("channel", channel).Msg("Failed to build full system prompt")
 			fullSystemPrompt = ""
 		} else {
 			sess.AddMessage(AgentMessage{
