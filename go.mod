@@ -10,7 +10,9 @@ require (
 	github.com/rs/zerolog v1.35.1
 	github.com/sipeed/picoclaw v0.2.8
 	github.com/spf13/cobra v1.10.2
+	github.com/tencent-connect/botgo v0.2.1
 	golang.org/x/net v0.53.0
+	golang.org/x/oauth2 v0.36.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -37,6 +39,7 @@ require (
 	github.com/github/copilot-sdk/go v0.2.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
+	github.com/go-resty/resty/v2 v2.17.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/jsonschema-go v0.4.2 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect

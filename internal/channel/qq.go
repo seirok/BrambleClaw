@@ -10,10 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/sipeed/picoclaw/pkg/channels"
-	"github.com/sipeed/picoclaw/pkg/identity"
 	"github.com/sipeed/picoclaw/pkg/logger"
-	"github.com/sipeed/picoclaw/pkg/media"
 	"github.com/tencent-connect/botgo"
 	"github.com/tencent-connect/botgo/dto"
 	"github.com/tencent-connect/botgo/event"
@@ -157,20 +154,14 @@ func (c *QQChannel) handleC2CMessage() event.C2CMessageEventHandler {
 		}
 
 		content := strings.TrimSpace(data.Content)
-		mediaPaths, attachmentNotes := c.extractInboundAttachments(senderID, data.ID, data.Attachments)
-		for _, note := range attachmentNotes {
-			content = appendContent(content, note)
-		}
-		if content == "" && len(mediaPaths) == 0 {
-			logger.DebugC("qq", "Received empty C2C message with no attachments, ignoring")
-			return nil
-		}
-
-		logger.InfoCF("qq", "Received C2C message", map[string]any{
-			"sender":      senderID,
-			"length":      len(content),
-			"media_count": len(mediaPaths),
-		})
+		//mediaPaths, attachmentNotes := c.extractInboundAttachments(senderID, data.ID, data.Attachments)
+		//for _, note := range attachmentNotes {
+		//	content = appendContent(content, note)
+		//}
+		//if content == "" && len(mediaPaths) == 0 {
+		//	logger.DebugC("qq", "Received empty C2C message with no attachments, ignoring")
+		//	return nil
+		//}
 
 		// Store chat routing context.
 		c.chatType.Store(senderID, "direct")
@@ -179,15 +170,11 @@ func (c *QQChannel) handleC2CMessage() event.C2CMessageEventHandler {
 		// Reset msg_seq counter for new inbound message.
 		c.msgSeqCounters.Store(senderID, new(atomic.Uint64))
 
-		metadata := map[string]string{
-			"account_id": senderID,
-		}
-
 		//
 		inboundMsg := &bus.InBoundMessage{
 			InChannel: "feishu",
 			SenderID:  senderID,
-			ChatID:    chatID,
+			ChatID:    senderID, //TODO
 			Content:   content,
 			TimeStamp: time.Now(),
 		}
@@ -201,51 +188,6 @@ func (c *QQChannel) handleC2CMessage() event.C2CMessageEventHandler {
 	}
 }
 
-func (c *QQChannel) extractInboundAttachments(
-	chatID, messageID string,
-	attachments []*dto.MessageAttachment,
-) ([]string, []string) {
-	if len(attachments) == 0 {
-		return nil, nil
-	}
-
-	scope := channels.BuildMediaScope("qq", chatID, messageID)
-	mediaPaths := make([]string, 0, len(attachments))
-	notes := make([]string, 0, len(attachments))
-
-	storeMedia := func(localPath string, attachment *dto.MessageAttachment) string {
-		if store := c.GetMediaStore(); store != nil {
-			ref, err := store.Store(localPath, media.MediaMeta{
-				Filename:      qqAttachmentFilename(attachment),
-				ContentType:   attachment.ContentType,
-				Source:        "qq",
-				CleanupPolicy: media.CleanupPolicyDeleteOnCleanup,
-			}, scope)
-			if err == nil {
-				return ref
-			}
-		}
-		return localPath
-	}
-
-	for _, attachment := range attachments {
-		if attachment == nil {
-			continue
-		}
-
-		filename := qqAttachmentFilename(attachment)
-		if localPath := c.downloadAttachment(attachment.URL, filename); localPath != "" {
-			mediaPaths = append(mediaPaths, storeMedia(localPath, attachment))
-		} else if attachment.URL != "" {
-			mediaPaths = append(mediaPaths, attachment.URL)
-		}
-
-		notes = append(notes, qqAttachmentNote(attachment))
-	}
-
-	return mediaPaths, notes
-}
-
 func appendContent(content, suffix string) string {
 	if suffix == "" {
 		return content
@@ -254,4 +196,54 @@ func appendContent(content, suffix string) string {
 		return suffix
 	}
 	return content + "\n" + suffix
+}
+
+func (c *QQChannel) handleGroupATMessage() event.GroupATMessageEventHandler {
+	return func(event *dto.WSPayload, data *dto.WSGroupATMessageData) error {
+		// extract user info
+		var senderID string
+		if data.Author != nil && data.Author.ID != "" {
+			senderID = data.Author.ID
+		} else {
+			logger.WarnC("qq", "Received group message with no sender ID")
+			return nil
+		}
+
+		content := strings.TrimSpace(data.Content)
+		//mediaPaths, attachmentNotes := c.extractInboundAttachments(data.GroupID, data.ID, data.Attachments)
+		//for _, note := range attachmentNotes {
+		//	content = appendContent(content, note)
+		//}
+
+		// GroupAT event means bot is always mentioned; apply group trigger filtering.
+		cleaned := strings.TrimSpace(content)
+		content = cleaned
+		//if content == "" && len(mediaPaths) == 0 {
+		//	logger.DebugC("qq", "Received empty group message with no attachments, ignoring")
+		//	return nil
+		//}
+
+		// Store chat routing context using GroupID as chatID.
+		c.chatType.Store(data.GroupID, "group")
+		c.lastMsgID.Store(data.GroupID, data.ID)
+
+		// Reset msg_seq counter for new inbound message.
+		c.msgSeqCounters.Store(data.GroupID, new(atomic.Uint64))
+
+		//
+		inboundMsg := &bus.InBoundMessage{
+			InChannel: "qq",
+			SenderID:  senderID,
+			ChatID:    senderID, //TODO
+			Content:   content,
+			TimeStamp: time.Now(),
+		}
+
+		err := c.base.PublishInBoundMessage(c.ctx, inboundMsg)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
 }
