@@ -127,7 +127,7 @@ func (mb *MessageBus) PublishOutBoundMessage(ctx context.Context, out_msg *OutBo
 func (mb *MessageBus) ConsumeInBoundMessage(ctx context.Context) (*InBoundMessage, error) {
 	select {
 	case msg := <-mb.InBound:
-		logger.L().Debug().Str("Message received", msg.Content).Msg("")
+		logger.L().Debug().Str("message", msg.Content).Msg("Message received")
 		return msg, nil
 	case <-ctx.Done():
 		logger.L().Debug().Msg("Context cancelled")

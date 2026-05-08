@@ -65,7 +65,9 @@ func (m *Manager) Start(ctx context.Context, registry *tools.ToolRegistry) error
 		for _, t := range mcpTools {
 			toolName := fmt.Sprintf("%s_%s", name, t.Name)
 			wrapper := NewMCPToolWrapper(toolName, t, client)
-			registry.Register(ctx, toolName, wrapper)
+			if err := registry.Register(ctx, toolName, wrapper); err != nil {
+				logger.L().Error().Err(err).Str("tool", toolName).Msg("注册 MCP 工具失败")
+			}
 			logger.L().Debug().Str("tool", toolName).Msg("注册 MCP 工具")
 		}
 	}

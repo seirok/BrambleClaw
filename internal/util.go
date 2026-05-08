@@ -10,13 +10,13 @@ import (
 )
 
 func BuildSessionKey(agentName, channelName, chatID string) string {
-	sessionKey := channelName + "_" + agentName + "_" + chatID
+	sessionKey := channelName + "::" + agentName + "::" + chatID
 	return sessionKey
 }
 
 func ParseSessionKey(sessionKey string) (agentName, channelName, chatID string, err error) {
-	// 按 "::" 进行切割
-	parts := strings.Split(sessionKey, "_")
+	// 按 "_" 进行切割
+	parts := strings.Split(sessionKey, "::")
 
 	// 严谨起见，先检查长度是否符合预期（应该有 3 部分）
 	if len(parts) == 3 {
@@ -28,6 +28,14 @@ func ParseSessionKey(sessionKey string) (agentName, channelName, chatID string, 
 	}
 
 	return agentName, channelName, chatID, nil
+}
+
+func SessionKeyToFile(sessionKey string) string {
+	agentName, channelName, chatID, err := ParseSessionKey(sessionKey)
+	if err != nil {
+		return ""
+	}
+	return agentName + "_" + channelName + "_" + chatID
 }
 
 func GetSessionFile(sessionKey string) string {
@@ -43,6 +51,7 @@ func CheckEnviromentVirable() bool {
 	missing := false
 	for _, env := range envs {
 		if os.Getenv(env) == "" {
+			// NOTE: Cannot use logger.L() here due to circular import (logger -> util -> logger)
 			fmt.Printf("[ERROR] Environment variable %s is not set.\n", env)
 			missing = true
 		}
@@ -112,4 +121,29 @@ func GetLogPath() string {
 
 func GetSystemPath() string {
 	return MakeItHome(".brambleclaw")
+}
+
+func StringValue(v *string) string {
+	if v == nil {
+		return ""
+	}
+	return *v
+}
+
+// ExtractJSONStringField unmarshals content as JSON and returns the value of the given string field.
+// Returns "" if the content is invalid JSON or the field is missing/empty.
+func ExtractJSONStringField(content, field string) string {
+	var m map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(content), &m); err != nil {
+		return ""
+	}
+	raw, ok := m[field]
+	if !ok {
+		return ""
+	}
+	var s string
+	if err := json.Unmarshal(raw, &s); err != nil {
+		return ""
+	}
+	return s
 }

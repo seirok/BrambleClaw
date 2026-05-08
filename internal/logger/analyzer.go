@@ -54,8 +54,8 @@ func AnalyzeLogs(logPath string, n int) error {
 		// 注意 ConsoleWriter.Write 期望每行一个 JSON
 		_, err := consoleWriter.Write([]byte(line + "\n"))
 		if err != nil {
-			// 如果格式化失败，直接打印原始内容
-			fmt.Println(line)
+			// 如果格式化失败，用日志记录原始内容
+			L().Warn().Str("line", line).Msg("Failed to format log line")
 		}
 	}
 

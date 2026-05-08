@@ -40,7 +40,7 @@ func (c *CLIChannel) Stop(ctx context.Context) error {
 }
 
 // Send 发送消息
-func (c *CLIChannel) Send(msg *bus.OutBoundMessage) error {
+func (c *CLIChannel) Send(ctx context.Context, msg *bus.OutBoundMessage) error {
 	fmt.Printf("\n> %s\n", msg.Content)
 	return nil
 }

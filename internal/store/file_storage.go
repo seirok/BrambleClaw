@@ -1,6 +1,7 @@
 package store
 
 import (
+	"brambleclaw/internal/logger"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -55,6 +56,7 @@ func (f *FileStorage[T]) Save(ctx context.Context, key string, data *T) error {
 	defer func() {
 		if r := recover(); r != nil { // 处理可能的 panic
 			os.Remove(tmpFileName)
+			logger.L().Error().Interface("panic", r).Str("path", path).Msg("Panic during file save")
 			panic(r)
 		}
 		if err != nil { // 如果 Save 方法返回错误，清理临时文件

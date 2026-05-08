@@ -2,6 +2,7 @@ package agent
 
 import (
 	"brambleclaw/internal/config"
+	"brambleclaw/internal/logger"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -53,7 +54,7 @@ func (c *LLMClient) Chat(msgs ChatCompletionRequest) (*LLMResponse, error) {
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
 		if err != nil {
-
+			logger.L().Warn().Err(err).Msg("Failed to close HTTP response body")
 		}
 	}(httpResp.Body)
 

@@ -482,7 +482,7 @@ func (cb *ContextBuilder) GetRecentlyDailyNotes(days int) (string, error) {
 		dailyNote := filepath.Join(cb.Agent().Workspace(), "memory", dateStr[:6], dateStr+".md")
 		data, err := os.ReadFile(dailyNote)
 		if err != nil {
-			logger.L().Debug().Msg("failed to read file " + dailyNote + " maybe not exist")
+			logger.L().Debug().Str("file", dailyNote).Msg("failed to read daily note file, maybe not exist")
 			return "", nil
 		}
 
