@@ -40,7 +40,6 @@ type AgentEvent interface {
 }
 
 // RuntimeProvider 定义运行时发布/订阅的最小接口
-// 放在 messages 包中以避免 agent ↔ runtime 循环导入
 type RuntimeProvider interface {
 	Publish(ctx context.Context, topicID string, msg BaseMessage)
 	Subscribe(ctx context.Context, topicID string) RuntimeSubscription

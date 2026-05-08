@@ -81,6 +81,10 @@ func (c *ChatAgentContainer) processMessage(ctx context.Context, msg messages.Ch
 		return
 	}
 
+	for _, inner := range resp.InnerMessages {
+		c.runtime.PublishTo(ctx, c.outputTopic, inner)
+	}
+
 	c.runtime.PublishTo(ctx, c.outputTopic, resp.ChatMessage)
 
 	if messages.IsHandoffMessage(resp.ChatMessage) {
