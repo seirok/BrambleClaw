@@ -11,6 +11,7 @@ type ChannelConfig struct {
 	CLI      CLIChannelConfig `json:"cli" mapstructure:"cli"`
 	DingTalk DingTalkConfig   `json:"dingtalk" mapstructure:"dingtalk"`
 	Feishu   FeishuConfig     `json:"feishu" mapstructure:"feishu"`
+	QQ       QQConfig         `json:"qq" mapstructure:"qq"`
 }
 
 type DingTalkConfig struct {
@@ -39,4 +40,16 @@ type FeishuConfig struct {
 	ReasoningChannelID string `json:"reasoning_channel_id"        yaml:"-"                            env:"PICOCLAW_CHANNELS_FEISHU_REASONING_CHANNEL_ID"`
 	// RandomReactionEmoji FlexibleStringSlice `json:"random_reaction_emoji"       yaml:"-"                            env:"PICOCLAW_CHANNELS_FEISHU_RANDOM_REACTION_EMOJI"`
 	IsLark bool `json:"is_lark"                     yaml:"-"                            env:"PICOCLAW_CHANNELS_FEISHU_IS_LARK"`
+}
+
+type QQConfig struct {
+	Enabled              bool               `json:"enabled"                  yaml:"-"                    env:"PICOCLAW_CHANNELS_QQ_ENABLED"`
+	AppID                string             `json:"app_id"                   yaml:"-"                    env:"PICOCLAW_CHANNELS_QQ_APP_ID"`
+	AppSecret            string             `json:"app_secret,omitzero"      yaml:"app_secret,omitempty" env:"PICOCLAW_CHANNELS_QQ_APP_SECRET"`
+	AllowFrom            []string           `json:"allow_from"               yaml:"-"                    env:"PICOCLAW_CHANNELS_QQ_ALLOW_FROM"`
+	GroupTrigger         GroupTriggerConfig `json:"group_trigger,omitempty"  yaml:"-"`
+	MaxMessageLength     int                `json:"max_message_length"       yaml:"-"                    env:"PICOCLAW_CHANNELS_QQ_MAX_MESSAGE_LENGTH"`
+	MaxBase64FileSizeMiB int64              `json:"max_base64_file_size_mib" yaml:"-"                    env:"PICOCLAW_CHANNELS_QQ_MAX_BASE64_FILE_SIZE_MIB"`
+	SendMarkdown         bool               `json:"send_markdown"            yaml:"-"                    env:"PICOCLAW_CHANNELS_QQ_SEND_MARKDOWN"`
+	ReasoningChannelID   string             `json:"reasoning_channel_id"     yaml:"-"                    env:"PICOCLAW_CHANNELS_QQ_REASONING_CHANNEL_ID"`
 }
