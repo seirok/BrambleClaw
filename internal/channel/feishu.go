@@ -171,6 +171,7 @@ func (c *FeishuChannel) Start(ctx context.Context) error {
 		c.config.AppID,
 		c.config.AppSecret,
 		larkws.WithEventHandler(dispatcher),
+		larkws.WithLogger(&SilentLogger{}),
 		//		larkws.WithDomain(domain),
 	)
 	wsClient := c.wsClient
@@ -381,3 +382,11 @@ func (c *FeishuChannel) invalidateTokenOnAuthError(code int) {
 		logger.L().Error().Str("app_id", c.config.AppID).Msg("feishu: Invalidated cached token due to auth error")
 	}
 }
+
+// TODO: 将日志重定向到 log 文件中
+type SilentLogger struct{}
+
+func (s *SilentLogger) Debug(ctx context.Context, args ...interface{}) {}
+func (s *SilentLogger) Info(ctx context.Context, args ...interface{})  {}
+func (s *SilentLogger) Warn(ctx context.Context, args ...interface{})  {}
+func (s *SilentLogger) Error(ctx context.Context, args ...interface{}) {}
