@@ -6,7 +6,9 @@ import (
 	"brambleclaw/internal/bus"
 	"brambleclaw/internal/channel"
 	"brambleclaw/internal/config"
+	"brambleclaw/internal/events"
 	"brambleclaw/internal/gateway"
+	"brambleclaw/internal/hook"
 	"brambleclaw/internal/logger"
 	"brambleclaw/internal/runtime"
 	"brambleclaw/internal/teamtool"
@@ -15,6 +17,8 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"reflect"
+	"strings"
 	"syscall"
 	"time"
 
@@ -120,22 +124,30 @@ type agentResponseMsg struct {
 	Content string
 }
 
+// thinkingEventMsg 用于传递思考事件
+type thinkingEventMsg struct {
+	Event events.ThinkingEvent
+}
+
 // appModel TUI 状态
 type appModel struct {
-	textInput    textinput.Model
-	viewport     viewport.Model
-	spinner      spinner.Model
-	help         help.Model
-	keys         keyMap
-	messages     []chatMessage
-	waiting      bool
-	showBanner   bool
-	width        int
-	height       int
-	msgBus       *bus.MessageBus
-	agentSession string
-	quitting     bool
-	err          error
+	textInput     textinput.Model
+	viewport      viewport.Model
+	eventViewport viewport.Model
+	spinner       spinner.Model
+	help          help.Model
+	keys          keyMap
+	messages      []chatMessage
+	eventLog      []events.ThinkingEvent
+	waiting       bool
+	showBanner    bool
+	width         int
+	height        int
+	msgBus        *bus.MessageBus
+	agentSession  string
+	quitting      bool
+	err           error
+	eventFocused  bool // true=event 面板有焦点
 }
 
 type keyMap struct {
@@ -199,17 +211,23 @@ func newAppModel(msgBus *bus.MessageBus, session string) appModel {
 	s.Style = spinnerStyle
 
 	vp := viewport.New(80, 20)
+	eventVp := viewport.New(80, 10)
+	eventVp.Style = lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("240"))
 
 	return appModel{
-		textInput:    ti,
-		viewport:     vp,
-		spinner:      s,
-		messages:     []chatMessage{},
-		waiting:      false,
-		showBanner:   true,
-		msgBus:       msgBus,
-		agentSession: session,
-		help:         help.New(),
+		textInput:     ti,
+		viewport:      vp,
+		eventViewport: eventVp,
+		spinner:       s,
+		messages:      []chatMessage{},
+		eventLog:      []events.ThinkingEvent{},
+		waiting:       false,
+		showBanner:    true,
+		msgBus:        msgBus,
+		agentSession:  session,
+		help:          help.New(),
 	}
 }
 
@@ -222,9 +240,10 @@ func (m appModel) Init() tea.Cmd {
 
 func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var (
-		tiCmd tea.Cmd
-		vpCmd tea.Cmd
-		spCmd tea.Cmd
+		tiCmd  tea.Cmd
+		vpCmd  tea.Cmd
+		evpCmd tea.Cmd
+		spCmd  tea.Cmd
 	)
 
 	switch msg := msg.(type) {
@@ -234,8 +253,18 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.quitting = true
 			return m, tea.Quit
 
+		case tea.KeyTab:
+			// 切换焦点
+			m.eventFocused = !m.eventFocused
+			if m.eventFocused {
+				m.textInput.Blur()
+			} else {
+				m.textInput.Focus()
+			}
+			return m, nil
+
 		case tea.KeyEnter:
-			if m.waiting {
+			if m.waiting || m.eventFocused {
 				return m, nil
 			}
 			input := m.textInput.Value()
@@ -275,21 +304,46 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.spinner.Tick
 
 		case tea.KeyUp:
-			m.viewport.ScrollUp(1)
+			if m.eventFocused {
+				m.eventViewport.ScrollUp(1)
+			} else {
+				m.viewport.ScrollUp(1)
+			}
 		case tea.KeyDown:
-			m.viewport.ScrollDown(1)
+			if m.eventFocused {
+				m.eventViewport.ScrollDown(1)
+			} else {
+				m.viewport.ScrollDown(1)
+			}
 		}
 		switch msg.String() {
 		case "pgup":
-			m.viewport.PageUp()
+			if m.eventFocused {
+				m.eventViewport.PageUp()
+			} else {
+				m.viewport.PageUp()
+			}
 		case "pgdown":
-			m.viewport.PageDown()
+			if m.eventFocused {
+				m.eventViewport.PageDown()
+			} else {
+				m.viewport.PageDown()
+			}
 		}
 
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
+		totalHeight := msg.Height - 4 // 输入 + help
+		chatHeight := totalHeight * 3 / 4
+		eventHeight := totalHeight - chatHeight - 1 // -1 for divider
+		if eventHeight < 3 {
+			eventHeight = 3
+			chatHeight = totalHeight - eventHeight - 1
+		}
 		m.viewport.Width = msg.Width
-		m.viewport.Height = msg.Height - 4
+		m.viewport.Height = chatHeight
+		m.eventViewport.Width = msg.Width
+		m.eventViewport.Height = eventHeight
 		return m, nil
 
 	case spinner.TickMsg:
@@ -309,6 +363,19 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.viewport.SetContent(m.renderMessages())
 		m.viewport.GotoBottom()
 
+	case thinkingEventMsg:
+		// 思考事件到达
+		m.eventLog = append(m.eventLog, msg.Event)
+		// 保留最多 200 条
+		if len(m.eventLog) > 200 {
+			m.eventLog = m.eventLog[len(m.eventLog)-200:]
+		}
+		m.eventViewport.SetContent(m.renderEvents())
+		// 如果在底部，自动滚动到底部
+		if m.eventViewport.AtBottom() {
+			m.eventViewport.GotoBottom()
+		}
+
 	case errMsg:
 		m.err = msg.err
 		return m, tea.Quit
@@ -316,8 +383,9 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	m.textInput, tiCmd = m.textInput.Update(msg)
 	m.viewport, vpCmd = m.viewport.Update(msg)
+	m.eventViewport, evpCmd = m.eventViewport.Update(msg)
 
-	return m, tea.Batch(tiCmd, vpCmd, spCmd)
+	return m, tea.Batch(tiCmd, vpCmd, evpCmd, spCmd)
 }
 
 // renderMessages 渲染消息列表为字符串
@@ -368,6 +436,25 @@ func (m appModel) View() string {
 
 	// 设置 viewport 内容
 	m.viewport.SetContent(m.renderMessages())
+	m.eventViewport.SetContent(m.renderEvents())
+
+	// 分割线
+	divider := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("240")).
+		Render(strings.Repeat("─", m.width))
+
+	// 面板标题
+	var titleStr string
+	if m.eventFocused {
+		titleStr = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("86")).
+			Bold(true).
+			Render("● [Thinking Events]")
+	} else {
+		titleStr = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("240")).
+			Render("○ [Thinking Events]")
+	}
 
 	// 输入区域
 	inputView := m.textInput.View()
@@ -377,10 +464,190 @@ func (m appModel) View() string {
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
 		m.viewport.View(),
+		divider,
+		titleStr,
+		m.eventViewport.View(),
 		"",
 		inputView,
 		helpStyle.Render(helpView),
 	)
+}
+
+// renderEvents 渲染事件列表
+func (m appModel) renderEvents() string {
+	var sb strings.Builder
+	for _, evt := range m.eventLog {
+		// 获取事件的样式和格式化摘要
+		style := getEventStyle(evt.Point)
+		summary := formatEventSummary(evt)
+		sb.WriteString(style.Render(summary))
+		sb.WriteString("\n")
+	}
+	return sb.String()
+}
+
+// getEventStyle 获取事件样式
+func getEventStyle(point string) lipgloss.Style {
+	switch {
+	case strings.HasPrefix(point, "hook.point.llm."):
+		return lipgloss.NewStyle().Foreground(lipgloss.Color("69")) // blue
+	case strings.HasPrefix(point, "hook.point.tool."):
+		return lipgloss.NewStyle().Foreground(lipgloss.Color("214")) // yellow
+	case strings.HasPrefix(point, "hook.point.message."):
+		return lipgloss.NewStyle().Foreground(lipgloss.Color("240")) // gray
+	case strings.HasPrefix(point, "hook.point.agent."):
+		return lipgloss.NewStyle().Foreground(lipgloss.Color("78")) // green
+	case strings.HasPrefix(point, "hook.point.sandbox."):
+		return lipgloss.NewStyle().Foreground(lipgloss.Color("135")) // purple
+	default:
+		return lipgloss.NewStyle().Foreground(lipgloss.Color("245")) // gray
+	}
+}
+
+// formatEventSummary 格式化事件摘要（通过类型断言处理 data）
+func formatEventSummary(evt events.ThinkingEvent) string {
+	switch {
+	case strings.HasPrefix(evt.Point, "hook.point.llm."):
+		return formatLLMSummary(evt)
+	case strings.HasPrefix(evt.Point, "hook.point.tool."):
+		return formatToolSummary(evt)
+	case strings.HasPrefix(evt.Point, "hook.point.message."):
+		return formatMessageSummary(evt)
+	case strings.HasPrefix(evt.Point, "hook.point.agent."):
+		return formatAgentSummary(evt)
+	case strings.HasPrefix(evt.Point, "hook.point.sandbox."):
+		return formatSandboxSummary(evt)
+	default:
+		return fmt.Sprintf("%s: %T", evt.Point, evt.Data)
+	}
+}
+
+func formatLLMSummary(evt events.ThinkingEvent) string {
+	switch evt.Point {
+	case "hook.point.llm.request":
+		req := evt.Data
+		model := "unknown"
+		msgCount := 0
+		v := reflect.ValueOf(req)
+		if v.Kind() == reflect.Struct {
+			if modelField := v.FieldByName("Model"); modelField.IsValid() {
+				model = modelField.String()
+			}
+			if msgsField := v.FieldByName("Messages"); msgsField.IsValid() {
+				msgCount = msgsField.Len()
+			}
+		}
+		return fmt.Sprintf("LLM → %s (%d messages)", model, msgCount)
+	case "hook.point.llm.response":
+		resp := evt.Data
+		totalTokens := 0
+		v := reflect.ValueOf(resp)
+		if v.Kind() == reflect.Ptr && v.Elem().Kind() == reflect.Struct {
+			v = v.Elem()
+			if usageField := v.FieldByName("Usage"); usageField.IsValid() {
+				if ptField := usageField.FieldByName("PromptTokens"); ptField.IsValid() {
+					totalTokens += int(ptField.Int())
+				}
+				if ctField := usageField.FieldByName("CompletionTokens"); ctField.IsValid() {
+					totalTokens += int(ctField.Int())
+				}
+			}
+		}
+		return fmt.Sprintf("LLM ← response (%d tokens)", totalTokens)
+	case "hook.point.llm.error":
+		if err, ok := evt.Data.(error); ok {
+			return fmt.Sprintf("LLM ✗ %v", err)
+		}
+		return "LLM ✗ error"
+	}
+	return "LLM event"
+}
+
+func formatToolSummary(evt events.ThinkingEvent) string {
+	switch evt.Point {
+	case "hook.point.tool.pre-execute":
+		if args, ok := evt.Data.(string); ok {
+			return fmt.Sprintf("TOOL ▶ %s", truncate(args, 100))
+		}
+		return "TOOL ▶ executing"
+	case "hook.point.tool.result":
+		resultStr := fmt.Sprintf("%v", evt.Data)
+		return fmt.Sprintf("TOOL ◀ %s", truncate(resultStr, 100))
+	case "hook.point.tool.error":
+		if err, ok := evt.Data.(error); ok {
+			return fmt.Sprintf("TOOL ✗ %v", err)
+		}
+		return "TOOL ✗ error"
+	}
+	return "TOOL event"
+}
+
+func formatMessageSummary(evt events.ThinkingEvent) string {
+	switch evt.Point {
+	case "hook.point.message.pre-process":
+		var content string
+		v := reflect.ValueOf(evt.Data)
+		if v.Kind() == reflect.Ptr && v.Elem().Kind() == reflect.Struct {
+			v = v.Elem()
+			if f := v.FieldByName("Content"); f.IsValid() {
+				content = f.String()
+			}
+		}
+		return fmt.Sprintf("MSG → processing: %s", truncate(content, 50))
+	case "hook.point.message.pre-response":
+		var content string
+		v := reflect.ValueOf(evt.Data)
+		if v.Kind() == reflect.Ptr && v.Elem().Kind() == reflect.Struct {
+			v = v.Elem()
+			if f := v.FieldByName("Content"); f.IsValid() {
+				content = f.String()
+			}
+		}
+		return fmt.Sprintf("MSG ← responding: %s", truncate(content, 50))
+	case "hook.point.message.post-process":
+		return "MSG ✔ processed"
+	}
+	return "MSG event"
+}
+
+func formatAgentSummary(evt events.ThinkingEvent) string {
+	name := "unknown"
+	v := reflect.ValueOf(evt.Data)
+	if v.Kind() == reflect.Ptr {
+		if nameMethod := v.MethodByName("Name"); nameMethod.IsValid() {
+			results := nameMethod.Call(nil)
+			if len(results) == 1 && results[0].Kind() == reflect.String {
+				name = results[0].String()
+			}
+		}
+	}
+	switch evt.Point {
+	case "hook.point.agent.create":
+		return fmt.Sprintf("AGENT %s created", name)
+	case "hook.point.agent.pre-start":
+		return fmt.Sprintf("AGENT %s starting...", name)
+	case "hook.point.agent.start":
+		return fmt.Sprintf("AGENT %s started", name)
+	case "hook.point.agent.pre-stop":
+		return fmt.Sprintf("AGENT %s stopping...", name)
+	case "hook.point.agent.stop":
+		return fmt.Sprintf("AGENT %s stopped", name)
+	}
+	return "AGENT event"
+}
+
+func formatSandboxSummary(evt events.ThinkingEvent) string {
+	return fmt.Sprintf("SANDBOX %s", strings.TrimPrefix(evt.Point, "hook.point.sandbox."))
+}
+
+func truncate(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	if maxLen <= 3 {
+		return "..."
+	}
+	return s[:maxLen-3] + "..."
 }
 
 // ========== runAgent ==========
@@ -478,7 +745,15 @@ func runAgent(cmd *cobra.Command, args []string) error {
 			fmt.Println("\n收到退出信号...")
 		}
 	} else {
-		// ========== 交互式执行：用 Bubble Tea 替换 bufio.Scanner ==========
+		// ========== 交互式执行 ==========
+
+		// 创建 EventBus 并注册 observers
+		tvCfg := cfg.Hooks.ThinkingVisibility
+		var eventBus *events.EventBus
+		if tvCfg.Enabled {
+			eventBus = events.NewEventBus(tvCfg.MaxEvents)
+			hook.RegisterObservers(eventBus, tvCfg)
+		}
 
 		model := newAppModel(msgBus, agentSession)
 		p := tea.NewProgram(model, tea.WithAltScreen())
@@ -494,13 +769,22 @@ func runAgent(cmd *cobra.Command, args []string) error {
 			}
 		}
 
-		// 启动 TUI
-		// 用 goroutine 从 responseChan 读并发送到 TUI
+		// 响应通道 -> TUI
 		go func() {
 			for content := range responseChan {
 				p.Send(agentResponseMsg{Content: content})
 			}
 		}()
+
+		// EventBus -> TUI
+		if eventBus != nil {
+			go func() {
+				for evt := range eventBus.Subscribe() {
+					p.Send(thinkingEventMsg{Event: evt})
+				}
+			}()
+			defer eventBus.Close()
+		}
 
 		if _, err := p.Run(); err != nil {
 			fmt.Fprintf(os.Stderr, "TUI 错误: %v\n", err)

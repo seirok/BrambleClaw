@@ -41,5 +41,7 @@ func createDefaultConfig() *Config {
 
 	cfg.LLMConfig = structs.DefaultLLMConfig()
 
+	cfg.Hooks = structs.DefaultHookConfig()
+
 	return cfg
 }

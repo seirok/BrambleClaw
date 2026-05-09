@@ -29,6 +29,9 @@ type HookConfig struct {
 
 	// Definitions Hook 定义列表
 	Definitions []HookDefinition `json:"definitions" yaml:"definitions"`
+
+	// ThinkingVisibility 思考过程可视化配置
+	ThinkingVisibility ThinkingVisibilityConfig `json:"thinking_visibility" yaml:"thinking_visibility"`
 }
 
 // HookDefaults 全局默认设置
@@ -118,6 +121,20 @@ func (c *ExternalConfig) GetWorkingDir(defaultDir string) string {
 	return defaultDir
 }
 
+// ThinkingVisibilityConfig 思考过程可视化配置
+type ThinkingVisibilityConfig struct {
+	Enabled   bool                  `json:"enabled" yaml:"enabled"`
+	MaxEvents int                   `json:"max_events" yaml:"max_events"`
+	Points    []ThinkingPointConfig `json:"points" yaml:"points"`
+}
+
+// ThinkingPointConfig 单个 hook point 的可视化配置
+type ThinkingPointConfig struct {
+	Point     string `json:"point" yaml:"point"`
+	Enabled   bool   `json:"enabled" yaml:"enabled"`
+	Verbosity string `json:"verbosity" yaml:"verbosity"` // "summary" | "detail"
+}
+
 // DefaultHookConfig 返回默认 Hook 配置
 func DefaultHookConfig() HookConfig {
 	return HookConfig{
@@ -130,5 +147,19 @@ func DefaultHookConfig() HookConfig {
 			Env:           []string{},
 		},
 		Definitions: []HookDefinition{},
+		ThinkingVisibility: ThinkingVisibilityConfig{
+			Enabled:   true,
+			MaxEvents: 200,
+			Points: []ThinkingPointConfig{
+				{Point: "hook.point.llm.request", Enabled: true, Verbosity: "summary"},
+				{Point: "hook.point.llm.response", Enabled: true, Verbosity: "summary"},
+				{Point: "hook.point.llm.error", Enabled: true, Verbosity: "detail"},
+				{Point: "hook.point.tool.pre-execute", Enabled: true, Verbosity: "detail"},
+				{Point: "hook.point.tool.result", Enabled: true, Verbosity: "summary"},
+				{Point: "hook.point.tool.error", Enabled: true, Verbosity: "detail"},
+				{Point: "hook.point.message.pre-process", Enabled: false, Verbosity: "summary"},
+				{Point: "hook.point.message.pre-response", Enabled: false, Verbosity: "summary"},
+			},
+		},
 	}
 }
