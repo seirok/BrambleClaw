@@ -104,6 +104,7 @@ func (a *AgentManager) Initialize(ctx context.Context, cfg any) error {
 			if err = agentToolRegistry.Register(ctx, tool, toolTerm); err != nil {
 				return fmt.Errorf("注册 Agent 工具 %s 失败: %w", tool, err)
 			}
+			logger.L().Debug().Str("tool", tool).Msg("Agent 工具注册成功")
 		}
 
 		// Orchestrator
@@ -122,6 +123,7 @@ func (a *AgentManager) Initialize(ctx context.Context, cfg any) error {
 			WithSessionManager(sm),
 			WithDescription(agentCfg.Description),
 			WithRuntime(a.runtime),
+			WithWorkspace(agentWorkspace),
 		)
 
 		// 将 Agent 设置到 ContextBuilder（解决循环依赖）

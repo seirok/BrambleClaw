@@ -119,6 +119,7 @@ func GetLogPath() string {
 	return MakeItHome(filepath.Join(".brambleclaw", "logs", "bramble.log"))
 }
 
+// GetSystemPath brambleclaw 系统根目录：$HOME$/.brambleclaw
 func GetSystemPath() string {
 	return MakeItHome(".brambleclaw")
 }

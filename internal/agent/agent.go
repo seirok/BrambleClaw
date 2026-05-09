@@ -114,6 +114,12 @@ func WithRuntime(r messages.RuntimeProvider) Option {
 	}
 }
 
+func WithWorkspace(workspace string) Option {
+	return func(a *Agent) {
+		a.workspace = workspace
+	}
+}
+
 func (a *Agent) Bus() *bus.MessageBus { return a.bus }
 
 func (a *Agent) SessionMgr() *session.PersistentSessionManager { return a.sessionManager }

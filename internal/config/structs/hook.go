@@ -1,5 +1,7 @@
 package structs
 
+import "brambleclaw/internal/logger"
+
 // HookType Hook 类型枚举
 type HookType string
 
@@ -162,4 +164,88 @@ func DefaultHookConfig() HookConfig {
 			},
 		},
 	}
+}
+
+// Validate validates HookConfig and fills defaults.
+// Returns whether there was a critical error (never for HookConfig).
+func (c *HookConfig) Validate() (hasError bool) {
+	defaults := DefaultHookConfig()
+
+	if c.Version == "" {
+		c.Version = defaults.Version
+	}
+
+	if c.Definitions == nil {
+		c.Definitions = defaults.Definitions
+	}
+
+	// Validate each hook definition
+	for i := range c.Definitions {
+		c.Definitions[i].Validate()
+	}
+
+	// Validate thinking visibility
+	if !c.ThinkingVisibility.Enabled {
+		c.ThinkingVisibility.Enabled = defaults.ThinkingVisibility.Enabled
+	}
+	if c.ThinkingVisibility.MaxEvents <= 0 {
+		c.ThinkingVisibility.MaxEvents = defaults.ThinkingVisibility.MaxEvents
+	}
+	if c.ThinkingVisibility.Points == nil {
+		c.ThinkingVisibility.Points = defaults.ThinkingVisibility.Points
+	}
+
+	return false
+}
+
+// Validate validates HookDefinition and fills defaults.
+func (c *HookDefinition) Validate() (hasError bool) {
+	if c.Point == "" {
+		// Invalid hook, but not critical - will be skipped
+		logger.L().Warn().Msg("Hook point is empty, skipping")
+	}
+
+	// Validate hook type
+	if !c.Type.IsValid() {
+		logger.L().Warn().Str("invalid_type", string(c.Type)).Msg("Invalid hook type, using 'internal'")
+		c.Type = HookTypeInternal
+	}
+
+	// Validate priority
+	if c.Priority <= 0 {
+		c.Priority = 50
+	} else if c.Priority > 100 {
+		c.Priority = 100
+	}
+
+	// Validate external config if type is external
+	if c.Type == HookTypeExternal {
+		c.Config.Validate()
+	}
+
+	return false
+}
+
+// Validate validates ExternalConfig and fills defaults.
+func (c *ExternalConfig) Validate() (hasError bool) {
+	defaults := DefaultHookConfig().Defaults
+
+	if c.Command == "" {
+		c.Command = defaults.Shell
+	}
+
+	if c.ScriptPath == "" {
+		logger.L().Warn().Msg("Hook script_path is empty")
+	}
+
+	// Timeout and MaxOutputSize use the Get* accessor methods already,
+	// but we validate they're positive
+	if c.TimeoutMs < 0 {
+		c.TimeoutMs = 0 // 0 means use default
+	}
+	if c.MaxOutputSize < 0 {
+		c.MaxOutputSize = 0 // 0 means use default
+	}
+
+	return false
 }

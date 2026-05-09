@@ -33,6 +33,7 @@ type HookDefaults = structs.HookDefaults
 type HookDefinition = structs.HookDefinition
 type ExternalConfig = structs.ExternalConfig
 type HookType = structs.HookType
+type SidebarConfig = structs.SidebarConfig
 
 type Config struct {
 	Log        structs.LogConfig     `json:"log" mapstructure:"log"`
@@ -47,6 +48,7 @@ type Config struct {
 	Compact    structs.CompactConfig `json:"compact" mapstructure:"compact"`
 	Sandbox    structs.SandboxConfig `json:"sandbox" mapstructure:"sandbox"`
 	Hooks      structs.HookConfig    `json:"hooks"`
+	Sidebar    structs.SidebarConfig `json:"sidebar" mapstructure:"sidebar"`
 }
 
 var (
@@ -107,10 +109,90 @@ func loadAndValidateConfig() {
 	ValidateGlobalConfig()
 }
 
+// ValidateGlobalConfig validates the global config and fills defaults.
 func ValidateGlobalConfig() {
-	// TODO: 校验配置
-}
+	if globalConfig == nil {
+		return
+	}
 
-func DefaultHookConfig() HookConfig {
-	return structs.DefaultHookConfig()
+	hasError := false
+
+	// Validate Log config
+	globalConfig.Log.Validate()
+
+	// Validate BusBufSize and SubBufSize
+	if globalConfig.BusBufSize <= 0 {
+		logger.L().Warn().Int("invalid_bus_buf_size", globalConfig.BusBufSize).Msg("Invalid bus_buf_size, using 100")
+		globalConfig.BusBufSize = 100
+	}
+	if globalConfig.SubBufSize <= 0 {
+		logger.L().Warn().Int("invalid_sub_buf_size", globalConfig.SubBufSize).Msg("Invalid sub_buf_size, using 20")
+		globalConfig.SubBufSize = 20
+	}
+
+	// Validate Channels config
+	globalConfig.Channels.Validate()
+
+	// Validate LLMConfig
+	if globalConfig.LLMConfig.Validate() {
+		hasError = true
+	}
+
+	// Validate Tools config
+	globalConfig.Tools.Validate()
+
+	// Validate Gateway config
+	if globalConfig.Gateway.Validate() {
+		hasError = true
+	}
+
+	// Validate Agents
+	if len(globalConfig.Agents) == 0 {
+		logger.L().Error().Msg("Agents list is empty")
+		hasError = true
+		// Restore default agent
+		defaultCfg := createDefaultConfig()
+		globalConfig.Agents = defaultCfg.Agents
+	} else {
+		// Validate each agent
+		agentNames := make(map[string]bool)
+		for i := range globalConfig.Agents {
+			if globalConfig.Agents[i].Validate() {
+				hasError = true
+			}
+			name := globalConfig.Agents[i].Name
+			if agentNames[name] {
+				logger.L().Warn().Str("duplicate_agent", name).Msg("Duplicate agent name found")
+			}
+			agentNames[name] = true
+		}
+
+		// Verify default agent exists
+		defaultAgent := globalConfig.Gateway.DefaultAgent
+		if !agentNames[defaultAgent] {
+			logger.L().Error().Str("missing_agent", defaultAgent).Msg("Default agent not found in agents list")
+			hasError = true
+		}
+	}
+
+	// Validate Session config
+	globalConfig.Session.Validate()
+
+	// Validate Compact config
+	globalConfig.Compact.Validate()
+
+	// Validate Sandbox config
+	globalConfig.Sandbox.Validate()
+
+	// Validate Hooks config
+	globalConfig.Hooks.Validate()
+
+	// Validate Sidebar config
+	globalConfig.Sidebar.Validate()
+
+	if hasError {
+		logger.L().Warn().Msg("Config validation completed with some errors, defaults applied where possible")
+	} else {
+		logger.L().Debug().Msg("Config validation completed successfully")
+	}
 }

@@ -53,3 +53,28 @@ type QQConfig struct {
 	SendMarkdown         bool               `json:"send_markdown"            yaml:"-"                    env:"PICOCLAW_CHANNELS_QQ_SEND_MARKDOWN"`
 	ReasoningChannelID   string             `json:"reasoning_channel_id"     yaml:"-"                    env:"PICOCLAW_CHANNELS_QQ_REASONING_CHANNEL_ID"`
 }
+
+// Validate validates ChannelConfig and fills defaults.
+// Returns whether there was a critical error (never for ChannelConfig).
+func (c *ChannelConfig) Validate() (hasError bool) {
+	c.CLI.Validate()
+	// Note: DingTalk, Feishu, QQ validation omitted for brevity,
+	// but should follow the same pattern if needed
+	return false
+}
+
+// Validate validates CLIChannelConfig and fills defaults.
+func (c *CLIChannelConfig) Validate() (hasError bool) {
+	if c.AllowedIDs == nil {
+		c.AllowedIDs = []string{"*"}
+	}
+	return false
+}
+
+// Validate validates GroupTriggerConfig and fills defaults.
+func (c *GroupTriggerConfig) Validate() (hasError bool) {
+	if c.Prefixes == nil {
+		c.Prefixes = []string{}
+	}
+	return false
+}

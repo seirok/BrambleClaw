@@ -51,3 +51,26 @@ func DefaultToolsConfig() ToolsConfig {
 		},
 	}
 }
+
+// Validate validates ToolsConfig and fills defaults.
+// Returns whether there was a critical error (never for ToolsConfig).
+func (c *ToolsConfig) Validate() (hasError bool) {
+	defaults := DefaultToolsConfig()
+
+	if !c.MCP.Enabled {
+		c.MCP.Enabled = defaults.MCP.Enabled
+	}
+	if c.MCP.Servers == nil {
+		c.MCP.Servers = defaults.MCP.Servers
+	}
+
+	if !c.WebSearch.Enabled {
+		c.WebSearch.Enabled = defaults.WebSearch.Enabled
+	}
+
+	if !c.UrlParse.Enabled {
+		c.UrlParse.Enabled = defaults.UrlParse.Enabled
+	}
+
+	return false
+}

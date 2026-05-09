@@ -30,6 +30,13 @@ type ContextBuilder struct {
 	summaryCompressor *SummaryCompressor
 }
 
+func NewContextBuilder(compactCfg *config.CompactConfig) (*ContextBuilder, error) {
+	contextBuilder := &ContextBuilder{
+		compact: compactCfg,
+	}
+	return contextBuilder, nil
+}
+
 func (cb *ContextBuilder) Agent() *Agent { return cb.agent }
 
 func (cb *ContextBuilder) SetAgent(agent *Agent) { cb.agent = agent }
@@ -79,13 +86,6 @@ func nodeText(n ast.Node) string {
 		return ast.GoToNext
 	})
 	return strings.Join(strings.Fields(b.String()), " ")
-}
-
-func NewContextBuilder(compactCfg *config.CompactConfig) (*ContextBuilder, error) {
-	contextBuilder := &ContextBuilder{
-		compact: compactCfg,
-	}
-	return contextBuilder, nil
 }
 
 func extractMarkdownMetadata(content string) (title, description string) {
@@ -275,7 +275,7 @@ func (cb *ContextBuilder) createDefaultBootstrapFile(filename, filePath string) 
 	switch filename {
 	case "AGENT.md":
 		content = "---\n" +
-			"name: pico\n" +
+			"name: brambleclaw\n" +
 			"description: >\n" +
 			"  The default general-purpose assistant for everyday conversation, problem\n" +
 			"  solving, and workspace help.\n" +
@@ -311,7 +311,7 @@ func (cb *ContextBuilder) createDefaultBootstrapFile(filename, filePath string) 
 
 	case "SOUL.md":
 		content = "# Soul\n\n" +
-			"I am PicoClaw: calm, helpful, and practical.\n\n" +
+			"I am BrambleClaw: calm, helpful, and practical.\n\n" +
 			"## Personality\n\n" +
 			"- Helpful and friendly\n" +
 			"- Concise and to the point\n" +
