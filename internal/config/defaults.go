@@ -43,5 +43,7 @@ func createDefaultConfig() *Config {
 
 	cfg.Hooks = structs.DefaultHookConfig()
 
+	cfg.Sidebar = structs.DefaultSidebarConfig()
+
 	return cfg
 }

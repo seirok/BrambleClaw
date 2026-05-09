@@ -6,6 +6,7 @@ import (
 	"brambleclaw/internal/bus"
 	"brambleclaw/internal/channel"
 	"brambleclaw/internal/config"
+	"brambleclaw/internal/config/structs"
 	"brambleclaw/internal/events"
 	"brambleclaw/internal/gateway"
 	"brambleclaw/internal/hook"
@@ -129,25 +130,57 @@ type thinkingEventMsg struct {
 	Event events.ThinkingEvent
 }
 
+// sidebarTickMsg 用于触发侧边栏数据刷新
+type sidebarTickMsg struct{}
+
+// sidebarStats 侧边栏统计数据
+type sidebarStats struct {
+	// 实时累加（来自 thinkingEventMsg）
+	PromptTokens     int
+	CompletionTokens int
+	TotalTokens      int
+	HookCounts       map[string]int64 // category -> count
+	HookErrors       map[string]int64 // category -> error count
+
+	// 低频刷新（来自 sidebarTickMsg）
+	HookAvgMs      map[string]float64 // category -> avg duration ms
+	ModelName      string
+	AgentName      string
+	IsPaused       bool
+	FileOps        int64
+	CmdExecs       int64
+	BlockedOps     int64
+	MessageCount   int
+	SessionAge     time.Duration
+	Summarized     int
+	MCPClientCount int
+}
+
 // appModel TUI 状态
 type appModel struct {
-	textInput     textinput.Model
-	viewport      viewport.Model
-	eventViewport viewport.Model
-	spinner       spinner.Model
-	help          help.Model
-	keys          keyMap
-	messages      []chatMessage
-	eventLog      []events.ThinkingEvent
-	waiting       bool
-	showBanner    bool
-	width         int
-	height        int
-	msgBus        *bus.MessageBus
-	agentSession  string
-	quitting      bool
-	err           error
-	eventFocused  bool // true=event 面板有焦点
+	textInput       textinput.Model
+	viewport        viewport.Model
+	eventViewport   viewport.Model
+	sidebarViewport viewport.Model
+	spinner         spinner.Model
+	help            help.Model
+	keys            keyMap
+	messages        []chatMessage
+	eventLog        []events.ThinkingEvent
+	waiting         bool
+	showBanner      bool
+	width           int
+	height          int
+	msgBus          *bus.MessageBus
+	agentSession    string
+	quitting        bool
+	err             error
+	eventFocused    bool // true=event 面板有焦点
+	sidebarEnabled  bool
+	sidebarWidth    int
+	sidebarStats    sidebarStats
+	sidebarSections []structs.SidebarSection
+	focus           focusRegion // 替换原来的 eventFocused bool
 }
 
 type keyMap struct {
@@ -196,7 +229,18 @@ var (
 	inputTextStyle = lipgloss.NewStyle()
 )
 
+type focusRegion int
+
+const (
+	focusInput focusRegion = iota // 0: 输入区
+	focusChat                     // 1: 主内容区
+	focusEvent                    // 2: 思考区
+)
+
 func newAppModel(msgBus *bus.MessageBus, session string) appModel {
+	cfg := config.Get()
+	sidebarCfg := cfg.Sidebar
+
 	ti := textinput.New()
 	ti.Placeholder = "输入消息..."
 	ti.Focus()
@@ -216,22 +260,45 @@ func newAppModel(msgBus *bus.MessageBus, session string) appModel {
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("240"))
 
+	sidebarVp := viewport.New(sidebarCfg.Width, 30)
+	sidebarVp.Style = lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("86"))
+
 	return appModel{
-		textInput:     ti,
-		viewport:      vp,
-		eventViewport: eventVp,
-		spinner:       s,
-		messages:      []chatMessage{},
-		eventLog:      []events.ThinkingEvent{},
-		waiting:       false,
-		showBanner:    true,
-		msgBus:        msgBus,
-		agentSession:  session,
-		help:          help.New(),
+		textInput:       ti,
+		viewport:        vp,
+		eventViewport:   eventVp,
+		sidebarViewport: sidebarVp,
+		spinner:         s,
+		messages:        []chatMessage{},
+		eventLog:        []events.ThinkingEvent{},
+		waiting:         false,
+		showBanner:      true,
+		msgBus:          msgBus,
+		agentSession:    session,
+		help:            help.New(),
+		sidebarEnabled:  sidebarCfg.Enabled,
+		sidebarWidth:    sidebarCfg.Width,
+		sidebarSections: sidebarCfg.Sections,
+		sidebarStats: sidebarStats{
+			HookCounts: make(map[string]int64),
+			HookErrors: make(map[string]int64),
+			HookAvgMs:  make(map[string]float64),
+		},
 	}
 }
 
 func (m appModel) Init() tea.Cmd {
+	if m.sidebarEnabled {
+		return tea.Batch(
+			textinput.Blink,
+			m.spinner.Tick,
+			tea.Tick(3*time.Second, func(t time.Time) tea.Msg {
+				return sidebarTickMsg{}
+			}),
+		)
+	}
 	return tea.Batch(
 		textinput.Blink,
 		m.spinner.Tick,
@@ -254,12 +321,14 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 
 		case tea.KeyTab:
-			// 切换焦点
-			m.eventFocused = !m.eventFocused
-			if m.eventFocused {
-				m.textInput.Blur()
-			} else {
+			// 循环切换：0 -> 1 -> 2 -> 0
+			m.focus = (m.focus + 1) % 3
+
+			// 只有在输入区时，textInput 才获取焦点
+			if m.focus == focusInput {
 				m.textInput.Focus()
+			} else {
+				m.textInput.Blur()
 			}
 			return m, nil
 
@@ -333,17 +402,55 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
-		totalHeight := msg.Height - 4 // 输入 + help
-		chatHeight := totalHeight * 3 / 4
-		eventHeight := totalHeight - chatHeight - 1 // -1 for divider
-		if eventHeight < 3 {
-			eventHeight = 3
-			chatHeight = totalHeight - eventHeight - 1
+
+		// --- 1. 横向宽度分配 ---
+		sidebarWidth := 32 // 与 View 中的 sidebarWidth 保持一致
+		mainContentWidth := m.width
+		if m.sidebarEnabled {
+			mainContentWidth = m.width - sidebarWidth
 		}
-		m.viewport.Width = msg.Width
+
+		// 确保宽度不为负数（防止窗口缩得太小时崩溃）
+		if mainContentWidth < 4 {
+			mainContentWidth = 4
+		}
+
+		// --- 2. 纵向高度分配 ---
+		reservedHeight := 10
+		availableHeight := m.height - reservedHeight
+
+		if availableHeight < 10 {
+			availableHeight = 10
+		} // 最小高度保证
+
+		// 按比例分配：聊天区占 70%，思考区占 30%
+		chatHeight := int(float64(availableHeight) * 0.7)
+		eventHeight := availableHeight - chatHeight
+
+		// --- 3. 更新各组件尺寸 ---
+
+		// 主聊天视口：宽度需减去边框占用的 2 个字符
+		m.viewport.Width = mainContentWidth - 4
 		m.viewport.Height = chatHeight
-		m.eventViewport.Width = msg.Width
+
+		// 思考事件视口：宽度需减去边框占用的 2 个字符
+		m.eventViewport.Width = mainContentWidth - 4
 		m.eventViewport.Height = eventHeight
+
+		// 侧边栏视口：
+		// 注意：侧边栏的高度在 View 中是通过 lipgloss.Height(leftPanel) 动态计算的，
+		// 这里设置 Width 即可，Height 可以设为一个安全值。
+		if m.sidebarEnabled {
+			m.sidebarViewport.Width = sidebarWidth - 4 // 减去边框和 Padding
+		}
+
+		// 输入框宽度：铺满全屏或预留少量边距
+		m.textInput.Width = m.width - 4
+
+		// 重新渲染内容以适配新宽度
+		m.viewport.SetContent(m.renderMessages())
+		m.eventViewport.SetContent(m.renderEvents())
+
 		return m, nil
 
 	case spinner.TickMsg:
@@ -371,10 +478,66 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.eventLog = m.eventLog[len(m.eventLog)-200:]
 		}
 		m.eventViewport.SetContent(m.renderEvents())
-		// 如果在底部，自动滚动到底部
-		if m.eventViewport.AtBottom() {
-			m.eventViewport.GotoBottom()
+
+		if m.sidebarEnabled {
+			event := msg.Event
+
+			// 从事件点提取类别
+			category := "UNKNOWN"
+			switch {
+			case strings.HasPrefix(event.Point, "hook.point.llm."):
+				category = "LLM"
+			case strings.HasPrefix(event.Point, "hook.point.tool."):
+				category = "TOOL"
+			case strings.HasPrefix(event.Point, "hook.point.agent."):
+				category = "AGENT"
+			case strings.HasPrefix(event.Point, "hook.point.message."):
+				category = "MESSAGE"
+			case strings.HasPrefix(event.Point, "hook.point.sandbox."):
+				category = "SANDBOX"
+			}
+			// 增加该类别的计数
+			m.sidebarStats.HookCounts[category]++
+
+			// 检查是否是错误事件
+			if strings.Contains(strings.ToLower(event.Point), "error") {
+				m.sidebarStats.HookErrors[category]++
+			}
+
+			// 如果是LLM响应，提取token使用量
+			if event.Point == "hook.point.llm.response" {
+				resp := event.Data
+				v := reflect.ValueOf(resp)
+				if v.Kind() == reflect.Ptr && v.Elem().Kind() == reflect.Struct {
+					v = v.Elem()
+					if usageField := v.FieldByName("Usage"); usageField.IsValid() {
+						if ptField := usageField.FieldByName("PromptTokens"); ptField.IsValid() {
+							m.sidebarStats.PromptTokens += int(ptField.Int())
+						}
+						if ctField := usageField.FieldByName("CompletionTokens"); ctField.IsValid() {
+							m.sidebarStats.CompletionTokens += int(ctField.Int())
+						}
+						m.sidebarStats.TotalTokens = m.sidebarStats.PromptTokens + m.sidebarStats.CompletionTokens
+					}
+				}
+			}
+
+			// 如果在底部，自动滚动到底部
+			if m.eventViewport.AtBottom() {
+				m.eventViewport.GotoBottom()
+			}
 		}
+	case sidebarTickMsg:
+		// 定时更新侧边栏低频数据
+		if m.sidebarEnabled {
+			cfg := config.Get()
+			m.sidebarStats.ModelName = cfg.LLMConfig.Model
+			m.sidebarStats.MessageCount = len(m.messages)
+			m.sidebarViewport.SetContent(m.renderSidebar())
+		}
+		return m, tea.Tick(3*time.Second, func(t time.Time) tea.Msg {
+			return sidebarTickMsg{}
+		})
 
 	case errMsg:
 		m.err = msg.err
@@ -384,6 +547,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.textInput, tiCmd = m.textInput.Update(msg)
 	m.viewport, vpCmd = m.viewport.Update(msg)
 	m.eventViewport, evpCmd = m.eventViewport.Update(msg)
+	m.sidebarViewport, _ = m.sidebarViewport.Update(msg)
 
 	return m, tea.Batch(tiCmd, vpCmd, evpCmd, spCmd)
 }
@@ -394,21 +558,7 @@ func (m appModel) renderMessages() string {
 
 	if m.showBanner && len(m.messages) == 0 {
 		// Banner
-		color1 := lipgloss.NewStyle().Foreground(lipgloss.Color("8;2;138;43;226"))
-		color2 := lipgloss.NewStyle().Foreground(lipgloss.Color("8;2;112;60;212"))
-		color3 := lipgloss.NewStyle().Foreground(lipgloss.Color("8;2;87;77;199"))
-		color4 := lipgloss.NewStyle().Foreground(lipgloss.Color("8;2;62;93;185"))
-
-		banner :=
-			color1.Render(`██████╗ ██████╗  █████╗ ███╗   ███╗██████╗ ██╗     ███████╗    ██████╗██╗       █████╗ ██╗    ██╗`) + "\n" +
-				color2.Render(`██╔══██╗██╔══██╗██╔══██╗████╗ ████║██╔══██╗██║     ██╔════╝   ██╔════╝██║      ██╔══██╗██║    ██║`) + "\n" +
-				color2.Render(`██████╔╝██████╔╝███████║██╔████╔██║██████╔╝██║     █████╗     ██║     ██║      ███████║██║ █╗ ██║`) + "\n" +
-				color3.Render(`██╔══██╗██╔══██╗██╔══██║██║╚██╔╝██║██╔══██╗██║     ██╔══╝     ██║     ██║      ██╔══██║██║███╗██║`) + "\n" +
-				color3.Render(`██████╔╝██║  ██║██║  ██║██║ ╚═╝ ██║██████╔╝███████╗███████╗    ╚██████╗███████╗██║  ██║╚███╔███╔╝`) + "\n" +
-				color4.Render(`╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝╚═════╝ ╚══════╝╚══════╝     ╚═════╝╚══════╝╚═╝  ╚═╝ ╚══╝╚══╝ `)
-
-		messagesView = banner + "\n\n" +
-			subtleStyle.Render("> 你好，请问有什么可以帮您？") + "\n\n"
+		messagesView = renderClaudeBanner(m.viewport.Width) + "\n\n"
 	}
 
 	// 渲染消息列表
@@ -434,43 +584,240 @@ func (m appModel) View() string {
 		return "Bye! 👋\n"
 	}
 
-	// 设置 viewport 内容
-	m.viewport.SetContent(m.renderMessages())
-	m.eventViewport.SetContent(m.renderEvents())
-
-	// 分割线
-	divider := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("240")).
-		Render(strings.Repeat("─", m.width))
-
-	// 面板标题
-	var titleStr string
-	if m.eventFocused {
-		titleStr = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("86")).
-			Bold(true).
-			Render("● [Thinking Events]")
-	} else {
-		titleStr = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("240")).
-			Render("○ [Thinking Events]")
+	// ---颜色与宽度分配---
+	activeColor := lipgloss.Color("86")    // 亮青色
+	inactiveColor := lipgloss.Color("248") // 调亮后的灰色边框
+	thinkingBlue := lipgloss.Color("33")   // 蓝色思考区标题
+	sidebarWidth := 32
+	mainWidth := m.width
+	if m.sidebarEnabled {
+		mainWidth = m.width - sidebarWidth
 	}
 
-	// 输入区域
-	inputView := m.textInput.View()
-	helpView := m.help.View(keys)
-	helpStyle := lipgloss.NewStyle().MarginTop(1)
+	// 渲染左侧面板 (Chat + Thinking)
+	// 聊天区样式
+	chatStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		Width(mainWidth-2).
+		Height(m.viewport.Height).
+		Padding(0, 1) // 增加左右内边距
 
-	return lipgloss.JoinVertical(
-		lipgloss.Left,
-		m.viewport.View(),
-		divider,
-		titleStr,
-		m.eventViewport.View(),
-		"",
-		inputView,
-		helpStyle.Render(helpView),
+	if m.focus == focusChat {
+		chatStyle = chatStyle.BorderForeground(activeColor)
+	} else {
+		chatStyle = chatStyle.BorderForeground(inactiveColor)
+	}
+	chatBox := chatStyle.Render(m.renderMessages())
+
+	// 思考区样式
+	eventStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		Width(mainWidth-2).
+		Height(m.eventViewport.Height).
+		Padding(0, 1) // 增加左右内边距
+
+	if m.focus == focusEvent {
+		eventStyle = eventStyle.BorderForeground(activeColor)
+	} else {
+		eventStyle = eventStyle.BorderForeground(inactiveColor)
+	}
+
+	// 思考区标题处理
+	eventTitleStyle := lipgloss.NewStyle().Foreground(thinkingBlue)
+	if m.focus == focusEvent {
+		eventTitleStyle = eventTitleStyle.Bold(true)
+	}
+	eventTitle := eventTitleStyle.Render(" 🧠 [Thinking Events]")
+
+	eventContent := lipgloss.JoinVertical(lipgloss.Left, eventTitle, m.renderEvents())
+	eventBox := eventStyle.Render(eventContent)
+
+	// 左侧纵向拼接
+	leftPanel := lipgloss.JoinVertical(lipgloss.Left, chatBox, eventBox)
+
+	// --- 3. 侧边栏对齐渲染 ---
+	var rightPanel string
+	if m.sidebarEnabled {
+		leftHeight := lipgloss.Height(leftPanel)
+		sidebarStyle := lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(inactiveColor).
+			Padding(0, 1).
+			Width(sidebarWidth - 2).
+			Height(leftHeight - 2)
+
+		rightPanel = sidebarStyle.Render(m.renderSidebar())
+	}
+
+	// 底部输入区 (带上下分割线且对齐)
+	// 定义输入容器样式：上下边框，左边距 1 以对齐上方边框线
+	inputContainerStyle := lipgloss.NewStyle().
+		Border(lipgloss.NormalBorder(), true, false, true, false).
+		BorderForeground(inactiveColor).
+		Padding(0, 0, 0, 1). // 关键：左边补 1 格，对齐左侧边框
+		Width(m.width)
+
+	if m.focus == focusInput {
+		inputContainerStyle = inputContainerStyle.BorderForeground(activeColor)
+		m.textInput.PromptStyle = lipgloss.NewStyle().Foreground(activeColor)
+	} else {
+		m.textInput.PromptStyle = lipgloss.NewStyle().Foreground(inactiveColor)
+	}
+
+	// 渲染输入框包装
+	inputBox := inputContainerStyle.Render(m.textInput.View())
+
+	// 帮助信息（位于最底部）
+	helpView := m.help.View(keys)
+
+	// 组装最终布局
+	// 拼接上方主区域
+	mainLayout := lipgloss.JoinHorizontal(lipgloss.Top, leftPanel, rightPanel)
+
+	// 最终拼接顺序：主面板 -> 带线的输入区 -> 帮助提示
+	return lipgloss.JoinVertical(lipgloss.Left,
+		mainLayout,
+		inputBox,
+		helpView,
 	)
+}
+
+// 添加 renderSidebar 函数：
+func (m appModel) renderSidebar() string {
+	var sb strings.Builder
+
+	// 侧边栏标题
+	titleStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("86")).
+		Bold(true).
+		MarginLeft(1)
+	sb.WriteString(titleStyle.Render("📊 Statistics"))
+	sb.WriteString("\n\n")
+	sectionTitleStyle := lipgloss.NewStyle().Bold(true)
+	contentStyle := lipgloss.NewStyle().
+		PaddingLeft(3). // 2个Emoji宽度 + 1个空格
+		Foreground(lipgloss.Color("245"))
+
+	// 遍历启用的 sections 渲染
+	for _, section := range m.sidebarSections {
+		if !section.Enabled {
+			continue
+		}
+
+		switch section.Name {
+		case "token_usage":
+			m.renderTokenUsage(&sb, sectionTitleStyle, contentStyle)
+		case "hook_stats":
+			m.renderHookStats(&sb, sectionTitleStyle, contentStyle)
+		case "model_info":
+			m.renderModelInfo(&sb, sectionTitleStyle, contentStyle)
+		case "sandbox":
+			m.renderSandboxStats(&sb, sectionTitleStyle, contentStyle)
+		case "session":
+			m.renderSessionStats(&sb, sectionTitleStyle, contentStyle)
+		case "mcp":
+			m.renderMCPStats(&sb, sectionTitleStyle, contentStyle)
+		}
+		sb.WriteString("\n")
+	}
+
+	return sb.String()
+}
+
+// 添加各个 render 辅助函数：
+func (m appModel) renderTokenUsage(sb *strings.Builder, titleStyle, contentStyle lipgloss.Style) {
+	sectionTitle := titleStyle.
+		Foreground(lipgloss.Color("207")).
+		Bold(true).
+		Render("🗳️ Token Usage")
+	sb.WriteString(sectionTitle + "\n")
+
+	// 使用 %-11s 确保标签对齐，%5d 确保数字对齐且不至于隔太开
+	promptStr := fmt.Sprintf("%-11s %5d", "Prompt:", m.sidebarStats.PromptTokens)
+	completionStr := fmt.Sprintf("%-11s %5d", "Completion:", m.sidebarStats.CompletionTokens)
+	totalStr := fmt.Sprintf("%-11s %5d", "Total:", m.sidebarStats.TotalTokens)
+
+	statStyle := contentStyle.Foreground(lipgloss.Color("240"))
+
+	sb.WriteString(statStyle.Render(promptStr) + "\n")
+	sb.WriteString(statStyle.Render(completionStr) + "\n")
+	sb.WriteString(statStyle.Render(totalStr) + "\n")
+}
+
+func (m appModel) renderHookStats(sb *strings.Builder, titleStyle, contentStyle lipgloss.Style) {
+	sectionTitle := titleStyle.
+		Foreground(lipgloss.Color("69")). // 保留原色
+		Render("🔗 Hook Stats")
+	sb.WriteString(sectionTitle + "\n")
+
+	categories := []string{"LLM", "TOOL", "AGENT", "MESSAGE", "SANDBOX"}
+	statStyle := contentStyle.Foreground(lipgloss.Color("240"))
+
+	for _, cat := range categories {
+		count := m.sidebarStats.HookCounts[cat]
+		errors := m.sidebarStats.HookErrors[cat]
+		var line string
+		if errors > 0 {
+			// 使用 %-7s 确保类别名称宽度一致，%3d 确保数字对齐
+			line = fmt.Sprintf("%-7s: %3d (%2d err)", cat, count, errors)
+		} else {
+			line = fmt.Sprintf("%-7s: %3d", cat, count)
+		}
+		sb.WriteString(statStyle.Render(line) + "\n")
+	}
+}
+
+func (m appModel) renderModelInfo(sb *strings.Builder, titleStyle, contentStyle lipgloss.Style) {
+	sectionTitle := titleStyle.
+		Foreground(lipgloss.Color("78")). // 保留原色
+		Render("🤖 Model Info")
+	sb.WriteString(sectionTitle + "\n")
+
+	statStyle := contentStyle.Foreground(lipgloss.Color("240"))
+
+	if m.sidebarStats.ModelName == "" {
+		// 这里的 config 调用请确保在作用域内可用
+		// m.sidebarStats.ModelName = config.Get().LLMConfig.Model
+	}
+
+	sb.WriteString(statStyle.Render(fmt.Sprintf("Model: %s", m.sidebarStats.ModelName)) + "\n")
+	sb.WriteString(statStyle.Render(fmt.Sprintf("Agent: %s", "main")) + "\n")
+}
+
+func (m appModel) renderSandboxStats(sb *strings.Builder, titleStyle, contentStyle lipgloss.Style) {
+	sectionTitle := titleStyle.
+		Foreground(lipgloss.Color("135")). // 保留原色
+		Render("📁 Sandbox")
+	sb.WriteString(sectionTitle + "\n")
+
+	statStyle := contentStyle.Foreground(lipgloss.Color("240"))
+
+	// 统一使用固定宽度对齐数字
+	sb.WriteString(statStyle.Render(fmt.Sprintf("File Ops: %5d", m.sidebarStats.FileOps)) + "\n")
+	sb.WriteString(statStyle.Render(fmt.Sprintf("Commands: %5d", m.sidebarStats.CmdExecs)) + "\n")
+	sb.WriteString(statStyle.Render(fmt.Sprintf("Blocked:  %5d", m.sidebarStats.BlockedOps)) + "\n")
+}
+
+func (m appModel) renderSessionStats(sb *strings.Builder, titleStyle, contentStyle lipgloss.Style) {
+	sectionTitle := titleStyle.
+		Foreground(lipgloss.Color("214")). // 保留原色
+		Render("💬 Session")
+	sb.WriteString(sectionTitle + "\n")
+
+	statStyle := contentStyle.Foreground(lipgloss.Color("240"))
+
+	sb.WriteString(statStyle.Render(fmt.Sprintf("Messages: %3d", m.sidebarStats.MessageCount)) + "\n")
+}
+
+func (m appModel) renderMCPStats(sb *strings.Builder, titleStyle, contentStyle lipgloss.Style) {
+	sectionTitle := titleStyle.
+		Foreground(lipgloss.Color("141")). // 保留原色
+		Render("🔌 MCP")
+	sb.WriteString(sectionTitle + "\n")
+
+	statStyle := contentStyle.Foreground(lipgloss.Color("240"))
+
+	sb.WriteString(statStyle.Render(fmt.Sprintf("Clients: %2d", m.sidebarStats.MCPClientCount)) + "\n")
 }
 
 // renderEvents 渲染事件列表
@@ -484,6 +831,86 @@ func (m appModel) renderEvents() string {
 		sb.WriteString("\n")
 	}
 	return sb.String()
+}
+
+var (
+	claudeOrange = lipgloss.Color("#D97757") // Claude 标志性的橘粉色
+	subtleGray   = lipgloss.Color("240")
+)
+
+func renderClaudeBanner(width int) string {
+	// 1. 定义颜色：黑莓掌的琥珀色眼睛和深色毛发色
+	amberEye := lipgloss.Color("#FFBF00") // 琥珀金
+	furColor := lipgloss.Color("#8B4513") // 深棕色
+
+	g := lipgloss.NewStyle().Foreground(lipgloss.Color("#7d7d7d")) // 灰毛
+	e := lipgloss.NewStyle().Foreground(lipgloss.Color("#4fc3f7")) // 亮蓝眼
+	n := lipgloss.NewStyle().Foreground(lipgloss.Color("#f06292")) // 粉鼻
+	w := lipgloss.NewStyle().Foreground(lipgloss.Color("#ffffff")) // 白胡子
+	s := "  "
+
+	lines := []string{
+		s + s + g.Render("█ ") + s + s + s + g.Render(" █") + s + s, // 尖耳朵
+		s + g.Render("█████") + s + g.Render("█████") + s,           // 耳根
+		g.Render("██████████████"),                                  // 额头
+		// 眼睛：缩小为 1个双块，且两边留出灰边，眼神瞬间就亮了
+		g.Render("██") + e.Render("██") + g.Render("██████") + e.Render("██") + g.Render("██"),
+		g.Render("██████████████"),                                                                 // 脸颊
+		s + g.Render("██") + w.Render("██") + n.Render("██") + w.Render("██") + g.Render("██") + s, // 鼻子
+		s + s + w.Render("██████") + s + s,                                                         // 小嘴
+		s + s + g.Render("██████") + s + s,                                                         // 下巴
+	}
+	pet := lipgloss.NewStyle().Foreground(furColor).Render(strings.Join(lines, "\n"))
+
+	welcomeMsg := lipgloss.NewStyle().Bold(true).Render("Welcome to Brambleclaw.")
+
+	// 左侧信息：加入“雷族”或“武士”身份标识
+	clanInfo := lipgloss.NewStyle().Foreground(subtleGray).Faint(true).Render(
+		"ThunderClan Edition • Warrior Code v1.0\n" +
+			"~/GolandProjects/brambleclaw",
+	)
+
+	leftContent := lipgloss.JoinVertical(lipgloss.Center, welcomeMsg, "", pet)
+	leftBox := lipgloss.JoinVertical(lipgloss.Left, leftContent, "", clanInfo)
+
+	// 3. 中间分割线
+	divider := lipgloss.NewStyle().
+		Border(lipgloss.NormalBorder(), false, true, false, false).
+		BorderForeground(lipgloss.Color("238")).
+		Padding(0, 2).
+		Height(9).
+		Render("")
+
+	// 4. 右侧：What's new (保持 Claude 风格的极简列表)
+	titleStyle := lipgloss.NewStyle().Foreground(amberEye).Bold(true)
+	listStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("250"))
+
+	rightStyle := lipgloss.NewStyle().MarginLeft(3) // 增加 3 个空格的距离
+
+	rightView := rightStyle.Render(
+		lipgloss.JoinVertical(lipgloss.Left,
+			titleStyle.Render("What's new in the Forest"),
+			"",
+			listStyle.Render("• Fixed viewport scrolling in Thinking Events"),
+			listStyle.Render("• Integrated Claude-style minimalist interface"),
+			listStyle.Render("• Enhanced Tab-navigation for three-pane layout"),
+			listStyle.Render("• Warrior code optimization for faster inference"),
+			"",
+			lipgloss.NewStyle().Foreground(subtleGray).Italic(true).Render("May the StarClan light your path."),
+		),
+	)
+
+	// 组合左右
+	bannerBody := lipgloss.JoinHorizontal(lipgloss.Top,
+		lipgloss.NewStyle().Width(35).Align(lipgloss.Center).Render(leftBox),
+		divider,
+		rightView,
+	)
+
+	return lipgloss.NewStyle().
+		Padding(1, 2).
+		Width(width - 4). // 这里的 width 是 viewport 的宽度
+		Render(bannerBody)
 }
 
 // getEventStyle 获取事件样式

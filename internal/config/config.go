@@ -33,6 +33,7 @@ type HookDefaults = structs.HookDefaults
 type HookDefinition = structs.HookDefinition
 type ExternalConfig = structs.ExternalConfig
 type HookType = structs.HookType
+type SidebarConfig = structs.SidebarConfig
 
 type Config struct {
 	Log        structs.LogConfig     `json:"log" mapstructure:"log"`
@@ -47,6 +48,7 @@ type Config struct {
 	Compact    structs.CompactConfig `json:"compact" mapstructure:"compact"`
 	Sandbox    structs.SandboxConfig `json:"sandbox" mapstructure:"sandbox"`
 	Hooks      structs.HookConfig    `json:"hooks"`
+	Sidebar    structs.SidebarConfig `json:"sidebar" mapstructure:"sidebar"`
 }
 
 var (
@@ -185,13 +187,12 @@ func ValidateGlobalConfig() {
 	// Validate Hooks config
 	globalConfig.Hooks.Validate()
 
+	// Validate Sidebar config
+	globalConfig.Sidebar.Validate()
+
 	if hasError {
 		logger.L().Warn().Msg("Config validation completed with some errors, defaults applied where possible")
 	} else {
 		logger.L().Debug().Msg("Config validation completed successfully")
 	}
-}
-
-func DefaultHookConfig() HookConfig {
-	return structs.DefaultHookConfig()
 }

@@ -20,7 +20,7 @@ type LogConfig struct {
 // DefaultLogConfig 返回默认日志配置
 func DefaultLogConfig() LogConfig {
 	return LogConfig{
-		ConsoleEnabled: true,
+		ConsoleEnabled: false,
 		Level:          "debug",
 	}
 }

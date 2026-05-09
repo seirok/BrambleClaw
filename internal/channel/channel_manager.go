@@ -61,24 +61,32 @@ func (m *ChannelManager) Initialize(ctx context.Context, cfg any) error {
 
 	// 初始化 DingTalk 通道
 	dingtalkCfg := cfgObj.Channels.DingTalk
-	dingtalkChannel, err := NewDingTalkChannel(dingtalkCfg, m.msgBus)
-	if err != nil {
-		return err
-	}
-	if err = m.channelRegistry.Register(ctx, "dingtalk", dingtalkChannel); err != nil {
-		logger.L().Error().Err(err).Msg("Failed to register DingTalk channel")
-		return fmt.Errorf("failed to register DingTalk channel: %w", err)
+	if dingtalkCfg.Enabled == true {
+		dingtalkChannel, err := NewDingTalkChannel(dingtalkCfg, m.msgBus)
+		if err != nil {
+			logger.L().Error().Err(err).Msg("Failed to create DingTalk channel")
+		} else {
+			if err = m.channelRegistry.Register(ctx, "dingtalk", dingtalkChannel); err != nil {
+				logger.L().Error().Err(err).Msg("Failed to register DingTalk channel")
+			}
+		}
+	} else {
+		logger.L().Debug().Msg("Dingtalk channel is not enabled")
 	}
 
 	// 初始化 Feishu 通道
 	feishuCfg := cfgObj.Channels.Feishu
-	feishuChannel, err := NewFeishuChannel(feishuCfg, m.msgBus)
-	if err != nil {
-		return err
-	}
-	if err = m.channelRegistry.Register(ctx, "feishu", feishuChannel); err != nil {
-		logger.L().Error().Err(err).Msg("Failed to register Feishu channel")
-		return fmt.Errorf("failed to register Feishu channel: %w", err)
+	if feishuCfg.Enabled == true {
+		feishuChannel, err := NewFeishuChannel(feishuCfg, m.msgBus)
+		if err != nil {
+			logger.L().Error().Err(err).Msg("Failed to create Feishu channel")
+		} else {
+			if err = m.channelRegistry.Register(ctx, "feishu", feishuChannel); err != nil {
+				logger.L().Error().Err(err).Msg("Failed to register Feishu channel")
+			}
+		}
+	} else {
+		logger.L().Debug().Msg("Feishu channel is not enabled")
 	}
 
 	m.status = interfaces.StatusRunning
