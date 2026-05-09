@@ -19,17 +19,20 @@ type LLMProcessor interface {
 
 // Orchestrator 编排器
 type Orchestrator struct {
-	llm   LLMProcessor
-	tools interfaces.Registry[tools.Tool]
-	ctx   context.Context
+	llm      LLMProcessor
+	tools    interfaces.Registry[tools.Tool]
+	toolDefs []map[string]interface{}
+	ctx      context.Context
 }
 
 // NewOrchestrator 创建编排器
 func NewOrchestrator(llm LLMProcessor, tools interfaces.Registry[tools.Tool]) *Orchestrator {
-	return &Orchestrator{
+	orch := &Orchestrator{
 		llm:   llm,
 		tools: tools,
 	}
+	orch.toolDefs = orch.prepareToolDefinitions()
+	return orch
 }
 
 // LLM 返回 LLM 处理器
@@ -50,6 +53,9 @@ func (o *Orchestrator) prepareToolDefinitions() []map[string]interface{} {
 			},
 		})
 	}
+
+	//jsonBytes, _ := json.MarshalIndent(defs, "", "  ")
+	//logger.L().Debug().Msg(string(jsonBytes))
 
 	return defs
 }
@@ -79,8 +85,6 @@ func (o *Orchestrator) UpdateHistory(llmResp *LLMResponse, historyMsg *[]ChatMsg
 
 // Run 运行编排器
 func (o *Orchestrator) Run(ctx context.Context, messages []messages.BaseMessage) (*LLMResponse, error) {
-	// 准备工具定义
-	toolDefs := o.prepareToolDefinitions()
 
 	// Agent Message --> ChatMsg
 	chatMsgs := make([]ChatMsg, len(messages))
@@ -95,7 +99,7 @@ func (o *Orchestrator) Run(ctx context.Context, messages []messages.BaseMessage)
 	chatReq := ChatCompletionRequest{
 		Model:    o.llm.Model(),
 		Messages: chatMsgs,
-		Tools:    toolDefs,
+		Tools:    o.toolDefs,
 	}
 
 	// 触发 LLM 请求前钩子
@@ -150,7 +154,7 @@ func (o *Orchestrator) Run(ctx context.Context, messages []messages.BaseMessage)
 		chatReq = ChatCompletionRequest{
 			Model:    o.llm.Model(),
 			Messages: chatMsgs,
-			Tools:    toolDefs,
+			Tools:    o.toolDefs,
 		}
 		response, err = o.llm.Chat(chatReq)
 		if err != nil {
@@ -179,7 +183,7 @@ func (o *Orchestrator) executeToolCall(ctx context.Context, toolCall ToolFunctio
 	toolName := toolCall.Name
 	tool, ok := o.tools.Get(ctx, toolName)
 	if ok != nil {
-		return ToolResult{}, errors.New("tool not found")
+		return ToolResult{}, fmt.Errorf("tool %s not found", toolName)
 	}
 
 	// Execute Tool

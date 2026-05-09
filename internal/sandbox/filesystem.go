@@ -21,7 +21,7 @@ type FileSystemTool struct {
 func NewFileSystemTool(sandbox *Sandbox) *FileSystemTool {
 	return &FileSystemTool{
 		sandbox: sandbox,
-		name:    "FileSystem",
+		name:    "filesystem",
 		desc:    "带沙箱保护的文件系统操作工具，用于读写工作目录内的文件",
 	}
 }
