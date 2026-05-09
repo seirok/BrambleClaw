@@ -1,6 +1,10 @@
 package structs
 
-import "time"
+import (
+	"time"
+
+	"brambleclaw/internal/logger"
+)
 
 // FileSystemConfig 文件系统配置
 type FileSystemConfig struct {
@@ -64,4 +68,58 @@ func DefaultSandboxConfig() SandboxConfig {
 			MaxBackups: 7,
 		},
 	}
+}
+
+// Validate validates SandboxConfig and fills defaults.
+// Returns whether there was a critical error (never for SandboxConfig).
+func (c *SandboxConfig) Validate() (hasError bool) {
+	defaults := DefaultSandboxConfig()
+
+	if c.Workspace == "" {
+		c.Workspace = defaults.Workspace
+	}
+
+	if c.FileSystem.MaxFileSize <= 0 {
+		logger.L().Warn().Int64("invalid_max_file_size", c.FileSystem.MaxFileSize).Msg("Invalid max_file_size, using default")
+		c.FileSystem.MaxFileSize = defaults.FileSystem.MaxFileSize
+	}
+
+	if c.FileSystem.MaxTotalSize <= 0 {
+		logger.L().Warn().Int64("invalid_max_total_size", c.FileSystem.MaxTotalSize).Msg("Invalid max_total_size, using default")
+		c.FileSystem.MaxTotalSize = defaults.FileSystem.MaxTotalSize
+	}
+
+	if c.FileSystem.AllowWritePaths == nil {
+		c.FileSystem.AllowWritePaths = defaults.FileSystem.AllowWritePaths
+	}
+
+	if c.Execution.Timeout <= 0 {
+		logger.L().Warn().Dur("invalid_timeout", c.Execution.Timeout).Msg("Invalid timeout, using default")
+		c.Execution.Timeout = defaults.Execution.Timeout
+	}
+
+	if c.Execution.MaxOutputSize <= 0 {
+		logger.L().Warn().Int("invalid_max_output_size", c.Execution.MaxOutputSize).Msg("Invalid max_output_size, using default")
+		c.Execution.MaxOutputSize = defaults.Execution.MaxOutputSize
+	}
+
+	if c.Execution.AllowedCommands == nil {
+		c.Execution.AllowedCommands = defaults.Execution.AllowedCommands
+	}
+
+	if c.Audit.LogPath == "" {
+		c.Audit.LogPath = defaults.Audit.LogPath
+	}
+
+	if c.Audit.MaxSize <= 0 {
+		logger.L().Warn().Int("invalid_max_size", c.Audit.MaxSize).Msg("Invalid max_size, using default")
+		c.Audit.MaxSize = defaults.Audit.MaxSize
+	}
+
+	if c.Audit.MaxBackups <= 0 {
+		logger.L().Warn().Int("invalid_max_backups", c.Audit.MaxBackups).Msg("Invalid max_backups, using default")
+		c.Audit.MaxBackups = defaults.Audit.MaxBackups
+	}
+
+	return false
 }

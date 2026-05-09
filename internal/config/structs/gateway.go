@@ -1,5 +1,7 @@
 package structs
 
+import "brambleclaw/internal/logger"
+
 // GatewayRouteRule 路由规则配置
 type GatewayRouteRule struct {
 	Channel    string            `json:"channel" mapstructure:"channel"`       // 通道名称，如 weixin, telegram
@@ -55,4 +57,68 @@ func DefaultGatewayConfig() GatewayConfig {
 			Timeout:  10,
 		},
 	}
+}
+
+// Validate validates GatewayConfig and fills defaults.
+// Returns whether there was a critical error.
+func (c *GatewayConfig) Validate() (hasError bool) {
+	defaults := DefaultGatewayConfig()
+
+	if c.Version == "" {
+		c.Version = defaults.Version
+	}
+
+	if c.DefaultAgent == "" {
+		logger.L().Error().Msg("Gateway default_agent is required")
+		hasError = true
+		c.DefaultAgent = defaults.DefaultAgent
+	}
+
+	if c.Routes == nil {
+		c.Routes = defaults.Routes
+	}
+
+	c.Retry.Validate()
+	c.HealthCheck.Validate()
+
+	return hasError
+}
+
+// Validate validates GatewayRetryPolicy and fills defaults.
+func (c *GatewayRetryPolicy) Validate() (hasError bool) {
+	defaults := DefaultGatewayConfig().Retry
+
+	if c.MaxRetries < 0 {
+		logger.L().Warn().Int("invalid_max_retries", c.MaxRetries).Msg("Invalid max_retries, using default")
+		c.MaxRetries = defaults.MaxRetries
+	}
+
+	if c.RetryDelay <= 0 {
+		logger.L().Warn().Int("invalid_retry_delay", c.RetryDelay).Msg("Invalid retry_delay, using default")
+		c.RetryDelay = defaults.RetryDelay
+	}
+
+	if c.Timeout <= 0 {
+		logger.L().Warn().Int("invalid_timeout", c.Timeout).Msg("Invalid timeout, using default")
+		c.Timeout = defaults.Timeout
+	}
+
+	return false
+}
+
+// Validate validates GatewayHealthCheck and fills defaults.
+func (c *GatewayHealthCheck) Validate() (hasError bool) {
+	defaults := DefaultGatewayConfig().HealthCheck
+
+	if c.Interval <= 0 {
+		logger.L().Warn().Int("invalid_interval", c.Interval).Msg("Invalid interval, using default")
+		c.Interval = defaults.Interval
+	}
+
+	if c.Timeout <= 0 {
+		logger.L().Warn().Int("invalid_timeout", c.Timeout).Msg("Invalid timeout, using default")
+		c.Timeout = defaults.Timeout
+	}
+
+	return false
 }
