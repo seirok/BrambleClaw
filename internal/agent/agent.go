@@ -13,7 +13,6 @@ import (
 	"brambleclaw/internal/tools/mcp"
 	"context"
 	"strings"
-	"time"
 )
 
 type Agent struct {
@@ -148,13 +147,9 @@ func (a *Agent) ProducedMessageTypes() []messages.MessageType {
 // OnMessages 处理 ChatMessage 列表，返回 Agent 响应（ChatAgent 接口核心方法）
 func (a *Agent) OnMessages(ctx context.Context, msgs []messages.ChatMessage) (*Response, error) {
 	// 将 ChatMessage 转换为 AgentMessage 并收集到 session
-	agentMsgs := make([]AgentMessage, 0, len(msgs))
+	agentMsgs := make([]*AgentMessage, 0, len(msgs))
 	for _, msg := range msgs {
-		agentMsgs = append(agentMsgs, AgentMessage{
-			Role:      RoleUser,
-			Content:   []ContentBlock{TextContent{Text: msg.ToModelText()}},
-			Timestamp: time.Now().UnixMilli(),
-		})
+		agentMsgs = append(agentMsgs, NewAgentMessage(msg.GetSource(), RoleUser, msg.ToModelText()))
 	}
 
 	// 如果有 system prompt 需要，从第一条消息的 metadata 获取上下文信息
@@ -184,11 +179,7 @@ func (a *Agent) OnMessages(ctx context.Context, msgs []messages.ChatMessage) (*R
 			logger.L().Error().Err(err).Str("agent", a.name).Str("channel", channel).Msg("Failed to build full system prompt")
 			fullSystemPrompt = ""
 		} else {
-			sess.AddMessage(AgentMessage{
-				Role:      RoleSystem,
-				Content:   []ContentBlock{TextContent{fullSystemPrompt}},
-				Timestamp: time.Now().UnixMilli(),
-			})
+			sess.AddMessage(NewAgentMessage(a.name, RoleSystem, fullSystemPrompt))
 		}
 	}
 
@@ -211,11 +202,7 @@ func (a *Agent) OnMessages(ctx context.Context, msgs []messages.ChatMessage) (*R
 	}
 
 	// 添加回复到 session
-	replyMsg := AgentMessage{
-		Role:      RoleAssistant,
-		Content:   []ContentBlock{TextContent{Text: replyContent}},
-		Timestamp: time.Now().UnixMilli(),
-	}
+	replyMsg := NewAgentMessage(a.name, RoleAssistant, replyContent)
 	sess.AddMessage(replyMsg)
 
 	// 更新 session

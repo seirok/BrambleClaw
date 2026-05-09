@@ -6,7 +6,6 @@ import (
 	"brambleclaw/internal/tools"
 	"context"
 	"fmt"
-	"time"
 )
 
 // SubAgent 二级 Agent，拥有独立 LLM 能力但无会话持久化
@@ -64,24 +63,16 @@ func (s *SubAgent) OnMessages(ctx context.Context, msgs []messages.ChatMessage) 
 			return nil, fmt.Errorf("sub-agent %q: build context failed: %w", s.Name(), err)
 		}
 		s.systemPrompt = prompt
-		s.messages = append(s.messages, AgentMessage{
-			Role:      RoleSystem,
-			Content:   []ContentBlock{TextContent{Text: s.systemPrompt}},
-			Timestamp: time.Now().UnixMilli(),
-		})
+		s.messages = append(s.messages, *NewAgentMessage(s.Name(), RoleSystem, s.systemPrompt))
 	}
 
 	for _, msg := range msgs {
-		s.messages = append(s.messages, AgentMessage{
-			Role:      RoleUser,
-			Content:   []ContentBlock{TextContent{Text: msg.ToModelText()}},
-			Timestamp: time.Now().UnixMilli(),
-		})
+		s.messages = append(s.messages, *NewAgentMessage(msg.GetSource(), RoleUser, msg.ToModelText()))
 	}
 
-	history := make([]interfaces.Message, len(s.messages))
+	history := make([]messages.BaseMessage, len(s.messages))
 	for i, m := range s.messages {
-		history[i] = m
+		history[i] = &m
 	}
 
 	resp, err := s.orche.Run(ctx, history)
@@ -94,11 +85,7 @@ func (s *SubAgent) OnMessages(ctx context.Context, msgs []messages.ChatMessage) 
 		replyContent = resp.Choices[0].Message.Content
 	}
 
-	s.messages = append(s.messages, AgentMessage{
-		Role:      RoleAssistant,
-		Content:   []ContentBlock{TextContent{Text: replyContent}},
-		Timestamp: time.Now().UnixMilli(),
-	})
+	s.messages = append(s.messages, *NewAgentMessage(s.Name(), RoleAssistant, replyContent))
 
 	return &Response{
 		ChatMessage: messages.NewTextMessage(s.Name(), replyContent),

@@ -2,11 +2,16 @@ package agent
 
 import (
 	"brambleclaw/internal/interfaces"
+	"brambleclaw/internal/messages"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 // Role 消息角色
@@ -86,9 +91,13 @@ func (t TextContent) Type() string {
 
 // AgentMessage Agent消息
 type AgentMessage struct {
-	Role      Role           `json:"role"`
-	Content   []ContentBlock `json:"content"`
-	Timestamp int64          `json:"timestamp"`
+	ID        string               `json:"id"`
+	Source    string               `json:"source"`
+	Type      messages.MessageType `json:"type"`
+	Role      Role                 `json:"role"`
+	Content   []ContentBlock       `json:"content"`
+	Metadata  map[string]string    `json:"metadata,omitempty"`
+	CreatedAt time.Time            `json:"created_at"`
 }
 
 // serializableContent 用于JSON序列化的内容块
@@ -129,11 +138,37 @@ func (m AgentMessage) MarshalJSON() ([]byte, error) {
 	return json.Marshal(aux)
 }
 
-// Body 实现 Message 接口，返回消息的JSON序列化字节
-func (m AgentMessage) Body() []byte {
-	data, _ := json.Marshal(m)
-	return data
+// NewAgentMessage 创建 AgentMessage（自动填充 ID/CreatedAt/Type）
+func NewAgentMessage(source string, role Role, content string) *AgentMessage {
+	return &AgentMessage{
+		ID:        uuid.New().String(),
+		Source:    source,
+		Type:      messages.MessageTypeText,
+		Role:      role,
+		Content:   []ContentBlock{TextContent{Text: content}},
+		Metadata:  make(map[string]string),
+		CreatedAt: time.Now().UTC(),
+	}
 }
+
+// BaseMessage 接口实现
+func (m *AgentMessage) GetID() string                  { return m.ID }
+func (m *AgentMessage) GetSource() string              { return m.Source }
+func (m *AgentMessage) GetType() messages.MessageType  { return m.Type }
+func (m *AgentMessage) GetCreatedAt() time.Time        { return m.CreatedAt }
+func (m *AgentMessage) GetMetadata() map[string]string { return m.Metadata }
+func (m *AgentMessage) ToText() string {
+	var sb strings.Builder
+	for _, ct := range m.Content {
+		if tc, ok := ct.(TextContent); ok {
+			sb.WriteString(tc.Text)
+		}
+	}
+	return sb.String()
+}
+
+// 编译时检查
+var _ messages.BaseMessage = (*AgentMessage)(nil)
 
 // UnmarshalJSON 自定义JSON反序列化
 func (m *AgentMessage) UnmarshalJSON(data []byte) error {

@@ -11,7 +11,6 @@ import (
 	"brambleclaw/internal/runtime"
 	"brambleclaw/internal/teamtool"
 	"brambleclaw/internal/tools"
-	"bufio"
 	"context"
 	"fmt"
 	"os"

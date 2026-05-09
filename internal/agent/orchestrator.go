@@ -3,6 +3,7 @@ package agent
 import (
 	"brambleclaw/internal/hook"
 	"brambleclaw/internal/interfaces"
+	"brambleclaw/internal/messages"
 	"brambleclaw/internal/tools"
 	"context"
 	"encoding/json"
@@ -77,24 +78,17 @@ func (o *Orchestrator) UpdateHistory(llmResp *LLMResponse, historyMsg *[]ChatMsg
 }
 
 // Run 运行编排器
-func (o *Orchestrator) Run(ctx context.Context, messages []interfaces.Message) (*LLMResponse, error) {
+func (o *Orchestrator) Run(ctx context.Context, messages []messages.BaseMessage) (*LLMResponse, error) {
 	// 准备工具定义
 	toolDefs := o.prepareToolDefinitions()
 
 	// Agent Message --> ChatMsg
 	chatMsgs := make([]ChatMsg, len(messages))
 	for i, msg := range messages {
-		if am, ok := msg.(AgentMessage); ok {
+		if am, ok := msg.(*AgentMessage); ok {
 			chatMsgs[i].Role = am.Role
-			content := ""
-			for _, ct := range am.Content {
-				if textContent, ok := ct.(TextContent); ok {
-					content += textContent.Text
-				}
-			}
-			chatMsgs[i].Content = content
 		}
-
+		chatMsgs[i].Content = msg.ToText()
 	}
 
 	// Get LLM's response

@@ -393,11 +393,7 @@ func (cb *ContextBuilder) Compact(ctx context.Context, sess *session.Session, in
 		return nil
 	}
 	needToCompact := msgs[sess.Summarized:(sess.Summarized + (cb.compact.CompactRounds)/4)]
-	summarizeMsg := AgentMessage{
-		Role:      RoleUser,
-		Content:   []ContentBlock{TextContent{Text: "Provide a concise summary of this conversation by far, preserving core context and key points.\n"}},
-		Timestamp: time.Now().UnixMilli(),
-	}
+	summarizeMsg := NewAgentMessage(cb.Agent().Name(), RoleUser, "Provide a concise summary of this conversation by far, preserving core context and key points.\n")
 	needToCompact = append(needToCompact, summarizeMsg)
 
 	resp, err := cb.Agent().orche.Run(ctx, needToCompact)
@@ -442,11 +438,7 @@ func (cb *ContextBuilder) Compact(ctx context.Context, sess *session.Session, in
 		} else {
 			// 替换 Messages[0]
 			if len(sess.Messages) > 0 {
-				sess.Messages[0] = AgentMessage{
-					Role:      RoleSystem,
-					Content:   []ContentBlock{TextContent{Text: newSystemPrompt}},
-					Timestamp: time.Now().UnixMilli(),
-				}
+				sess.Messages[0] = NewAgentMessage(cb.Agent().Name(), RoleSystem, newSystemPrompt)
 				sess.Modified = true
 				logger.L().Debug().Str("sessionKey", sess.Key).
 					Msg("compact: system prompt updated with new session summary")

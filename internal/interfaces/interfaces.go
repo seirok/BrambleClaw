@@ -44,11 +44,6 @@ type Registry[V any] interface {
 	List(ctx context.Context) []V
 }
 
-type Message interface {
-	// 获取消息内容
-	Body() []byte
-}
-
 type Service interface {
 	// Start 启动服务，ctx 用于控制启动过程的超时（例如初始化数据库连接）
 	Start(ctx context.Context) error

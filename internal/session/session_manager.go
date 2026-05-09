@@ -5,6 +5,7 @@ import (
 	"brambleclaw/internal/config"
 	"brambleclaw/internal/interfaces"
 	"brambleclaw/internal/logger"
+	"brambleclaw/internal/messages"
 	"brambleclaw/internal/store"
 	"context"
 	"fmt"
@@ -227,7 +228,7 @@ func (m *PersistentSessionManager) GetOrCreate(sessionkey string) (*Session, boo
 
 	sess = &Session{
 		Key:        sessionkey,
-		Messages:   []interfaces.Message{},
+		Messages:   []messages.BaseMessage{},
 		CreatedAt:  time.Now(),
 		Summarized: 0,
 	}
@@ -288,7 +289,7 @@ func (m *PersistentSessionManager) ClearSessionWithMeta(sessionKey string) (int,
 		return 0, err
 	}
 
-	sess.Messages = []interfaces.Message{}
+	sess.Messages = []messages.BaseMessage{}
 	sess.Modified = true
 	sess.UpdatedAt = time.Now()
 	sess.Summarized = 0
