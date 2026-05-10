@@ -45,5 +45,7 @@ func createDefaultConfig() *Config {
 
 	cfg.Sidebar = structs.DefaultSidebarConfig()
 
+	cfg.Skill = structs.DefaultSkillConfig()
+
 	return cfg
 }

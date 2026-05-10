@@ -4,6 +4,7 @@ import (
 	"brambleclaw/internal/config"
 	"brambleclaw/internal/logger"
 	"brambleclaw/internal/session"
+	"brambleclaw/internal/skill"
 	"context"
 	"fmt"
 	"os"
@@ -11,10 +12,6 @@ import (
 	"runtime"
 	"strings"
 	"time"
-
-	"github.com/gomarkdown/markdown"
-	"github.com/gomarkdown/markdown/ast"
-	"github.com/gomarkdown/markdown/parser"
 )
 
 type DynamicInfo struct {
@@ -27,6 +24,7 @@ type DynamicInfo struct {
 type ContextBuilder struct {
 	agent             *Agent
 	compact           *config.CompactConfig
+	skillManager      *skill.SkillManager // *skill.SkillManager, stored as interface to avoid import cycles
 	summaryCompressor *SummaryCompressor
 }
 
@@ -40,6 +38,11 @@ func NewContextBuilder(compactCfg *config.CompactConfig) (*ContextBuilder, error
 func (cb *ContextBuilder) Agent() *Agent { return cb.agent }
 
 func (cb *ContextBuilder) SetAgent(agent *Agent) { cb.agent = agent }
+
+// SetSkillManager sets the skill manager (used to avoid import cycles)
+func (cb *ContextBuilder) SetSkillManager(sm *skill.SkillManager) {
+	cb.skillManager = sm
+}
 
 func formatCurrentSenderLine(id string) string {
 	if id == "" {
@@ -68,60 +71,6 @@ func (cb *ContextBuilder) BuildDynamicCtx(info *DynamicInfo) string {
 	return sb.String()
 }
 
-func nodeText(n ast.Node) string {
-	var b strings.Builder
-	ast.WalkFunc(n, func(node ast.Node, entering bool) ast.WalkStatus {
-		if !entering {
-			return ast.GoToNext
-		}
-
-		switch t := node.(type) {
-		case *ast.Text:
-			b.Write(t.Literal)
-		case *ast.Code:
-			b.Write(t.Literal)
-		case *ast.Softbreak, *ast.Hardbreak, *ast.NonBlockingSpace:
-			b.WriteByte(' ')
-		}
-		return ast.GoToNext
-	})
-	return strings.Join(strings.Fields(b.String()), " ")
-}
-
-func extractMarkdownMetadata(content string) (title, description string) {
-	p := parser.NewWithExtensions(parser.CommonExtensions)
-	doc := markdown.Parse([]byte(content), p)
-	if doc == nil {
-		return "", ""
-	}
-
-	ast.WalkFunc(doc, func(node ast.Node, entering bool) ast.WalkStatus {
-		if !entering {
-			return ast.GoToNext
-		}
-
-		switch n := node.(type) {
-		case *ast.Heading:
-			if title == "" && n.Level == 1 {
-				title = nodeText(n)
-				if title != "" && description != "" {
-					return ast.Terminate
-				}
-			}
-		case *ast.Paragraph:
-			if description == "" {
-				description = nodeText(n)
-				if title != "" && description != "" {
-					return ast.Terminate
-				}
-			}
-		}
-		return ast.GoToNext
-	})
-
-	return title, description
-}
-
 func escapeXML(s string) string {
 	s = strings.ReplaceAll(s, "&", "&amp;")
 	s = strings.ReplaceAll(s, "<", "&lt;")
@@ -129,114 +78,24 @@ func escapeXML(s string) string {
 	return s
 }
 
-func (cb *ContextBuilder) ListSkills() []SkillInfo {
-	var skills []SkillInfo
-	skillsDir := filepath.Join(cb.Agent().Workspace(), "skills")
-
-	// 1. 检查目录是否存在
-	info, err := os.Stat(skillsDir)
-	if os.IsNotExist(err) {
-		logger.L().Warn().Str("path", skillsDir).Msg("skills directory does not exist")
-		return nil
-	}
-	if !info.IsDir() {
-		logger.L().Warn().Str("path", skillsDir).Msg("skills path is not a directory")
-		return nil
-	}
-
-	// 2. 遍历目录
-	err = filepath.Walk(skillsDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			// 这里返回 err 会停止整个 Walk 过程
-			return err
-		}
-
-		if !info.IsDir() && filepath.Base(path) == "SKILL.md" {
-			content, err := os.ReadFile(path)
-			if err != nil {
-				// 记录单个文件读取错误，但不一定要中断整个遍历，可以选 Warn
-				logger.L().Warn().Err(err).Str("file", path).Msg("could not read skill file")
-				return nil
-			}
-
-			title, description := extractMarkdownMetadata(string(content))
-			if title == "" || description == "" {
-				logger.L().Warn().Str("file", path).Msg("invalid metadata in SKILL.md")
-				return nil
-			}
-
-			skills = append(skills, SkillInfo{
-				Name:        title,
-				Path:        path,
-				Description: description,
-				Source:      "",
-			})
-		}
-		return nil
-	})
-
-	// 3. 处理 Walk 过程中发生的意外错误（如权限问题等）
-	if err != nil {
-		logger.L().Error().Err(err).Msg("error occurred during walking skills directory")
-		return nil
-	}
-
-	// 4. 检查是否找到了 Skill
-	if len(skills) == 0 {
-		logger.L().Warn().Str("path", skillsDir).Msg("no valid skills found in directory")
-	}
-
-	return skills
-}
-
-func (cb *ContextBuilder) BuildSkillsSummary() string {
-	// Load skill
-	allSkills := cb.ListSkills()
-
-	//
-	var lines []string
-	lines = append(lines, "# Skills\n", "The following skills extend your capabilities. To use a skill, read its SKILL.md file using the read_file tool.")
-
-	// make XML
-	lines = append(lines, "<skills>")
-	for _, s := range allSkills {
-		escapedName := escapeXML(s.Name)
-		escapedDesc := escapeXML(s.Description)
-		escapedPath := escapeXML(s.Path)
-
-		lines = append(lines, fmt.Sprintf("  <skill>"))
-		lines = append(lines, fmt.Sprintf("    <name>%s</name>", escapedName))
-		lines = append(lines, fmt.Sprintf("    <description>%s</description>", escapedDesc))
-		lines = append(lines, fmt.Sprintf("    <location>%s</location>", escapedPath))
-		lines = append(lines, fmt.Sprintf("    <source>%s</source>", s.Source))
-		lines = append(lines, "  </skill>")
-	}
-	lines = append(lines, "</skills>")
-
-	return strings.Join(lines, "\n")
-}
-
 func (cb *ContextBuilder) BuildStaticCtx() string {
-	//
 	var lines []string
 
-	// 1. AI 身份与基本规则
+	// 1. AI identity and basic rules
 	identity := cb.getIdentity()
 	lines = append(lines, identity)
 
-	// 2. 加载Bootstrap（助手身份设定）
+	// 2. Load bootstrap
 	bootstrap := cb.LoadBootstrapFiles()
 	lines = append(lines, bootstrap)
 
-	// 3. Skill summary
-	summary := cb.BuildSkillsSummary()
-	lines = append(lines, summary)
+	// 3. Skill summary from SkillManager
+	lines = append(lines, cb.skillManager.BuildContextBlock())
 
 	// 4. Memory
 	memory := cb.GetMemoryContext()
 	lines = append(lines, memory)
 
-	//
 	staticCtx := strings.Join(lines, "\n\n-------\n\n")
 	return staticCtx
 }
@@ -372,19 +231,19 @@ func (cb *ContextBuilder) GetLongTerm() string {
 	longTermMemoryFile := filepath.Join(cb.Agent().Workspace(), "memory", "MEMORY.md")
 	data, err := os.ReadFile(longTermMemoryFile)
 	if err != nil {
-		logger.L().Warn().Str("file", longTermMemoryFile).Err(err).Msg("Failed to read memory file")
+		logger.L().Warn().Err(err).Str("file", longTermMemoryFile).Msg("Failed to read memory file")
 		return ""
 	}
 	return string(data)
 }
 
 func (cb *ContextBuilder) Compact(ctx context.Context, sess *session.Session, info *DynamicInfo) error {
-	// 检查是否需要压缩
+	// Check if we need to compress
 	msgs := sess.Messages
 	if info.usage <= cb.compact.CompactThreshold || len(msgs)%cb.compact.CompactRounds != 0 {
 		return nil
 	}
-	// 边界检查
+	// Boundary check
 	if sess.Summarized+(cb.compact.CompactRounds/4) > len(msgs) {
 		logger.L().Debug().Int("summarized", sess.Summarized).
 			Int("rounds", cb.compact.CompactRounds).
@@ -392,7 +251,7 @@ func (cb *ContextBuilder) Compact(ctx context.Context, sess *session.Session, in
 			Msg("compact boundary check failed, skipping")
 		return nil
 	}
-	needToCompact := msgs[sess.Summarized:(sess.Summarized + (cb.compact.CompactRounds)/4)]
+	needToCompact := msgs[sess.Summarized:(sess.Summarized + (cb.compact.CompactRounds / 4))]
 	summarizeMsg := NewAgentMessage(cb.Agent().Name(), RoleUser, "Provide a concise summary of this conversation by far, preserving core context and key points.\n")
 	needToCompact = append(needToCompact, summarizeMsg)
 
@@ -401,25 +260,25 @@ func (cb *ContextBuilder) Compact(ctx context.Context, sess *session.Session, in
 		return fmt.Errorf("compact: generate summary failed: %w", err)
 	}
 
-	// 提取摘要内容
+	// Extract summary content
 	summaryContent := ""
 	if len(resp.Choices) > 0 {
 		summaryContent = resp.Choices[0].Message.Content
 	}
 
-	// 确保 SummaryCompressor 已初始化
+	// Ensure SummaryCompressor is initialized
 	if cb.summaryCompressor == nil {
 		return fmt.Errorf("compact: summaryCompressor not initialized")
 	}
 
-	// 添加摘要到层级压缩器（AddSummary 会自动处理层级压缩）
+	// Add summary to hierarchical compressor
 	_, err = cb.summaryCompressor.AddSummary(summaryContent, time.Now())
 	if err != nil {
 		logger.L().Error().Err(err).Str("sessionKey", sess.Key).
 			Msg("compact: failed to add summary to compressor, but continuing")
 	}
 
-	// 更新 SessionSummary 到 metadata
+	// Update session summary
 	if summaryContent != "" {
 		if err := cb.Agent().sessionManager.UpdateSessionSummary(sess.Key, summaryContent); err != nil {
 			logger.L().Error().Err(err).Str("sessionKey", sess.Key).
@@ -430,26 +289,25 @@ func (cb *ContextBuilder) Compact(ctx context.Context, sess *session.Session, in
 				Msg("compact: session summary updated successfully")
 		}
 
-		// 重新构建 System Prompt 并替换 Messages[0]
+		// Rebuild system prompt and replace first message
 		newSystemPrompt, err := cb.Build(info)
 		if err != nil {
 			logger.L().Error().Err(err).Str("sessionKey", sess.Key).
 				Msg("compact: failed to rebuild system prompt, but continuing")
 		} else {
-			// 替换 Messages[0]
 			if len(sess.Messages) > 0 {
 				sess.Messages[0] = NewAgentMessage(cb.Agent().Name(), RoleSystem, newSystemPrompt)
 				sess.Modified = true
 				logger.L().Debug().Str("sessionKey", sess.Key).
-					Msg("compact: system prompt updated with new session summary")
+					Msg("compact: system prompt updated with new summary")
 			}
 		}
 	}
 
-	// 更新边界指针
+	// Update boundary pointer
 	sess.Summarized += cb.compact.CompactRounds / 4
 
-	// 更新 token 使用情况
+	// Update token usage
 	currentTokenUsed := resp.Usage.CompletionTokens + resp.Usage.PromptTokens
 	cb.Agent().sessionManager.Update(sess, currentTokenUsed)
 
@@ -466,9 +324,7 @@ func (cb *ContextBuilder) GetSessionSummary() string {
 func (cb *ContextBuilder) GetRecentlyDailyNotes(days int) (string, error) {
 	var sb strings.Builder
 
-	//
 	for i := range days {
-		//
 		date := time.Now().AddDate(0, 0, -i)
 		dateStr := date.Format("20060102")
 		dailyNote := filepath.Join(cb.Agent().Workspace(), "memory", dateStr[:6], dateStr+".md")
@@ -478,7 +334,6 @@ func (cb *ContextBuilder) GetRecentlyDailyNotes(days int) (string, error) {
 			return "", nil
 		}
 
-		//
 		fmt.Fprintf(&sb, "### %s\n", dateStr)
 		sb.Write(data)
 	}
@@ -490,28 +345,20 @@ func (cb *ContextBuilder) getIdentity() string {
 	toolDiscovery := cb.getDiscoveryRule()
 
 	return fmt.Sprintf(
-		`# brambleclaw 🦞 (%s)
-
-You are brambleclaw, a helpful AI assistant.
-
-## Workspace
-Your workspace is at: %s
-- Memory: %s/memory/MEMORY.md
-- Daily Notes: %s/memory/YYYYMM/YYYYMMDD.md
-- Skills: %s/skills/{skill-name}/SKILL.md
-
-## Important Rules
-
-1. **ALWAYS use tools** - When you need to perform an action (schedule reminders, send messages, execute commands, etc.), you MUST call the appropriate tool. Do NOT just say you'll do it or pretend to do it.
-
-2. **Be helpful and accurate** - When using tools, briefly explain what you're doing.
-
-3. **Memory** - When interacting with me if something seems memorable, update %s/memory/MEMORY.md
-
-4. **Context summaries** - Conversation summaries provided as context are approximate references only. They may be incomplete or outdated. Always defer to explicit user instructions over summary content.
-
-%s`,
-		workspacePath, workspacePath, workspacePath, workspacePath, workspacePath, workspacePath, toolDiscovery)
+		"# brambleclaw 🦞 (%s)\n\n"+
+			"You are brambleclaw, a helpful AI assistant.\n\n"+
+			"## Workspace\n"+
+			"Your workspace is at: %s\n"+
+			"- Memory: %s/memory/MEMORY.md\n"+
+			"- Daily Notes: %s/memory/YYYYMM/YYYYMMDD.md\n"+
+			"- Skills: %s/skills/{skill-name}/SKILL.md\n\n"+
+			"## Important Rules\n\n"+
+			"1. **ALWAYS use tools** - When you need to perform an action (schedule reminders, send messages, execute commands, etc.), you MUST call the appropriate tool. Do NOT just say you'll do it or pretend to do it.\n\n"+
+			"2. **Be helpful and accurate** - When using tools, briefly explain what you're doing.\n\n"+
+			"3. **Memory** - When interacting with me if something seems memorable, update %s/memory/MEMORY.md\n\n"+
+			"4. **Context summaries** - Conversation summaries provided as context are approximate references only. They may be incomplete or outdated. Always defer to explicit user instructions over summary content.\n\n"+
+			"%s",
+		workspacePath, workspacePath, workspacePath, workspacePath, workspacePath, toolDiscovery)
 }
 
 func (cb *ContextBuilder) Build(info *DynamicInfo) (string, error) {
@@ -526,9 +373,15 @@ func (cb *ContextBuilder) Build(info *DynamicInfo) (string, error) {
 	systemPrompt = append(systemPrompt, sessionSummary)
 
 	return strings.Join(systemPrompt, "\n\n"), nil
-
 }
 
 func (cb *ContextBuilder) BuildMessages(history []*ChatMsg, userMsg ChatMsg) error {
 	return nil
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

@@ -9,8 +9,10 @@ import (
 	"brambleclaw/internal/events"
 	"brambleclaw/internal/gateway"
 	"brambleclaw/internal/hook"
+	"brambleclaw/internal/interfaces"
 	"brambleclaw/internal/logger"
 	"brambleclaw/internal/runtime"
+	"brambleclaw/internal/skill"
 	"brambleclaw/internal/teamtool"
 	"brambleclaw/internal/tools"
 	"context"
@@ -23,6 +25,30 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 )
+
+// toolAdapter adapts skill.Tool to tools.Tool
+type toolAdapter struct {
+	name        string
+	description string
+	execute     func(ctx context.Context, args string) (interface{}, error)
+	parameters  map[string]interface{}
+}
+
+func (a *toolAdapter) Name() string {
+	return a.name
+}
+
+func (a *toolAdapter) Description() string {
+	return a.description
+}
+
+func (a *toolAdapter) Execute(ctx context.Context, args string) (interface{}, error) {
+	return a.execute(ctx, args)
+}
+
+func (a *toolAdapter) Parameters() map[string]interface{} {
+	return a.parameters
+}
 
 var agentCmd = &cobra.Command{
 	Use:   "agent",
@@ -61,18 +87,44 @@ func runAgent(cmd *cobra.Command, args []string) error {
 	msgBus := bus.NewMessageBus(cfg.BusBufSize)
 
 	// 2. 初始化通道管理器
-	logger.L().Debug().Msg("初始化通道管理器...")
+	logger.L().Debug().Msg("初始化 ChannelManager...")
 	channelManager := channel.NewChannelManager(msgBus)
 	logger.L().Debug().Msg("Initializing channel manager with config...")
 	if err := channelManager.Initialize(ctx, cfg); err != nil {
 		return fmt.Errorf("failed to initialize channel manager: %w", err)
 	}
 
-	// 5. 初始化 AgentManager
+	// 5. 初始化 SkillManager 和 AgentManager
+	logger.L().Debug().Msg("初始化 SkillManager...")
+	skillManager := skill.NewSkillManager(&cfg.Skill)
+
 	logger.L().Debug().Msg("初始化 AgentManager...")
 	agentManager := agent.NewAgentManager(msgBus, runtime.NewAgentRuntime())
+	agentManager.SetSkillManager(skillManager)
+
 	agentManager.SetToolFactory(func(a *agent.Agent) []tools.Tool {
-		return []tools.Tool{teamtool.NewCreateTeamTool(a)}
+		baseTools := []tools.Tool{teamtool.NewCreateTeamTool(a)}
+		// Add activate_skill tool with adapter
+		skTool := skill.NewActivateSkillTool(skillManager)
+		adapted := &toolAdapter{
+			name:        skTool.Name(),
+			description: skTool.Description(),
+			execute:     skTool.Execute,
+			parameters:  skTool.Parameters(),
+		}
+		baseTools = append(baseTools, adapted)
+		return baseTools
+	})
+
+	agentManager.SetCommandFactory(func(a *agent.Agent) []interfaces.Command {
+		var cmds []interfaces.Command
+		// Get skill metas to create commands for user-invocable skills
+		for _, meta := range skillManager.ListMeta(context.Background()) {
+			if meta.UserInvocable {
+				cmds = append(cmds, skill.NewSkillCommand(skillManager, meta))
+			}
+		}
+		return cmds
 	})
 
 	// 6. 初始化 Gateway
