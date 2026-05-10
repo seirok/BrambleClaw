@@ -68,13 +68,6 @@ type LLMResponse struct {
 	} `json:"usage"`
 }
 
-type SkillInfo struct {
-	Name        string `json:"name"`
-	Path        string `json:"path"`
-	Source      string `json:"source"`
-	Description string `json:"description"`
-}
-
 // ContentBlock 内容块接口
 type ContentBlock interface {
 	Type() string

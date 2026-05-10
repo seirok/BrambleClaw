@@ -9,6 +9,7 @@ import (
 	"brambleclaw/internal/logger"
 	"brambleclaw/internal/messages"
 	"brambleclaw/internal/session"
+	"brambleclaw/internal/skill"
 	"brambleclaw/internal/tools"
 	"brambleclaw/internal/tools/mcp"
 	"context"
@@ -26,6 +27,7 @@ type Agent struct {
 	mcp            *mcp.Manager
 	builder        *ContextBuilder
 	commands       interfaces.Registry[interfaces.Command]
+	skillManager   interface{} // *skill.SkillManager
 	base           *BaseChatAgent
 	runtime        messages.RuntimeProvider
 }
@@ -117,6 +119,17 @@ func WithRuntime(r messages.RuntimeProvider) Option {
 func WithWorkspace(workspace string) Option {
 	return func(a *Agent) {
 		a.workspace = workspace
+	}
+}
+
+// WithSkillManager 设置技能管理器
+func WithSkillManager(sm *skill.SkillManager) Option {
+	return func(a *Agent) {
+		a.skillManager = sm
+		// Also set on ContextBuilder
+		if a.builder != nil {
+			a.builder.SetSkillManager(sm)
+		}
 	}
 }
 

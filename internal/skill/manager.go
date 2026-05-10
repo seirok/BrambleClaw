@@ -71,6 +71,7 @@ func (m *SkillManager) Initialize(ctx context.Context, cfg any) error {
 	return nil
 }
 
+// AddWorkspace 将 agent workspace 下的 skill 注册到 manager 中
 func (m *SkillManager) AddWorkspace(ctx context.Context, workspacePath string) error {
 	if !m.cfg.Enabled {
 		return nil
@@ -101,7 +102,7 @@ func (m *SkillManager) AddWorkspace(ctx context.Context, workspacePath string) e
 	return nil
 }
 
-// scanDirectory 扫描 Skill 目录
+// scanDirectory 扫描 Skill 目录， 并将合法的 skill 注册到 manager 中
 func (m *SkillManager) scanDirectory(ctx context.Context, dir string, scope Scope) error {
 	logger.L().Debug().Str("dir", dir).Int("scope", int(scope)).Msg("Scanning skill directory")
 

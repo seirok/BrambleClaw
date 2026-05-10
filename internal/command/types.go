@@ -13,23 +13,21 @@ var (
 	ErrCommandExists   = errors.New("command already exists")
 )
 
-// 编译时检查：确保 CommandRegistry 实现了 Registry[Command]
-var _ interfaces.Registry[*interfaces.Command] = (*CommandRegistry)(nil)
+// 编译时检查
+var _ interfaces.Registry[interfaces.Command] = (*CommandRegistry)(nil)
 
 type CommandRegistry struct {
-	commands map[string]*interfaces.Command
+	commands map[string]interfaces.Command
 	mu       sync.RWMutex
 }
 
-// NewCommandRegistry 创建实例
 func NewCommandRegistry() *CommandRegistry {
 	return &CommandRegistry{
-		commands: make(map[string]*interfaces.Command),
+		commands: make(map[string]interfaces.Command),
 	}
 }
 
-// Register 注册指令
-func (r *CommandRegistry) Register(ctx context.Context, name string, cmd *interfaces.Command) error {
+func (r *CommandRegistry) Register(ctx context.Context, name string, cmd interfaces.Command) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -41,7 +39,6 @@ func (r *CommandRegistry) Register(ctx context.Context, name string, cmd *interf
 	return nil
 }
 
-// Unregister 注销指令
 func (r *CommandRegistry) Unregister(ctx context.Context, name string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -54,8 +51,7 @@ func (r *CommandRegistry) Unregister(ctx context.Context, name string) error {
 	return nil
 }
 
-// Get 获取指令
-func (r *CommandRegistry) Get(ctx context.Context, name string) (*interfaces.Command, error) {
+func (r *CommandRegistry) Get(ctx context.Context, name string) (interfaces.Command, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -66,12 +62,11 @@ func (r *CommandRegistry) Get(ctx context.Context, name string) (*interfaces.Com
 	return cmd, nil
 }
 
-// List 返回所有指令
-func (r *CommandRegistry) List(ctx context.Context) []*interfaces.Command {
+func (r *CommandRegistry) List(ctx context.Context) []interfaces.Command {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	list := make([]*interfaces.Command, 0, len(r.commands))
+	list := make([]interfaces.Command, 0, len(r.commands))
 	for _, cmd := range r.commands {
 		list = append(list, cmd)
 	}

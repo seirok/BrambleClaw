@@ -8,10 +8,10 @@ import (
 type Scope int
 
 const (
-	ScopePlugin     Scope = iota // 0: plugin-provided skills
-	ScopeProject                 // 1: {workspace}/skills/
-	ScopePersonal                // 2: ~/.brambleclaw/skills/
-	ScopeEnterprise              // 3: enterprise-managed (future)
+	ScopePlugin     Scope = iota // 0: plugin-provided skills (lowest priority)
+	ScopePersonal                // 1: ~/.brambleclaw/skills/ (global)
+	ScopeProject                 // 2: {workspace}/skills/ (workspace, overrides global)
+	ScopeEnterprise              // 3: enterprise-managed (future, highest priority)
 )
 
 type SkillFrontmatter struct {
