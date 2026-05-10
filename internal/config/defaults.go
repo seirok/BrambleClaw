@@ -25,7 +25,7 @@ func createDefaultConfig() *Config {
 			Name:        "main",
 			Description: "Default agent for handling messages",
 			LLM:         structs.DefaultLLMConfig(),
-			Tools:       []string{"web_search", "shell", "filesystem", "url_parse"},
+			Tools:       []string{"web_search", "shell", "filesystem", "url_parse", "glob", "grep"},
 			MaxHistory:  50,
 			Enabled:     true,
 		},
