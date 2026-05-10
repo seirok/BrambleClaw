@@ -74,7 +74,7 @@ func (c *ChatAgentContainer) processMessage(ctx context.Context, msg messages.Ch
 	resp, err := c.agent.OnMessages(ctx, []messages.ChatMessage{msg})
 	if err != nil {
 		logger.L().Error().Err(err).Str("agent", c.agent.Name()).Msg("Agent.OnMessages failed in container")
-		errMsg := messages.NewAgentErrorMessage(c.agent.Name(), err.Error())
+		errMsg := messages.NewAgentErrorMessage(c.agent.Name(), err.Error()).WithIsProgramError(true)
 		c.runtime.PublishTo(ctx, c.outputTopic, errMsg)
 		return
 	}
