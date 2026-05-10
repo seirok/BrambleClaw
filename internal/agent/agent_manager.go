@@ -25,7 +25,7 @@ type AgentManager struct {
 	mu            sync.RWMutex
 	status        interfaces.ManagerStatus
 
-	// toolFactory 注入额外的工具到每个 Agent（由外部设置，避免循环依赖）
+	// toolFactory 注入额外的工具到每个 Agent
 	toolFactory func(*Agent) []tools.Tool
 }
 
