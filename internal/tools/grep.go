@@ -1,8 +1,8 @@
 package tools
 
 import (
-	"bufio"
 	"brambleclaw/internal/logger"
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -12,6 +12,34 @@ import (
 
 	"github.com/bmatcuk/doublestar/v4"
 )
+
+// Grep 工具是一个非常实用的文件内容搜索工具，主要用于：
+//
+// 功能特点
+//
+// 1. 文本搜索：在文件中搜索特定字符串
+// 2. 正则表达式：支持复杂的模式匹配
+// 3. 递归搜索：在目录树中递归查找
+// 4. 文件过滤：只搜索特定类型的文件（如 *.go）
+// 5. 上下文显示：显示匹配行前后的代码
+// 6. 行号显示：方便定位代码位置
+//
+// 使用场景
+//
+// 1. 代码搜索
+//- 查找某个函数的定义：grep "func myFunction"
+//- 查找特定的 API 调用：grep "http\.Get"
+//
+// 2. 调试问题
+//- 查找错误日志：grep "ERROR"
+//- 查找特定的配置项：grep "timeout:"
+//
+// 3. 代码重构
+//- 查找所有使用旧 API 的地方：grep "OldAPI"
+//- 统计某个功能的使用频率
+//
+// 4. 文档查找
+// 在 Markdown 文件中查找特定章节：grep "## Usage"
 
 // GrepTool 文件内容搜索工具
 type GrepTool struct {
@@ -95,15 +123,15 @@ func (t *GrepTool) Parameters() map[string]interface{} {
 // Execute 执行工具
 func (t *GrepTool) Execute(ctx context.Context, argStr string) (interface{}, error) {
 	var args struct {
-		Pattern       string  `json:"pattern"`
-		Path          string  `json:"path"`
-		IsRegex       bool    `json:"is_regex"`
-		Recursive     bool    `json:"recursive"`
-		ShowLineNum   bool    `json:"show_line_num"`
-		BeforeContext int     `json:"before_context"`
-		AfterContext  int     `json:"after_context"`
-		Include       string  `json:"include"`
-		Exclude       string  `json:"exclude"`
+		Pattern       string `json:"pattern"`
+		Path          string `json:"path"`
+		IsRegex       bool   `json:"is_regex"`
+		Recursive     bool   `json:"recursive"`
+		ShowLineNum   bool   `json:"show_line_num"`
+		BeforeContext int    `json:"before_context"`
+		AfterContext  int    `json:"after_context"`
+		Include       string `json:"include"`
+		Exclude       string `json:"exclude"`
 	}
 
 	err := json.Unmarshal([]byte(argStr), &args)
