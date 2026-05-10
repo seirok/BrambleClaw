@@ -80,6 +80,8 @@ func (a *AgentManager) Initialize(ctx context.Context, cfg any) error {
 		}
 		filesystemTool := sandbox.NewFileSystemTool(sandBox)
 		shellTool := sandbox.NewShellTool(sandBox)
+		globTool := tools.NewGlobTool()
+		grepTool := tools.NewGrepTool()
 		a.toolRegistry = tools.NewToolRegistry()
 		if err := a.toolRegistry.Register(ctx, "web_search", websearchTool); err != nil {
 			return fmt.Errorf("注册 web_search 工具失败: %w", err)
@@ -92,6 +94,12 @@ func (a *AgentManager) Initialize(ctx context.Context, cfg any) error {
 		}
 		if err := a.toolRegistry.Register(ctx, "url_parse", urlparsetool); err != nil {
 			return fmt.Errorf("注册 url_parse 工具失败: %w", err)
+		}
+		if err := a.toolRegistry.Register(ctx, "glob", globTool); err != nil {
+			return fmt.Errorf("注册 glob 工具失败: %w", err)
+		}
+		if err := a.toolRegistry.Register(ctx, "grep", grepTool); err != nil {
+			return fmt.Errorf("注册 grep 工具失败: %w", err)
 		}
 
 		agentToolRegistry := tools.NewToolRegistry()
