@@ -91,6 +91,11 @@ func (t *ReadTool) resolvePath(path string) string {
 
 // readFile 读取文件
 func (t *ReadTool) readFile(ctx context.Context, path string, args map[string]interface{}) (interface{}, error) {
+	// 验证 sandbox 不为 nil
+	if t.sandbox == nil {
+		return nil, fmt.Errorf("sandbox not configured")
+	}
+
 	// 验证路径
 	if err := t.sandbox.ValidatePath(path, false); err != nil {
 		logger.L().Error().Err(err).Str("path", path).Msg("ReadTool: path validation failed")

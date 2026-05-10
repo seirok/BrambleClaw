@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 )
 
@@ -36,19 +37,19 @@ func (t *WriteTool) Description() string {
 }
 
 // Parameters 返回工具参数定义
-func (t *WriteTool) Parameters() map[string]any {
-	return map[string]any{
+func (t *WriteTool) Parameters() map[string]interface{} {
+	return map[string]interface{}{
 		"type": "object",
-		"properties": map[string]any{
-			"path": map[string]any{
+		"properties": map[string]interface{}{
+			"path": map[string]interface{}{
 				"type":        "string",
 				"description": "文件路径（相对于工作目录或绝对路径）",
 			},
-			"content": map[string]any{
+			"content": map[string]interface{}{
 				"type":        "string",
 				"description": "要写入的文件内容",
 			},
-			"append": map[string]any{
+			"append": map[string]interface{}{
 				"type":        "boolean",
 				"description": "是否追加写入（可选，默认 false）",
 			},
@@ -58,9 +59,9 @@ func (t *WriteTool) Parameters() map[string]any {
 }
 
 // Execute 执行工具
-func (t *WriteTool) Execute(ctx context.Context, argStr string) (any, error) {
+func (t *WriteTool) Execute(ctx context.Context, argStr string) (interface{}, error) {
 	// 解析参数
-	var args map[string]any
+	var args map[string]interface{}
 	if err := json.Unmarshal([]byte(argStr), &args); err != nil {
 		return nil, fmt.Errorf("解析参数失败: %w", err)
 	}
@@ -102,7 +103,15 @@ func (t *WriteTool) resolvePath(path string) string {
 }
 
 // writeFile 写入文件
-func (t *WriteTool) writeFile(ctx context.Context, path string, content string, appendMode bool) (any, error) {
+func (t *WriteTool) writeFile(ctx context.Context, path string, content string, appendMode bool) (interface{}, error) {
+	// 验证 sandbox 不为 nil
+	if t.sandbox == nil {
+		return nil, fmt.Errorf("sandbox not configured")
+	}
+	if t.sandbox.Config() == nil {
+		return nil, fmt.Errorf("sandbox config not available")
+	}
+
 	// 验证路径
 	if err := t.sandbox.ValidatePath(path, true); err != nil {
 		logger.L().Error().Err(err).Str("path", path).Msg("WriteTool: path validation failed")
@@ -111,9 +120,19 @@ func (t *WriteTool) writeFile(ctx context.Context, path string, content string, 
 
 	// 检查文件大小限制
 	contentSize := int64(len(content))
-	if t.sandbox.Config().FileSystem.MaxFileSize > 0 && contentSize > t.sandbox.Config().FileSystem.MaxFileSize {
+	var totalSize int64 = contentSize
+
+	if appendMode {
+		// 对于追加模式，检查总大小
+		if info, err := os.Stat(path); err == nil {
+			totalSize = info.Size() + contentSize
+		}
+	}
+
+	maxSize := t.sandbox.Config().FileSystem.MaxFileSize
+	if maxSize > 0 && totalSize > maxSize {
 		t.sandbox.LogAuditEvent(sandbox.AuditEventAccessDenied, path, false, "文件大小超出限制")
-		return nil, fmt.Errorf("文件大小 %d 超过最大限制 %d", contentSize, t.sandbox.Config().FileSystem.MaxFileSize)
+		return nil, fmt.Errorf("文件大小 %d 超过最大限制 %d", totalSize, maxSize)
 	}
 
 	// 记录审计日志
