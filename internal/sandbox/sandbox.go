@@ -281,6 +281,16 @@ func (s *Sandbox) logAuditEvent(eventType AuditEventType, target string, success
 	s.auditLogger.Log(event)
 }
 
+// Config 返回沙箱配置
+func (s *Sandbox) Config() *config.SandboxConfig {
+	return s.config
+}
+
+// LogAuditEvent 记录审计事件
+func (s *Sandbox) LogAuditEvent(eventType AuditEventType, target string, success bool, message string) {
+	s.logAuditEvent(eventType, target, success, message)
+}
+
 // GetMetrics 获取沙箱指标
 func (s *Sandbox) GetMetrics() *Metrics {
 	s.metrics.mu.RLock()

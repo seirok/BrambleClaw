@@ -127,7 +127,7 @@ func (t *FileSystemTool) readFile(ctx context.Context, path string) (interface{}
 	t.sandbox.metrics.IncrementFileOp()
 
 	// 读取文件
-	data, err := readFileWithContext(ctx, path)
+	data, err := ReadFileWithContext(ctx, path)
 	if err != nil {
 		return nil, fmt.Errorf("读取文件失败(%s): %w", path, err)
 	}
@@ -244,7 +244,7 @@ func (t *FileSystemTool) logAudit(eventType AuditEventType, target string, succe
 
 // Helper 函数
 
-func readFileWithContext(ctx context.Context, path string) ([]byte, error) {
+func ReadFileWithContext(ctx context.Context, path string) ([]byte, error) {
 	type result struct {
 		data []byte
 		err  error
