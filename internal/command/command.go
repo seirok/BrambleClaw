@@ -8,14 +8,14 @@ import (
 	"fmt"
 )
 
-// ClearCommand clears the session
+// ClearCommand clears the session by creating a new one
 type ClearCommand struct{}
 
 // Name returns command name
 func (c *ClearCommand) Name() string { return "clear" }
 
 // Description returns command description
-func (c *ClearCommand) Description() string { return "清除当前会话历史" }
+func (c *ClearCommand) Description() string { return "创建新会话（保留旧会话记录）" }
 
 // Usage returns usage info
 func (c *ClearCommand) Usage() string { return "/clear" }
@@ -43,9 +43,9 @@ func (c *ClearCommand) Execute(ctx context.Context, agent interface{}, msg inter
 
 	var reply string
 	if err != nil {
-		reply = fmt.Sprintf("❌ 清理失败: %v", err)
+		reply = fmt.Sprintf("❌ 创建新会话失败: %v", err)
 	} else {
-		reply = fmt.Sprintf("✅ 会话已重置，删除了 %d 条消息。", count)
+		reply = fmt.Sprintf("✅ 已创建新会话，旧会话有 %d 条消息已保留。", count)
 	}
 	logger.L().Info().Str("command", "clear").Msg(reply)
 	// fmt.Println(reply)

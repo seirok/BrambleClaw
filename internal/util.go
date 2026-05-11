@@ -2,12 +2,20 @@ package util
 
 import (
 	"brambleclaw/internal/interfaces"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 )
+
+func GenerateRandomChatID() string {
+	bytes := make([]byte, 16)
+	rand.Read(bytes)
+	return hex.EncodeToString(bytes)
+}
 
 func BuildSessionKey(agentName, channelName, chatID string) string {
 	sessionKey := channelName + "::" + agentName + "::" + chatID

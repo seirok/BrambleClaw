@@ -9,22 +9,17 @@ import (
 	"brambleclaw/internal/store"
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 )
 
-func truncateWithEllipsis(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	return s[:maxLen] + "..."
-}
-
 // PersistentSessionManager 支持持久化的 Session 管理器
 type PersistentSessionManager struct {
 	workspace        string
+	currentSession   *Session
 	sessions         interfaces.Registry[*Session] // session key --> session
 	sessionsMeta     interfaces.Registry[*SessionMetadata]
 	sessionStore     *store.FileStorage[Session]
@@ -169,6 +164,44 @@ func (m *PersistentSessionManager) Get(ctx context.Context, id string) (*Session
 	return m.sessions.Get(ctx, id)
 }
 
+// GetCurrentSession 获取当前会话
+func (m *PersistentSessionManager) GetCurrentSession() *Session {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	return m.currentSession
+}
+
+// SetCurrentSession 设置当前会话
+func (m *PersistentSessionManager) SetCurrentSession(session *Session) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.currentSession = session
+}
+
+// SaveCurrentSession 保存当前会话
+func (m *PersistentSessionManager) SaveCurrentSession() error {
+	m.mu.RLock()
+	sess := m.currentSession
+	m.mu.RUnlock()
+
+	if sess == nil {
+		return fmt.Errorf("no current session")
+	}
+
+	sess.GetMetadata().FirstUserMessage = sess.GetFirstUserMessage()
+
+	if err := m.SaveSession(sess.Key); err != nil {
+		return err
+	}
+	if err := m.SaveSessionMeta(sess.Key); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // List 返回所有 session 列表
 func (m *PersistentSessionManager) List(ctx context.Context) []*Session {
 	m.mu.RLock()
@@ -216,6 +249,12 @@ func (m *PersistentSessionManager) SaveAllSessionsWithMeta() {
 		if err := m.SaveSession(sess.Key); err != nil {
 			logger.L().Error().Err(err).Str("session_key", sess.Key).Msg("保存 session 失败")
 		}
+
+		sessMeta := sess.GetMetadata()
+		if sessMeta.FirstUserMessage == "" {
+			sessMeta.FirstUserMessage = sess.GetFirstUserMessage()
+		}
+
 		if err := m.SaveSessionMeta(sess.Key); err != nil {
 			logger.L().Error().Err(err).Str("session_key", sess.Key).Msg("保存 session meta 失败")
 		}
@@ -230,6 +269,7 @@ func (m *PersistentSessionManager) GetOrCreate(sessionkey string) (*Session, boo
 	// 使用 Get 检查是否存在
 	sess, err := m.sessions.Get(m.ctx, sessionkey)
 	if err == nil {
+		m.currentSession = sess
 		return sess, false
 	}
 
@@ -253,12 +293,13 @@ func (m *PersistentSessionManager) GetOrCreate(sessionkey string) (*Session, boo
 		}
 
 		if err := m.sessionsMeta.Register(m.ctx, sessionkey, &SessionMetadata{
-			AgentName:    agentName,
-			ChannelName:  channelName,
-			ChatID:       chatID,
-			CreatedAt:    time.Now(),
-			MessageCount: 0,
-			TokenCount:   0,
+			AgentName:        agentName,
+			ChannelName:      channelName,
+			ChatID:           chatID,
+			CreatedAt:        time.Now(),
+			MessageCount:     0,
+			TokenCount:       0,
+			FirstUserMessage: "",
 		}); err != nil {
 
 			logger.L().Error().Err(err).Str("session_key", sessionkey).Msg("注册 session meta 失败")
@@ -269,7 +310,76 @@ func (m *PersistentSessionManager) GetOrCreate(sessionkey string) (*Session, boo
 		}
 	}
 
+	m.currentSession = sess
 	return sess, true
+}
+
+// RenewSession 创建一个新的 session，保留旧 session 的持久化文件
+func (m *PersistentSessionManager) RenewSession(sessionKey string) (newSessionKey string, oldMessageCount int, err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// 获取旧 session
+	sess, err := m.sessions.Get(m.ctx, sessionKey)
+	if err != nil {
+		return "", 0, fmt.Errorf("session not found: %s", sessionKey)
+	}
+
+	oldMessageCount = len(sess.Messages)
+
+	// 解析旧 session key 获取 agentName 和 channelName
+	agentName, channelName, _, err := util.ParseSessionKey(sessionKey)
+	if err != nil {
+		return "", 0, fmt.Errorf("failed to parse session key: %w", err)
+	}
+
+	// 生成新的 chatID 和 session key
+	newChatID := util.GenerateRandomChatID()
+	newSessionKey = util.BuildSessionKey(agentName, channelName, newChatID)
+
+	// 从注册中移除旧 session
+	if err := m.sessions.Unregister(m.ctx, sessionKey); err != nil {
+		// 继续，即使有错误
+	}
+	if err := m.sessionsMeta.Unregister(m.ctx, sessionKey); err != nil {
+		// 继续，即使有错误
+	}
+
+	// 创建新 session
+	newSess := &Session{
+		Key:        newSessionKey,
+		Messages:   []messages.BaseMessage{},
+		CreatedAt:  time.Now(),
+		UpdatedAt:  time.Now(),
+		Summarized: 0,
+	}
+	newSess.setStores(m.sessionStore, m.sessionMetaStore)
+
+	if err := m.sessions.Register(m.ctx, newSessionKey, newSess); err != nil {
+		return "", 0, fmt.Errorf("register new session failed: %w", err)
+	}
+
+	// 创建新的 session metadata
+	newMeta := &SessionMetadata{
+		AgentName:        agentName,
+		ChannelName:      channelName,
+		ChatID:           newChatID,
+		CreatedAt:        time.Now(),
+		UpdatedAt:        time.Now(),
+		MessageCount:     0,
+		TokenCount:       0,
+		FirstUserMessage: "",
+	}
+
+	if err := m.sessionsMeta.Register(m.ctx, newSessionKey, newMeta); err != nil {
+		return "", 0, fmt.Errorf("register new session meta failed: %w", err)
+	}
+
+	newSess.setMeta(newMeta)
+
+	m.currentSession = newSess
+
+	return newSessionKey, oldMessageCount, nil
 }
 
 // ClearSession 清空指定 session 的消息
@@ -288,13 +398,6 @@ func (m *PersistentSessionManager) ClearSessionWithMeta(sessionKey string) (int,
 	}
 
 	count := len(sess.Messages)
-
-	if err := m.sessionStore.Delete(m.ctx, util.GetSessionFile(util.SessionKeyToFile(sessionKey))); err != nil {
-		return 0, err
-	}
-	if err := m.sessionMetaStore.Delete(m.ctx, util.GetSessionMetaFile(util.SessionKeyToFile(sessionKey))); err != nil {
-		return 0, err
-	}
 
 	sess.Messages = []messages.BaseMessage{}
 	sess.Modified = true
@@ -415,4 +518,81 @@ func (m *PersistentSessionManager) SaveSession(sessionKey string) error {
 	}
 
 	return nil
+}
+
+// LoadAllMetadata loads all session metadata from disk (even those not in registry)
+func (m *PersistentSessionManager) LoadAllMetadata(ctx context.Context) ([]*SessionMetadata, error) {
+	m.mu.RLock()
+	dataDir := m.sessionMetaStore.DataDir
+	m.mu.RUnlock()
+
+	entries, err := os.ReadDir(dataDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []*SessionMetadata{}, nil
+		}
+		return nil, fmt.Errorf("failed to read metadata directory: %w", err)
+	}
+
+	var results []*SessionMetadata
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		fmt.Println(name)
+		if !strings.HasSuffix(name, interfaces.MetaSuffix) {
+			continue
+		}
+
+		m.mu.RLock()
+		meta, err := m.sessionMetaStore.Load(ctx, name)
+		m.mu.RUnlock()
+
+		if err == nil {
+			results = append(results, meta)
+		}
+	}
+	logger.L().Debug().Int("sessions", len(results)).Msg("Session meta data has been loaded")
+	return results, nil
+}
+
+// LoadSession loads a session from disk (creates if doesn't exist in registry)
+func (m *PersistentSessionManager) LoadSession(ctx context.Context, sessionKey string) (*Session, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Check if already exists
+	if sess, err := m.sessions.Get(ctx, sessionKey); err == nil {
+		return sess, nil
+	}
+
+	// Create session object and load from disk
+	sess := NewSession(sessionKey, m.workspace)
+	sess.setStores(m.sessionStore, m.sessionMetaStore)
+
+	if err := sess.Start(ctx); err != nil {
+		return nil, fmt.Errorf("failed to load session: %w", err)
+	}
+
+	// Ensure metadata is in registry
+	meta := sess.GetMetadata()
+	if meta != nil {
+		// Check if meta already exists first
+		if _, err := m.sessionsMeta.Get(ctx, sessionKey); err != nil {
+			if err := m.sessionsMeta.Register(ctx, sessionKey, meta); err != nil {
+				logger.L().Error().Err(err).Str("session_key", sessionKey).Msg("register session meta failed")
+			}
+		}
+		sess.setMeta(meta)
+	}
+
+	// Register session
+	if err := m.sessions.Register(ctx, sessionKey, sess); err != nil {
+		return nil, fmt.Errorf("failed to register session: %w", err)
+	}
+
+	m.currentSession = sess
+
+	return sess, nil
 }

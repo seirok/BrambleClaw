@@ -2,6 +2,7 @@ package session
 
 import (
 	util "brambleclaw/internal"
+	"brambleclaw/internal/logger"
 	"brambleclaw/internal/messages"
 	"brambleclaw/internal/store"
 	"context"
@@ -11,7 +12,14 @@ import (
 	"time"
 )
 
-const maxFirstUserMessageLen = 80
+const maxFirstUserMessageLen = 20
+
+func truncateWithEllipsis(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
+}
 
 type Session struct {
 	Key               string                 `json:"key"`
@@ -79,6 +87,18 @@ func (s *Session) Start(ctx context.Context) error {
 		return fmt.Errorf("加载 session meta 失败(%s): %w", s.Key, err)
 	}
 
+	// 自动补全 FirstUserMessage
+	if s.meta.FirstUserMessage == "" {
+		for _, msg := range s.Messages {
+			if msg.GetSource() == "user" {
+				s.meta.FirstUserMessage = truncateWithEllipsis(msg.ToText(), maxFirstUserMessageLen)
+				// 标记需要保存
+				s.Modified = true
+				break
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -119,15 +139,15 @@ func (s *Session) GetMetadata() *SessionMetadata {
 }
 
 type SessionMetadata struct {
-	AgentName         string    `json:"agent_name"`
-	ChannelName       string    `json:"channel_name"`
-	ChatID            string    `json:"chat_id"`
-	CreatedAt         time.Time `json:"created_at"`
-	UpdatedAt         time.Time `json:"updated_at"`
-	MessageCount      int       `json:"message_count"`
-	TokenCount        int       `json:"token_count"`
-	SessionSummary    string    `json:"session_summary,omitempty"` // 会话摘要（多条，带时间戳）
-	FirstUserMessage  string    `json:"first_user_message,omitempty"`
+	AgentName        string    `json:"agent_name"`
+	ChannelName      string    `json:"channel_name"`
+	ChatID           string    `json:"chat_id"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
+	MessageCount     int       `json:"message_count"`
+	TokenCount       int       `json:"token_count"`
+	SessionSummary   string    `json:"session_summary,omitempty"` // 会话摘要（多条，带时间戳）
+	FirstUserMessage string    `json:"first_user_message,omitempty"`
 }
 
 func (s *Session) LoadHistory() []messages.BaseMessage {
@@ -140,4 +160,18 @@ func (s *Session) LoadHistory() []messages.BaseMessage {
 func (s *Session) AddMessage(msg messages.BaseMessage) {
 	s.Messages = append(s.Messages, msg)
 	s.Modified = true
+}
+
+func (s *Session) GetFirstUserMessage() string {
+	if len(s.Messages) < 2 {
+		logger.L().Debug().Msg("no valid user message")
+		return ""
+	}
+
+	return s.Messages[1].ToText()
+}
+
+func (s *Session) GetChatID() string {
+	_, _, cid, _ := util.ParseSessionKey(s.Key)
+	return cid
 }

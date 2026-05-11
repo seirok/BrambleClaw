@@ -1,11 +1,13 @@
 package tui
 
 import (
+	util "brambleclaw/internal"
 	"brambleclaw/internal/bus"
 	"brambleclaw/internal/config"
 	"brambleclaw/internal/config/structs"
 	"brambleclaw/internal/events"
 	"brambleclaw/internal/logger"
+	"brambleclaw/internal/session"
 	"context"
 	"reflect"
 	"strings"
@@ -13,6 +15,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -79,7 +82,7 @@ type appModel struct {
 	width           int
 	height          int
 	msgBus          *bus.MessageBus
-	agentSession    string
+	currentChatID   string
 	quitting        bool
 	err             error
 	eventFocused    bool // true=event 面板有焦点
@@ -88,6 +91,10 @@ type appModel struct {
 	sidebarStats    sidebarStats
 	sidebarSections []structs.SidebarSection
 	focus           focusRegion
+	mode            appMode
+	resumeList      list.Model
+	sessionManager  *session.PersistentSessionManager
+	agentName       string
 }
 
 type keyMap struct {
@@ -143,13 +150,21 @@ const (
 	focusEvent                    // 2: 思考区
 )
 
+type appMode int
+
+const (
+	modeInput appMode = iota
+	modeWaiting
+	modeResume
+)
+
 // errMsg 用于错误传递
 type errMsg struct {
 	err error
 }
 
 // NewAppModel 创建 TUI 模型
-func NewAppModel(msgBus *bus.MessageBus, session string) appModel {
+func NewAppModel(msgBus *bus.MessageBus, session string, sessMgr *session.PersistentSessionManager, agentName string) appModel {
 	cfg := config.Get()
 	sidebarCfg := cfg.Sidebar
 
@@ -188,7 +203,7 @@ func NewAppModel(msgBus *bus.MessageBus, session string) appModel {
 		waiting:         false,
 		showBanner:      true,
 		msgBus:          msgBus,
-		agentSession:    session,
+		currentChatID:   session,
 		help:            help.New(),
 		sidebarEnabled:  sidebarCfg.Enabled,
 		sidebarWidth:    sidebarCfg.Width,
@@ -198,6 +213,9 @@ func NewAppModel(msgBus *bus.MessageBus, session string) appModel {
 			HookErrors: make(map[string]int64),
 			HookAvgMs:  make(map[string]float64),
 		},
+		mode:           modeInput,
+		sessionManager: sessMgr,
+		agentName:      agentName,
 	}
 }
 
@@ -218,6 +236,16 @@ func (m appModel) Init() tea.Cmd {
 }
 
 func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch m.mode {
+	case modeResume:
+		return m.updateResume(msg)
+	default: // modeInput and modeWaiting
+		return m.updateNormal(msg)
+	}
+}
+
+// updateNormal handles key messages in input and waiting modes
+func (m appModel) updateNormal(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var (
 		tiCmd  tea.Cmd
 		vpCmd  tea.Cmd
@@ -245,7 +273,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 
 		case tea.KeyEnter:
-			if m.waiting || m.eventFocused {
+			if m.mode == modeWaiting || m.eventFocused {
 				return m, nil
 			}
 			input := m.textInput.Value()
@@ -255,6 +283,50 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if input == "exit" || input == "quit" {
 				m.quitting = true
 				return m, tea.Quit
+			}
+			if input == "/resume" {
+				// 先持久化当前会话
+				if m.sessionManager != nil {
+					currentSession := m.sessionManager.GetCurrentSession()
+					if currentSession != nil {
+						if currentSession.GetFirstUserMessage() != "" {
+							err := m.sessionManager.SaveCurrentSession()
+							if err != nil {
+								logger.L().Error().Msg("Failed to save current session")
+							}
+						}
+					}
+				}
+				newModel, cmd, _ := m.initResumeList()
+				newModel.mode = modeResume
+				return newModel, cmd
+			}
+			if input == "/clear" {
+				// 创建新会话
+				if m.sessionManager != nil {
+					oldSessionKey := m.sessionManager.GetCurrentSession().Name()
+					newSessionKey, oldMsgCount, err := m.sessionManager.RenewSession(oldSessionKey)
+					if err != nil {
+						logger.L().Error().Err(err).Msg("Failed to renew session")
+						return m, nil
+					}
+
+					// 解析新的 session key 获取新的 chatID
+					_, _, newChatID, err := util.ParseSessionKey(newSessionKey)
+					if err == nil {
+						// 更新为新的 chatID
+						m.currentChatID = newChatID
+					}
+
+					logger.L().Info().Int("oldMessageCount", oldMsgCount).Msg("Session cleared, created new session")
+				}
+
+				// 清空消息显示
+				m.messages = []chatMessage{}
+				m.textInput.SetValue("")
+				m.viewport.SetContent(m.renderMessages())
+				m.showBanner = true
+				return m, nil
 			}
 
 			// 发送用户消息
@@ -271,7 +343,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				inboundMsg := &bus.InBoundMessage{
 					InChannel: "cli",
 					SenderID:  "cli",
-					ChatID:    m.agentSession,
+					ChatID:    m.currentChatID,
 					Content:   input,
 					TimeStamp: time.Now(),
 				}
@@ -281,7 +353,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}()
 
-			m.waiting = true
+			m.mode = modeWaiting
 			return m, m.spinner.Tick
 
 		case tea.KeyUp:
@@ -353,7 +425,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case spinner.TickMsg:
-		if m.waiting {
+		if m.mode == modeWaiting {
 			m.spinner, spCmd = m.spinner.Update(msg)
 		}
 
@@ -363,7 +435,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			IsUser:    false,
 			Timestamp: time.Now(),
 		})
-		m.waiting = false
+		m.mode = modeInput
 		m.showBanner = false
 		m.viewport.SetContent(m.renderMessages())
 		m.viewport.GotoBottom()

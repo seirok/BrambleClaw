@@ -11,6 +11,11 @@ func (m appModel) View() string {
 		return "Bye! 👋\n"
 	}
 
+	// Show resume list if in resume mode
+	if m.mode == modeResume {
+		return m.viewResume()
+	}
+
 	// ---颜色与宽度分配---
 	activeColor := lipgloss.Color("86")    // 亮青色
 	inactiveColor := lipgloss.Color("248") // 调亮后的灰色边框
@@ -138,4 +143,59 @@ func (m appModel) renderEvents() string {
 		sb.WriteString("\n")
 	}
 	return sb.String()
+}
+
+// viewResume renders the resume session list
+func (m appModel) viewResume() string {
+	// ---颜色与宽度分配---
+	activeColor := lipgloss.Color("86")    // 亮青色
+	inactiveColor := lipgloss.Color("248") // 调亮后的灰色边框
+	sidebarWidth := 32
+	mainWidth := m.width
+	if m.sidebarEnabled {
+		mainWidth = m.width - sidebarWidth
+	}
+
+	// 渲染左侧面板 (Resume List)
+	resumeStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(activeColor).
+		Padding(0, 1)
+
+	// Get available height
+	availableHeight := m.viewport.Height + m.eventViewport.Height + 1
+	resumeStyle.Height(availableHeight)
+
+	resumeBox := resumeStyle.Width(mainWidth - 2).Render(m.resumeList.View())
+
+	// --- 3. 侧边栏对齐渲染 ---
+	var rightPanel string
+	if m.sidebarEnabled {
+		leftHeight := lipgloss.Height(resumeBox)
+		sidebarStyle := lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(inactiveColor).
+			Padding(0, 1).
+			Width(sidebarWidth - 2).
+			Height(leftHeight - 2)
+
+		rightPanel = sidebarStyle.Render(m.renderSidebar())
+	}
+
+	// 底部提示区
+	hintStyle := lipgloss.NewStyle().
+		Border(lipgloss.NormalBorder(), true, false, true, false).
+		BorderForeground(inactiveColor).
+		Padding(0, 0, 0, 1).
+		Width(m.width).
+		Foreground(lipgloss.Color("240"))
+	hintBox := hintStyle.Render("↑↓ 导航 | Enter 选择 | Esc 返回")
+
+	// 组装最终布局
+	mainLayout := lipgloss.JoinHorizontal(lipgloss.Top, resumeBox, rightPanel)
+
+	return lipgloss.JoinVertical(lipgloss.Left,
+		mainLayout,
+		hintBox,
+	)
 }

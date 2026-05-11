@@ -360,12 +360,12 @@ func (a *Agent) HandleMessage(ctx context.Context, msg *bus.InBoundMessage) {
 }
 
 func (a *Agent) ClearSession(sessionKey string) (int, error) {
-	count, err := a.SessionMgr().ClearSessionWithMeta(sessionKey)
+	_, count, err := a.SessionMgr().RenewSession(sessionKey)
 	if err != nil {
-		logger.L().Error().Err(err).Msg("Failed to clear session")
+		logger.L().Error().Err(err).Msg("Failed to renew session")
 		return 0, err
 	}
-	logger.L().Info().Int("count", count).Msg("Session cleared")
+	logger.L().Info().Int("count", count).Msg("Session renewed with new key")
 	return count, nil
 }
 

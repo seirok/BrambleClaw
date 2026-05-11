@@ -1,6 +1,7 @@
 package interfaces
 
 const DefaultAgentName = "main"
+const CliChannelName = "cli"
 
 type ManagerStatus int
 
