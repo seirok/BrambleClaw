@@ -15,6 +15,13 @@ import (
 	"time"
 )
 
+func truncateWithEllipsis(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
+}
+
 // PersistentSessionManager 支持持久化的 Session 管理器
 type PersistentSessionManager struct {
 	workspace        string
@@ -315,6 +322,16 @@ func (m *PersistentSessionManager) Update(session *Session, tokenUsed int) {
 	if err != nil {
 		logger.L().Error().Err(err).Str("session_key", session.Key).Msg("session 和 sessionMeta 状态不一致")
 		return
+	}
+
+	// Auto-set first user message
+	if sessionMeta.FirstUserMessage == "" {
+		for _, msg := range session.Messages {
+			if msg.GetSource() == "user" {
+				sessionMeta.FirstUserMessage = truncateWithEllipsis(msg.ToText(), maxFirstUserMessageLen)
+				break
+			}
+		}
 	}
 
 	sessionMeta.UpdatedAt = time.Now()
