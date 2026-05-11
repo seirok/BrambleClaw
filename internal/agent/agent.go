@@ -326,6 +326,20 @@ func (a *Agent) HandleMessage(ctx context.Context, msg *bus.InBoundMessage) {
 	response, err := a.OnMessages(ctx, []messages.ChatMessage{chatMsg})
 	if err != nil {
 		logger.L().Error().Err(err).Msg("Failed to process message via OnMessages")
+		// Type 2: route program error to TUI
+		errMsg := messages.NewAgentErrorMessage(a.name, err.Error()).WithIsProgramError(true)
+		errOutData := messages.ToOutBoundData(errMsg, msg.ChatID, msg.InChannel, msg.ID)
+		errOutbound := &bus.OutBoundMessage{
+			ChatID:     errOutData.ChatID,
+			OutChannel: errOutData.Channel,
+			Content:    errOutData.Content,
+			MsgType:    errOutData.MsgType,
+			ReplyTo:    errOutData.ReplyTo,
+			TimeStamp:  errOutData.TimeStamp,
+		}
+		if pubErr := a.Bus().PublishOutBoundMessage(ctx, errOutbound); pubErr != nil {
+			logger.L().Error().Err(pubErr).Str("channel", errOutbound.OutChannel).Msg("Error publishing error response")
+		}
 		return
 	}
 
@@ -335,6 +349,7 @@ func (a *Agent) HandleMessage(ctx context.Context, msg *bus.InBoundMessage) {
 		ChatID:     outData.ChatID,
 		OutChannel: outData.Channel,
 		Content:    outData.Content,
+		MsgType:    outData.MsgType,
 		ReplyTo:    outData.ReplyTo,
 		TimeStamp:  outData.TimeStamp,
 	}

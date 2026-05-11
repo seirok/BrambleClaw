@@ -50,6 +50,12 @@ func (a *toolAdapter) Parameters() map[string]interface{} {
 	return a.parameters
 }
 
+// responsePayload carries response content and message type from CLIChannel to TUI
+type responsePayload struct {
+	Content string
+	MsgType string
+}
+
 var agentCmd = &cobra.Command{
 	Use:   "agent",
 	Short: "启动 AI 代理服务",
@@ -199,20 +205,20 @@ func runAgent(cmd *cobra.Command, args []string) error {
 		p := tea.NewProgram(model, tea.WithAltScreen())
 
 		// 获取 CLIChannel 并设置回调
-		var responseChan chan string = make(chan string, 1)
+		var responseChan chan responsePayload = make(chan responsePayload, 1)
 		cliChan, err := channelManager.Get(ctx, "cli")
 		if err == nil {
 			if c, ok := cliChan.(*channel.CLIChannel); ok {
-				c.SetOnResponse(func(content string) {
-					responseChan <- content
+				c.SetOnResponse(func(content, msgType string) {
+					responseChan <- responsePayload{Content: content, MsgType: msgType}
 				})
 			}
 		}
 
 		// 响应通道 -> TUI
 		go func() {
-			for content := range responseChan {
-				p.Send(tui.AgentResponseMsg{Content: content})
+			for payload := range responseChan {
+				p.Send(tui.AgentResponseMsg{Content: payload.Content, MsgType: payload.MsgType})
 			}
 		}()
 
