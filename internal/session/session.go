@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+const maxFirstUserMessageLen = 80
+
 type Session struct {
 	Key               string                 `json:"key"`
 	Messages          []messages.BaseMessage `json:"messages"` // 会话消息
@@ -117,14 +119,15 @@ func (s *Session) GetMetadata() *SessionMetadata {
 }
 
 type SessionMetadata struct {
-	AgentName      string    `json:"agent_name"`
-	ChannelName    string    `json:"channel_name"`
-	ChatID         string    `json:"chat_id"`
-	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
-	MessageCount   int       `json:"message_count"`
-	TokenCount     int       `json:"token_count"`
-	SessionSummary string    `json:"session_summary,omitempty"` // 会话摘要（多条，带时间戳）
+	AgentName         string    `json:"agent_name"`
+	ChannelName       string    `json:"channel_name"`
+	ChatID            string    `json:"chat_id"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
+	MessageCount      int       `json:"message_count"`
+	TokenCount        int       `json:"token_count"`
+	SessionSummary    string    `json:"session_summary,omitempty"` // 会话摘要（多条，带时间戳）
+	FirstUserMessage  string    `json:"first_user_message,omitempty"`
 }
 
 func (s *Session) LoadHistory() []messages.BaseMessage {
