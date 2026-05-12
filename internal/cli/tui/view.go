@@ -26,7 +26,7 @@ func (m appModel) View() string {
 		mainWidth = m.width - sidebarWidth
 	}
 
-	// 渲染左侧面板 (Chat + Thinking)
+	// chat box
 	chatStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		Width(mainWidth-2).
@@ -38,7 +38,10 @@ func (m appModel) View() string {
 	} else {
 		chatStyle = chatStyle.BorderForeground(inactiveColor)
 	}
-	chatBox := chatStyle.Render(m.renderMessages())
+
+	m.viewport.SetContent(m.renderMessages())
+	chatBox := chatStyle.Render(m.viewport.View())
+	// 	chatBox := chatStyle.Render(m.renderMessages())
 
 	// 思考区样式
 	eventStyle := lipgloss.NewStyle().
@@ -120,10 +123,12 @@ func (m appModel) renderMessages() string {
 		var line string
 		if msg.IsUser {
 			line = userStyle.Render("You: "+msg.Content) + "\n"
+		} else if msg.IsError {
+			line = errorStyle.Render("! "+msg.Content) + "\n"
 		} else {
 			line = agentStyle.Render("🐱: "+msg.Content) + "\n"
 		}
-		messagesView += line + "\n\n"
+		messagesView += line + "\n"
 	}
 
 	if m.waiting {

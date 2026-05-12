@@ -53,6 +53,12 @@ func (a *toolAdapter) Parameters() map[string]interface{} {
 	return a.parameters
 }
 
+// responsePayload carries response content and message type from CLIChannel to TUI
+type responsePayload struct {
+	Content string
+	MsgType string
+}
+
 var agentCmd = &cobra.Command{
 	Use:   "agent",
 	Short: "启动 AI 代理服务",
@@ -66,7 +72,7 @@ var (
 
 func init() {
 	agentCmd.Flags().StringVarP(&agentMessage, "message", "m", "", "非交互式执行：发送一条消息后退出")
-	//	agentCmd.Flags().StringVarP(&agentSession, "session", "s", "default", "指定 Session Key，保留上下文对话")
+	agentCmd.Flags().StringVarP(&agentSession, "session", "s", "default", "指定 Session Key，保留上下文对话")
 
 	rootCmd.AddCommand(agentCmd)
 }
@@ -179,7 +185,38 @@ func runAgent(cmd *cobra.Command, args []string) error {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
-	// ========== 交互式执行 ==========
+	// 交互式与非交互式执行
+	if agentMessage != "" {
+		// 非交互式执行
+		inboundMsg := &bus.InBoundMessage{
+			InChannel: "cli",
+			SenderID:  "cli",
+			ChatID:    agentSession,
+			Content:   agentMessage,
+			TimeStamp: time.Now(),
+		}
+
+		// 订阅接收返回的消息
+		sub := msgBus.Subscribe()
+		defer msgBus.Unsubscribe(sub.ID)
+
+		if err := msgBus.PublishInBoundMessage(ctx, inboundMsg); err != nil {
+			return fmt.Errorf("发送消息失败: %w", err)
+		}
+
+		select {
+		case outMsg := <-sub.Channel:
+			if outMsg.ReplyTo == inboundMsg.ID {
+				time.Sleep(100 * time.Millisecond)
+			}
+		case <-time.After(30 * time.Second):
+			return fmt.Errorf("执行超时")
+		case <-ctx.Done():
+		case <-sigChan:
+			fmt.Println("\n收到退出信号...")
+		}
+	} else {
+		// ========== 交互式执行 ==========
 
 	// 创建 EventBus 并注册 observers
 	tvCfg := cfg.Hooks.ThinkingVisibility
@@ -195,23 +232,23 @@ func runAgent(cmd *cobra.Command, args []string) error {
 	model := tui.NewAppModel(msgBus, currentChatID, sessMgr, agentName)
 	p := tea.NewProgram(model, tea.WithAltScreen())
 
-	// 获取 CLIChannel 并设置回调
-	var responseChan chan string = make(chan string, 1)
-	cliChan, err := channelManager.Get(ctx, "cli")
-	if err == nil {
-		if c, ok := cliChan.(*channel.CLIChannel); ok {
-			c.SetOnResponse(func(content string) {
-				responseChan <- content
-			})
+		// 获取 CLIChannel 并设置回调
+		var responseChan chan responsePayload = make(chan responsePayload, 1)
+		cliChan, err := channelManager.Get(ctx, "cli")
+		if err == nil {
+			if c, ok := cliChan.(*channel.CLIChannel); ok {
+				c.SetOnResponse(func(content, msgType string) {
+					responseChan <- responsePayload{Content: content, MsgType: msgType}
+				})
+			}
 		}
-	}
 
-	// 响应通道 -> TUI
-	go func() {
-		for content := range responseChan {
-			p.Send(tui.AgentResponseMsg{Content: content})
-		}
-	}()
+		// 响应通道 -> TUI
+		go func() {
+			for payload := range responseChan {
+				p.Send(tui.AgentResponseMsg{Content: payload.Content, MsgType: payload.MsgType})
+			}
+		}()
 
 	// EventBus -> TUI
 	if eventBus != nil {
