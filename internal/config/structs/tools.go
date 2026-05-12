@@ -28,11 +28,35 @@ type UrlParseConfig struct {
 	Enabled bool `json:"enabled" mapstructure:"enabled"`
 }
 
+// GlobConfig Glob 工具配置
+type GlobConfig struct {
+	Enabled bool `json:"enabled" mapstructure:"enabled"`
+}
+
+// GrepConfig Grep 工具配置
+type GrepConfig struct {
+	Enabled bool `json:"enabled" mapstructure:"enabled"`
+}
+
+// ReadConfig 读取工具配置
+type ReadConfig struct {
+	Enabled bool `json:"enabled" mapstructure:"enabled"`
+}
+
+// WriteConfig 写入工具配置
+type WriteConfig struct {
+	Enabled bool `json:"enabled" mapstructure:"enabled"`
+}
+
 // ToolsConfig 工具配置
 type ToolsConfig struct {
 	MCP       MCPConfig       `json:"mcp" mapstructure:"mcp"`
 	WebSearch WebSearchConfig `json:"web_search" mapstructure:"web_search"`
 	UrlParse  UrlParseConfig  `json:"url_parse" mapstructure:"url_parse"`
+	Glob      GlobConfig      `json:"glob" mapstructure:"glob"`
+	Grep      GrepConfig      `json:"grep" mapstructure:"grep"`
+	Read      ReadConfig      `json:"read" mapstructure:"read"`
+	Write     WriteConfig     `json:"write" mapstructure:"write"`
 }
 
 // DefaultToolsConfig 返回默认工具配置
@@ -48,6 +72,18 @@ func DefaultToolsConfig() ToolsConfig {
 		},
 		UrlParse: UrlParseConfig{
 			Enabled: false,
+		},
+		Glob: GlobConfig{
+			Enabled: true,
+		},
+		Grep: GrepConfig{
+			Enabled: true,
+		},
+		Read: ReadConfig{
+			Enabled: true,
+		},
+		Write: WriteConfig{
+			Enabled: true,
 		},
 	}
 }
@@ -70,6 +106,22 @@ func (c *ToolsConfig) Validate() (hasError bool) {
 
 	if !c.UrlParse.Enabled {
 		c.UrlParse.Enabled = defaults.UrlParse.Enabled
+	}
+
+	if !c.Glob.Enabled {
+		c.Glob.Enabled = defaults.Glob.Enabled
+	}
+
+	if !c.Grep.Enabled {
+		c.Grep.Enabled = defaults.Grep.Enabled
+	}
+
+	if !c.Read.Enabled {
+		c.Read.Enabled = defaults.Read.Enabled
+	}
+
+	if !c.Write.Enabled {
+		c.Write.Enabled = defaults.Write.Enabled
 	}
 
 	return false

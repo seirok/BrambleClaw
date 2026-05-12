@@ -127,7 +127,7 @@ func (t *FileSystemTool) readFile(ctx context.Context, path string) (interface{}
 	t.sandbox.metrics.IncrementFileOp()
 
 	// 读取文件
-	data, err := readFileWithContext(ctx, path)
+	data, err := ReadFileWithContext(ctx, path)
 	if err != nil {
 		return nil, fmt.Errorf("读取文件失败(%s): %w", path, err)
 	}
@@ -161,7 +161,7 @@ func (t *FileSystemTool) writeFile(ctx context.Context, path string, content str
 	}
 
 	// 写入文件
-	if err := writeFileWithContext(ctx, path, []byte(content), 0644); err != nil {
+	if err := WriteFileWithContext(ctx, path, []byte(content), 0644); err != nil {
 		return nil, fmt.Errorf("写入文件失败(%s): %w", path, err)
 	}
 
@@ -244,7 +244,7 @@ func (t *FileSystemTool) logAudit(eventType AuditEventType, target string, succe
 
 // Helper 函数
 
-func readFileWithContext(ctx context.Context, path string) ([]byte, error) {
+func ReadFileWithContext(ctx context.Context, path string) ([]byte, error) {
 	type result struct {
 		data []byte
 		err  error
@@ -264,7 +264,7 @@ func readFileWithContext(ctx context.Context, path string) ([]byte, error) {
 	}
 }
 
-func writeFileWithContext(ctx context.Context, path string, data []byte, perm uint32) error {
+func WriteFileWithContext(ctx context.Context, path string, data []byte, perm uint32) error {
 	type result struct {
 		err error
 	}
@@ -281,6 +281,36 @@ func writeFileWithContext(ctx context.Context, path string, data []byte, perm ui
 	case res := <-ch:
 		return res.err
 	}
+}
+
+func AppendFileWithContext(ctx context.Context, path string, data []byte, perm uint32) error {
+	type result struct {
+		err error
+	}
+
+	ch := make(chan result, 1)
+	go func() {
+		var err error
+		file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, os.FileMode(perm))
+		if err != nil {
+			ch <- result{err}
+			return
+		}
+		defer file.Close()
+		_, err = file.Write(data)
+		ch <- result{err}
+	}()
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case res := <-ch:
+		return res.err
+	}
+}
+
+func EnsureDir(path string) error {
+	return ensureDir(path)
 }
 
 func listDirWithContext(ctx context.Context, path string) ([]os.DirEntry, error) {
