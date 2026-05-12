@@ -106,6 +106,7 @@ func (a *AgentManager) Initialize(ctx context.Context, cfg any) error {
 		readTool := tools.NewReadTool(sandBox)
 		writeTool := tools.NewWriteTool(sandBox)
 		listTool := tools.NewListTool(sandBox)
+		grantPermTool := tools.NewGrantPermissionTool(sandBox)
 		a.toolRegistry = tools.NewToolRegistry()
 		if err := a.toolRegistry.Register(ctx, "web_search", websearchTool); err != nil {
 			return fmt.Errorf("注册 web_search 工具失败: %w", err)
@@ -130,6 +131,9 @@ func (a *AgentManager) Initialize(ctx context.Context, cfg any) error {
 		}
 		if err := a.toolRegistry.Register(ctx, "list", listTool); err != nil {
 			return fmt.Errorf("注册 list 工具失败: %w", err)
+		}
+		if err := a.toolRegistry.Register(ctx, "grant_permission", grantPermTool); err != nil {
+			return fmt.Errorf("注册 grant_permission 工具失败: %w", err)
 		}
 
 		agentToolRegistry := tools.NewToolRegistry()

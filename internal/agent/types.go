@@ -37,6 +37,20 @@ type ToolCall struct {
 	Function ToolFunction `json:"function"`
 }
 
+// UnmarshalJSON 自定义反序列化，确保 type 字段默认为 "function"
+func (tc *ToolCall) UnmarshalJSON(data []byte) error {
+	type Alias ToolCall
+	var aux Alias
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	*tc = ToolCall(aux)
+	if tc.Type == "" {
+		tc.Type = "function"
+	}
+	return nil
+}
+
 type ToolFunction struct {
 	Name      string `json:"name"`
 	Arguments string `json:"arguments"`

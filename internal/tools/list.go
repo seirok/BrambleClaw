@@ -90,7 +90,7 @@ func (t *ListTool) listFiles(ctx context.Context, path string) (interface{}, err
 	}
 
 	// 验证路径
-	if err := t.sandbox.ValidatePath(path, false); err != nil {
+	if err := t.sandbox.ValidatePath(ctx, path, false); err != nil {
 		logger.L().Error().Err(err).Str("path", path).Msg("ListTool: path validation failed")
 		return nil, err
 	}

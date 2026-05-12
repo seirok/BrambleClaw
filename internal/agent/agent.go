@@ -8,6 +8,7 @@ import (
 	"brambleclaw/internal/interfaces"
 	"brambleclaw/internal/logger"
 	"brambleclaw/internal/messages"
+	"brambleclaw/internal/sandbox"
 	"brambleclaw/internal/session"
 	"brambleclaw/internal/skill"
 	"brambleclaw/internal/tools"
@@ -209,8 +210,9 @@ func (a *Agent) OnMessages(ctx context.Context, msgs []messages.ChatMessage) (*R
 
 	historyMsg := sess.LoadHistory()
 
-	// 使用 Orchestrator 处理
-	resp, err := a.Orchestrator().Run(ctx, historyMsg)
+	// 使用 Orchestrator 处理（注入 session key 到 context）
+	toolCtx := sandbox.ContextWithSessionKey(ctx, sessKey)
+	resp, err := a.Orchestrator().Run(toolCtx, historyMsg)
 	if err != nil {
 		return nil, err
 	}

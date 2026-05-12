@@ -5,6 +5,7 @@ import (
 	"brambleclaw/internal/hook"
 	"brambleclaw/internal/logger"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -19,8 +20,42 @@ import (
 type Sandbox struct {
 	config      *config.SandboxConfig
 	auditLogger *AuditLogger
+	permissions *SessionPermissionStore
 	mu          sync.RWMutex
 	metrics     *Metrics
+}
+
+// ErrPathNeedsConfirmation 表示路径需要用户确认才能写入
+var ErrPathNeedsConfirmation = errors.New("path requires user confirmation")
+
+// PathNeedsConfirmationError 需要用户确认的路径错误
+type PathNeedsConfirmationError struct {
+	Path      string
+	Workspace string
+}
+
+func (e *PathNeedsConfirmationError) Error() string {
+	return fmt.Sprintf("需要用户确认才能写入: %s (超出工作目录 %s)", e.Path, e.Workspace)
+}
+
+func (e *PathNeedsConfirmationError) Unwrap() error {
+	return ErrPathNeedsConfirmation
+}
+
+// ErrCommandNeedsConfirmation 表示命令需要用户确认才能执行
+var ErrCommandNeedsConfirmation = errors.New("command requires user confirmation")
+
+// CommandNeedsConfirmationError 需要用户确认的命令错误
+type CommandNeedsConfirmationError struct {
+	Command string
+}
+
+func (e *CommandNeedsConfirmationError) Error() string {
+	return fmt.Sprintf("需要用户确认才能执行命令: %s (不在白名单中)", e.Command)
+}
+
+func (e *CommandNeedsConfirmationError) Unwrap() error {
+	return ErrCommandNeedsConfirmation
 }
 
 // Metrics 沙箱指标
@@ -50,6 +85,7 @@ func NewSandbox(config *config.SandboxConfig, auditLogger *AuditLogger) (*Sandbo
 	s := &Sandbox{
 		config:      config,
 		auditLogger: auditLogger,
+		permissions: NewSessionPermissionStore(),
 		metrics:     &Metrics{},
 	}
 
@@ -65,7 +101,7 @@ func (s *Sandbox) IsEnabled() bool {
 }
 
 // ValidatePath 验证路径是否在允许范围内
-func (s *Sandbox) ValidatePath(path string, forWrite bool) error {
+func (s *Sandbox) ValidatePath(ctx context.Context, path string, forWrite bool) error {
 	if !s.IsEnabled() {
 		return nil
 	}
@@ -109,15 +145,25 @@ func (s *Sandbox) ValidatePath(path string, forWrite bool) error {
 	if strings.HasPrefix(rel, "..") {
 		// 路径在工作目录外
 		if forWrite {
-			// 写入操作：检查是否在 AllowWritePaths 中
+			// 1. 检查 session 级别的临时权限
+			sessionKey := SessionKeyFromContext(ctx)
+			if sessionKey != "" && s.permissions.IsGranted(sessionKey, absPath) {
+				s.logAuditEvent(AuditEventPathEscape, absPath, true, "session 临时写入权限已授权")
+				return nil
+			}
+
+			// 2. 检查 AllowWritePaths 配置
 			if s.isPathInAllowWritePathsList(absPath) {
 				s.logAuditEvent(AuditEventPathEscape, absPath, true, "允许写入配置的外部路径")
 				return nil
 			}
-			// 不在允许列表中，拒绝
-			s.logAuditEvent(AuditEventPathEscape, absPath, false, "路径逃逸被拒绝")
-			s.metrics.IncrementBlocked()
-			return fmt.Errorf("路径逃逸: %s 超出工作目录 %s", absPath, workspaceAbs)
+
+			// 3. 需要用户确认
+			s.logAuditEvent(AuditEventPathEscape, absPath, false, "路径需要用户确认")
+			return &PathNeedsConfirmationError{
+				Path:      absPath,
+				Workspace: workspaceAbs,
+			}
 		} else {
 			// 读取操作：检查 AllowReadOutside
 			if s.config.AllowReadOutside {
@@ -147,7 +193,7 @@ func (s *Sandbox) isPathInAllowWritePathsList(path string) bool {
 }
 
 // ValidateCommand 验证命令是否在白名单中
-func (s *Sandbox) ValidateCommand(command string) error {
+func (s *Sandbox) ValidateCommand(ctx context.Context, command string) error {
 	if !s.IsEnabled() {
 		return nil
 	}
@@ -172,15 +218,25 @@ func (s *Sandbox) ValidateCommand(command string) error {
 	}
 
 	// 检查是否在白名单中
-	if !IsCommandAllowed(s.config, cmdName) {
-		s.logAuditEvent(AuditEventCommandBlock, command, false, "命令不在白名单中")
-		s.metrics.IncrementBlocked()
-		return fmt.Errorf("命令 '%s' 不在允许的白名单中", cmdName)
+	if IsCommandAllowed(s.config, cmdName) {
+		s.logAuditEvent(AuditEventCommandStart, command, true, "命令验证通过")
+		logger.L().Debug().Str("command", command).Msg("validation pass")
+		return nil
 	}
 
-	s.logAuditEvent(AuditEventCommandStart, command, true, "命令验证通过")
-	logger.L().Debug().Str("command", command).Msg("validation pass")
-	return nil
+	// 不在白名单：检查 session 级别的临时命令权限
+	sessionKey := SessionKeyFromContext(ctx)
+	if sessionKey != "" && s.permissions.IsCommandGranted(sessionKey, cmdName) {
+		s.logAuditEvent(AuditEventCommandStart, command, true, "session 临时命令权限已授权")
+		return nil
+	}
+
+	// 需要用户确认
+	s.logAuditEvent(AuditEventCommandBlock, command, false, "命令不在白名单中，需要用户确认")
+	s.metrics.IncrementBlocked()
+	return &CommandNeedsConfirmationError{
+		Command: cmdName,
+	}
 }
 
 // ExecuteCommand 在沙箱中执行命令
@@ -191,7 +247,7 @@ func (s *Sandbox) ExecuteCommand(ctx context.Context, command string) (string, e
 	}
 
 	// 验证命令
-	if err := s.ValidateCommand(command); err != nil {
+	if err := s.ValidateCommand(ctx, command); err != nil {
 		return "", err
 	}
 
@@ -280,6 +336,11 @@ func (s *Sandbox) logAuditEvent(eventType AuditEventType, target string, success
 // Config 返回沙箱配置
 func (s *Sandbox) Config() *config.SandboxConfig {
 	return s.config
+}
+
+// Permissions 返回 session 权限存储
+func (s *Sandbox) Permissions() *SessionPermissionStore {
+	return s.permissions
 }
 
 // LogAuditEvent 记录审计事件

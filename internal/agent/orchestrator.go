@@ -75,10 +75,11 @@ func (o *Orchestrator) UpdateHistory(llmResp *LLMResponse, historyMsg *[]ChatMsg
 
 	//
 	rawMsg := llmResp.Choices[0].Message
+
 	respMsg := ChatMsg{
-		Role:      Role(rawMsg.Role), // 如果 Role 是别名，记得转换
+		Role:      Role(rawMsg.Role),
 		Content:   rawMsg.Content,
-		ToolCalls: rawMsg.ToolCalls, // 只要 ToolCall 的结构一致，可以直接赋值
+		ToolCalls: rawMsg.ToolCalls,
 	}
 	*historyMsg = append(*historyMsg, respMsg)
 	return nil
