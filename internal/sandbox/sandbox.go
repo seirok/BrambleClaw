@@ -3,6 +3,7 @@ package sandbox
 import (
 	"brambleclaw/internal/config"
 	"brambleclaw/internal/hook"
+	"brambleclaw/internal/logger"
 	"context"
 	"fmt"
 	"os"
@@ -104,50 +105,44 @@ func (s *Sandbox) ValidatePath(path string, forWrite bool) error {
 		return fmt.Errorf("计算相对路径失败: %w", err)
 	}
 
-	// 检查是否逃逸出工作目录
+	// 检查路径是否被允许
 	if strings.HasPrefix(rel, "..") {
-		// 尝试读取外部文件
-		if !forWrite && s.config.AllowReadOutside {
-			// 允许读取，但需要审计
-			s.logAuditEvent(AuditEventPathEscape, absPath, true, "允许读取工作目录外的文件")
-			return nil
-		}
-
-		// 写入操作或不允许读取外部文件
-		s.logAuditEvent(AuditEventPathEscape, absPath, false, "路径逃逸被拒绝")
-		s.metrics.IncrementBlocked()
-		return fmt.Errorf("路径逃逸: %s 超出工作目录 %s", absPath, workspaceAbs)
-	}
-
-	// 检查写入权限
-	if forWrite {
-		// 检查是否在允许的写入路径列表中
-		if !s.isPathInAllowedWritePaths(absPath) {
-			s.logAuditEvent(AuditEventAccessDenied, absPath, false, "写入路径不在允许列表中")
+		// 路径在工作目录外
+		if forWrite {
+			// 写入操作：检查是否在 AllowWritePaths 中
+			if s.isPathInAllowWritePathsList(absPath) {
+				s.logAuditEvent(AuditEventPathEscape, absPath, true, "允许写入配置的外部路径")
+				return nil
+			}
+			// 不在允许列表中，拒绝
+			s.logAuditEvent(AuditEventPathEscape, absPath, false, "路径逃逸被拒绝")
 			s.metrics.IncrementBlocked()
-			return fmt.Errorf("写入路径不在允许列表中: %s", absPath)
+			return fmt.Errorf("路径逃逸: %s 超出工作目录 %s", absPath, workspaceAbs)
+		} else {
+			// 读取操作：检查 AllowReadOutside
+			if s.config.AllowReadOutside {
+				s.logAuditEvent(AuditEventPathEscape, absPath, true, "允许读取工作目录外的文件")
+				return nil
+			}
+			// 不允许读取外部文件
+			s.logAuditEvent(AuditEventPathEscape, absPath, false, "路径逃逸被拒绝")
+			s.metrics.IncrementBlocked()
+			return fmt.Errorf("路径逃逸: %s 超出工作目录 %s", absPath, workspaceAbs)
 		}
 	}
 
+	// 路径在工作目录内：总是允许
 	return nil
 }
 
-// 检查路径是否在允许的写入路径列表中
-func (s *Sandbox) isPathInAllowedWritePaths(path string) bool {
-	// 首先检查是否在工作目录内
-	workspaceAbs, _ := filepath.Abs(s.config.Workspace)
-	if strings.HasPrefix(path, workspaceAbs) {
-		return true
-	}
-
-	// 检查是否在额外允许的写入路径中
+// 检查路径是否在允许的写入路径列表中（仅检查 AllowWritePaths，不包含工作目录）
+func (s *Sandbox) isPathInAllowWritePathsList(path string) bool {
 	for _, pattern := range s.config.FileSystem.AllowWritePaths {
 		matched, err := regexp.MatchString(pattern, path)
 		if err == nil && matched {
 			return true
 		}
 	}
-
 	return false
 }
 
@@ -184,6 +179,7 @@ func (s *Sandbox) ValidateCommand(command string) error {
 	}
 
 	s.logAuditEvent(AuditEventCommandStart, command, true, "命令验证通过")
+	logger.L().Debug().Str("command", command).Msg("validation pass")
 	return nil
 }
 
@@ -345,4 +341,3 @@ func ensureDir(path string) error {
 	}
 	return nil
 }
-

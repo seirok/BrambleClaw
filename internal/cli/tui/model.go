@@ -188,9 +188,9 @@ func NewAppModel(msgBus *bus.MessageBus, session string, sessMgr *session.Persis
 
 	vp := viewport.New(80, 20)
 	eventVp := viewport.New(80, 10)
-	eventVp.Style = lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("240"))
+	// eventVp.Style = lipgloss.NewStyle().
+	//	Border(lipgloss.RoundedBorder()).
+	//	BorderForeground(lipgloss.Color("240"))
 
 	sidebarVp := viewport.New(sidebarCfg.Width, 30)
 	sidebarVp.Style = lipgloss.NewStyle().

@@ -1,6 +1,7 @@
 package sandbox
 
 import (
+	"brambleclaw/internal/logger"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -54,6 +55,7 @@ func (t *ShellTool) Parameters() map[string]interface{} {
 
 // Execute 执行工具
 func (t *ShellTool) Execute(ctx context.Context, argStr string) (interface{}, error) {
+	logger.L().Info().Str("tool", t.name).Msg("tool start to execute")
 	// 解析参数
 	var args struct {
 		Command    string `json:"command"`

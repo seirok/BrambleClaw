@@ -1,6 +1,8 @@
 package structs
 
 import (
+	util "brambleclaw/internal"
+	"path/filepath"
 	"time"
 
 	"brambleclaw/internal/logger"
@@ -47,10 +49,11 @@ type SandboxConfig struct {
 
 // DefaultSandboxConfig 返回默认沙箱配置
 func DefaultSandboxConfig() SandboxConfig {
+	sandboxDir := filepath.Join(util.GetSystemPath(), "sandbox")
 	return SandboxConfig{
-		Enabled:          false,
-		Workspace:        "sandbox",
-		AllowReadOutside: false,
+		Enabled:          true,
+		Workspace:        sandboxDir,
+		AllowReadOutside: true,
 		FileSystem: FileSystemConfig{
 			AllowWritePaths: []string{},
 			MaxFileSize:     10 * 1024 * 1024,  // 10MB
