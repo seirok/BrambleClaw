@@ -31,7 +31,7 @@ func (c *AgentConfig) Validate() (hasError bool) {
 	}
 
 	if len(c.Tools) == 0 {
-		c.Tools = []string{"web_search", "shell", "filesystem", "url_parse"}
+		c.Tools = []string{"web_search", "shell", "read", "write", "list", "glob", "grep", "url_parse"}
 	}
 
 	return hasError

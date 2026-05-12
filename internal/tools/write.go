@@ -60,6 +60,7 @@ func (t *WriteTool) Parameters() map[string]interface{} {
 
 // Execute 执行工具
 func (t *WriteTool) Execute(ctx context.Context, argStr string) (interface{}, error) {
+	logger.L().Info().Str("tool", t.name).Msg("tool start to execute")
 	// 解析参数
 	var args map[string]interface{}
 	if err := json.Unmarshal([]byte(argStr), &args); err != nil {

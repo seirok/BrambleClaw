@@ -122,6 +122,7 @@ func (t *GrepTool) Parameters() map[string]interface{} {
 
 // Execute 执行工具
 func (t *GrepTool) Execute(ctx context.Context, argStr string) (interface{}, error) {
+	logger.L().Info().Str("tool", t.name).Msg("tool start to execute")
 	var args struct {
 		Pattern       string `json:"pattern"`
 		Path          string `json:"path"`

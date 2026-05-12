@@ -100,21 +100,18 @@ func (a *AgentManager) Initialize(ctx context.Context, cfg any) error {
 		if err != nil {
 			return fmt.Errorf("创建 Sandbox 失败: %w", err)
 		}
-		filesystemTool := sandbox.NewFileSystemTool(sandBox)
 		shellTool := sandbox.NewShellTool(sandBox)
 		globTool := tools.NewGlobTool()
 		grepTool := tools.NewGrepTool()
 		readTool := tools.NewReadTool(sandBox)
 		writeTool := tools.NewWriteTool(sandBox)
+		listTool := tools.NewListTool(sandBox)
 		a.toolRegistry = tools.NewToolRegistry()
 		if err := a.toolRegistry.Register(ctx, "web_search", websearchTool); err != nil {
 			return fmt.Errorf("注册 web_search 工具失败: %w", err)
 		}
 		if err := a.toolRegistry.Register(ctx, "shell", shellTool); err != nil {
 			return fmt.Errorf("注册 shell 工具失败: %w", err)
-		}
-		if err := a.toolRegistry.Register(ctx, "filesystem", filesystemTool); err != nil {
-			return fmt.Errorf("注册 filesystem 工具失败: %w", err)
 		}
 		if err := a.toolRegistry.Register(ctx, "url_parse", urlparsetool); err != nil {
 			return fmt.Errorf("注册 url_parse 工具失败: %w", err)
@@ -130,6 +127,9 @@ func (a *AgentManager) Initialize(ctx context.Context, cfg any) error {
 		}
 		if err := a.toolRegistry.Register(ctx, "write", writeTool); err != nil {
 			return fmt.Errorf("注册 write 工具失败: %w", err)
+		}
+		if err := a.toolRegistry.Register(ctx, "list", listTool); err != nil {
+			return fmt.Errorf("注册 list 工具失败: %w", err)
 		}
 
 		agentToolRegistry := tools.NewToolRegistry()
