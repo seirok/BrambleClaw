@@ -173,6 +173,12 @@ func (a *AgentManager) Initialize(ctx context.Context, cfg any) error {
 		if err := cmdRegistry.Register(ctx, "undo", &command.UndoCommand{}); err != nil {
 			logger.L().Error().Err(err).Msg("Failed to register undo command")
 		}
+		if err := cmdRegistry.Register(ctx, "model", &command.ModelCommand{}); err != nil {
+			logger.L().Error().Err(err).Msg("Failed to register model command")
+		}
+		if err := cmdRegistry.Register(ctx, "skills", &command.SkillsCommand{}); err != nil {
+			logger.L().Error().Err(err).Msg("Failed to register skills command")
+		}
 
 		// Set skill manager on agent
 		agent := NewAgent(agentCfg.Name,

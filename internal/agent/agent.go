@@ -180,6 +180,93 @@ func (a *Agent) ListUserInvocableSkills() interface{} {
 	return result
 }
 
+// ListAllSkills 返回所有技能的详细信息（不做 UserInvocable 过滤），给 /skills 命令用
+func (a *Agent) ListAllSkills() interface{} {
+	if a.skillManager == nil {
+		return nil
+	}
+	sm, ok := a.skillManager.(*skill.SkillManager)
+	if !ok {
+		return nil
+	}
+	metas := sm.ListMeta(context.Background())
+	type skillArg struct {
+		Name        string
+		Description string
+		Required    bool
+		Default     string
+	}
+	result := make([]struct {
+		Name               string
+		Description        string
+		UserInvocable      bool
+		DisableModelInvoke bool
+		Scope              string
+		Arguments          []skillArg
+	}, 0, len(metas))
+	for _, m := range metas {
+		args := make([]skillArg, 0, len(m.Arguments))
+		for _, arg := range m.Arguments {
+			args = append(args, skillArg{
+				Name:        arg.Name,
+				Description: arg.Description,
+				Required:    arg.Required,
+				Default:     arg.Default,
+			})
+		}
+		var scopeStr string
+		switch m.Scope {
+		case skill.ScopePlugin:
+			scopeStr = "plugin"
+		case skill.ScopePersonal:
+			scopeStr = "personal"
+		case skill.ScopeProject:
+			scopeStr = "project"
+		case skill.ScopeEnterprise:
+			scopeStr = "enterprise"
+		default:
+			scopeStr = "unknown"
+		}
+		result = append(result, struct {
+			Name               string
+			Description        string
+			UserInvocable      bool
+			DisableModelInvoke bool
+			Scope              string
+			Arguments          []skillArg
+		}{
+			Name:               m.Name,
+			Description:        m.Description,
+			UserInvocable:      m.UserInvocable,
+			DisableModelInvoke: m.DisableModelInvoke,
+			Scope:              scopeStr,
+			Arguments:          args,
+		})
+	}
+	return result
+}
+
+// CurrentModel 返回当前使用的 LLM 模型名
+func (a *Agent) CurrentModel() string {
+	if a.orche == nil {
+		return ""
+	}
+	return a.orche.LLM().Model()
+}
+
+// SwitchModel 切换到指定的 LLM 模型
+func (a *Agent) SwitchModel(model string) error {
+	if a.orche == nil {
+		return nil
+	}
+	llm := a.orche.LLM()
+	if llmClient, ok := llm.(*LLMClient); ok {
+		llmClient.SetModel(model)
+		return nil
+	}
+	return nil
+}
+
 // ResetSession 重置当前会话，清空消息但不创建新会话
 func (a *Agent) ResetSession(sessionKey string) error {
 	if _, err := a.SessionMgr().ClearSessionWithMeta(sessionKey); err != nil {

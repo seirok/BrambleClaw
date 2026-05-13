@@ -31,6 +31,11 @@ func (c *LLMClient) Model() string {
 	return modelName
 }
 
+// SetModel 更新模型名
+func (c *LLMClient) SetModel(model string) {
+	c.config.Model = model
+}
+
 func (c *LLMClient) Chat(msgs ChatCompletionRequest) (*LLMResponse, error) {
 	//
 	data, err := json.Marshal(msgs)
