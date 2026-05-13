@@ -3,6 +3,7 @@ package structs
 type SkillConfig struct {
 	Enabled          bool   `json:"enabled" mapstructure:"enabled"`
 	PersonalSkillDir string `json:"personal_skill_dir" mapstructure:"personal_skill_dir"`
+	AgentsSkillDir   string `json:"agents_skill_dir" mapstructure:"agents_skill_dir"`
 	ProjectSkillDir  string `json:"project_skill_dir" mapstructure:"project_skill_dir"`
 	HotReload        bool   `json:"hot_reload" mapstructure:"hot_reload"`
 	DebounceMs       int    `json:"debounce_ms" mapstructure:"debounce_ms"`
@@ -14,6 +15,7 @@ func DefaultSkillConfig() SkillConfig {
 	return SkillConfig{
 		Enabled:          true,
 		PersonalSkillDir: "",
+		AgentsSkillDir:   "",
 		ProjectSkillDir:  "",
 		HotReload:        true,
 		DebounceMs:       500,

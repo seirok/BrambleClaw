@@ -50,21 +50,29 @@ func (m *SkillManager) Initialize(ctx context.Context, cfg any) error {
 		}
 	}
 
-	// Scan scope directories
-	dirs := make([]string, 0)
-
-	// Personal scope
+	// Scan personal scope (~/.brambleclaw/skills/)
 	personalDir := skillCfg.PersonalSkillDir
 	if personalDir == "" {
 		personalDir = filepath.Join(util.GetSystemPath(), "skills")
 	}
 	if _, err := os.Stat(personalDir); err == nil {
-		dirs = append(dirs, personalDir)
+		if err := m.scanDirectory(ctx, personalDir, ScopePersonal); err != nil {
+			logger.L().Warn().Err(err).Str("dir", personalDir).Msg("Failed to scan personal skill directory")
+		}
 	}
 
-	for _, dir := range dirs {
-		if err := m.scanDirectory(ctx, dir, ScopePersonal); err != nil {
-			logger.L().Warn().Err(err).Str("dir", dir).Msg("Failed to scan skill directory")
+	// Scan agents scope (~/.agents/skills/) - npx skills add 安装目录
+	agentsDir := skillCfg.AgentsSkillDir
+	if agentsDir == "" {
+		if homeDir, err := os.UserHomeDir(); err == nil {
+			agentsDir = filepath.Join(homeDir, ".agents", "skills")
+		}
+	}
+	if agentsDir != "" {
+		if _, err := os.Stat(agentsDir); err == nil {
+			if err := m.scanDirectory(ctx, agentsDir, ScopePersonal); err != nil {
+				logger.L().Warn().Err(err).Str("dir", agentsDir).Msg("Failed to scan agents skill directory")
+			}
 		}
 	}
 

@@ -72,7 +72,7 @@ func (sw *SkillWatcher) addInitialDirs(ctx context.Context) error {
 	sw.mu.Lock()
 	defer sw.mu.Unlock()
 
-	// Add personal skill dir
+	// Add personal skill dir (~/.brambleclaw/skills/)
 	personalDir := sw.cfg.PersonalSkillDir
 	if personalDir == "" {
 		personalDir = filepath.Join(getGlobalConfigPath(), "skills")
@@ -80,6 +80,21 @@ func (sw *SkillWatcher) addInitialDirs(ctx context.Context) error {
 	if _, err := os.Stat(personalDir); err == nil {
 		if err := sw.addDir(ctx, personalDir); err != nil {
 			logger.L().Warn().Err(err).Str("dir", personalDir).Msg("Failed to watch personal skill dir")
+		}
+	}
+
+	// Add agents skill dir (~/.agents/skills/)
+	agentsDir := sw.cfg.AgentsSkillDir
+	if agentsDir == "" {
+		if homeDir, err := os.UserHomeDir(); err == nil {
+			agentsDir = filepath.Join(homeDir, ".agents", "skills")
+		}
+	}
+	if agentsDir != "" {
+		if _, err := os.Stat(agentsDir); err == nil {
+			if err := sw.addDir(ctx, agentsDir); err != nil {
+				logger.L().Warn().Err(err).Str("dir", agentsDir).Msg("Failed to watch agents skill dir")
+			}
 		}
 	}
 
@@ -197,14 +212,31 @@ func (sw *SkillWatcher) processEvent(ctx context.Context, event fsnotify.Event) 
 }
 
 func (sw *SkillWatcher) detectScope(dir string) Scope {
-	// Check if it's personal scope
+	parentDir := filepath.Dir(dir)
+
+	// Check if it's personal scope (~/.brambleclaw/skills/)
 	personalDir := sw.cfg.PersonalSkillDir
 	if personalDir == "" {
 		personalDir = filepath.Join(getGlobalConfigPath(), "skills")
 	}
-	if filepath.Dir(dir) == personalDir {
+	if filepath.Clean(parentDir) == filepath.Clean(personalDir) {
 		return ScopePersonal
 	}
+
+	// Check if it's agents scope (~/.agents/skills/)
+	var agentsDir string
+	if sw.cfg.AgentsSkillDir != "" {
+		agentsDir = sw.cfg.AgentsSkillDir
+	} else {
+		// Fallback to ~/.agents/skills
+		if homeDir, err := os.UserHomeDir(); err == nil {
+			agentsDir = filepath.Join(homeDir, ".agents", "skills")
+		}
+	}
+	if agentsDir != "" && filepath.Clean(parentDir) == filepath.Clean(agentsDir) {
+		return ScopePersonal
+	}
+
 	// Default to project scope
 	return ScopeProject
 }
