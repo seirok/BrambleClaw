@@ -79,8 +79,8 @@ func (m *PersistentSessionManager) StartAll(ctx context.Context) error {
 	var errs []error
 	for _, sess := range sessions {
 		if err := sess.Start(ctx); err != nil {
-			logger.L().Error().Err(err).Str("session_key", sess.Key).Msg("启动 session 失败")
-			errs = append(errs, fmt.Errorf("session %q 启动失败: %w", sess.Key, err))
+			logger.L().Error().Err(err).Str("session_key", sess.Key).Msg("Failed to start session")
+			errs = append(errs, fmt.Errorf("failed to start session %q: %w", sess.Key, err))
 		}
 	}
 
@@ -90,7 +90,7 @@ func (m *PersistentSessionManager) StartAll(ctx context.Context) error {
 
 	m.status = interfaces.StatusRunning
 	if len(errs) > 0 {
-		return fmt.Errorf("sessions 启动出错: %v", errs)
+		return fmt.Errorf("failed to start sessions: %v", errs)
 	}
 	return nil
 }
@@ -100,27 +100,27 @@ func (m *PersistentSessionManager) StopAll(ctx context.Context) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	// 通知 autosave goroutine 退出
+	// Notify autosave goroutine to exit
 	select {
 	case <-m.stopChan:
-		// 已关闭，避免重复 close 导致 panic
+		// Already closed, avoid panic from double close
 	default:
 		close(m.stopChan)
 	}
 
-	// 停止所有 Session（保存到磁盘）
+	// Stop all Sessions (save to disk)
 	sessions := m.sessions.List(ctx)
 	var errs []error
 	for _, sess := range sessions {
 		if err := sess.Stop(ctx); err != nil {
-			errs = append(errs, fmt.Errorf("停止 session %q 失败: %w", sess.Key, err))
+			errs = append(errs, fmt.Errorf("failed to stop session %q: %w", sess.Key, err))
 		}
 	}
 
 	m.status = interfaces.StatusStopped
 
 	if len(errs) > 0 {
-		return fmt.Errorf("停止 sessions 出错: %v", errs)
+		return fmt.Errorf("failed to stop sessions: %v", errs)
 	}
 	return nil
 }
@@ -138,12 +138,12 @@ func (m *PersistentSessionManager) Remove(ctx context.Context, id string) error 
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	// 删除存储文件
+	// Delete storage files
 	if err := m.sessionStore.Delete(m.ctx, util.GetSessionFile(util.SessionKeyToFile(id))); err != nil {
-		logger.L().Error().Err(err).Str("session_key", id).Msg("删除 session 文件失败")
+		logger.L().Error().Err(err).Str("session_key", id).Msg("Failed to delete session file")
 	}
 	if err := m.sessionMetaStore.Delete(m.ctx, util.GetSessionMetaFile(util.SessionKeyToFile(id))); err != nil {
-		logger.L().Error().Err(err).Str("session_key", id).Msg("删除 session meta 文件失败")
+		logger.L().Error().Err(err).Str("session_key", id).Msg("Failed to delete session meta file")
 	}
 
 	if err := m.sessions.Unregister(ctx, id); err != nil {
@@ -247,7 +247,7 @@ func (m *PersistentSessionManager) SaveAllSessionsWithMeta() {
 
 	for _, sess := range sessions {
 		if err := m.SaveSession(sess.Key); err != nil {
-			logger.L().Error().Err(err).Str("session_key", sess.Key).Msg("保存 session 失败")
+			logger.L().Error().Err(err).Str("session_key", sess.Key).Msg("Failed to save session")
 		}
 
 		sessMeta := sess.GetMetadata()
@@ -256,7 +256,7 @@ func (m *PersistentSessionManager) SaveAllSessionsWithMeta() {
 		}
 
 		if err := m.SaveSessionMeta(sess.Key); err != nil {
-			logger.L().Error().Err(err).Str("session_key", sess.Key).Msg("保存 session meta 失败")
+			logger.L().Error().Err(err).Str("session_key", sess.Key).Msg("Failed to save session meta")
 		}
 	}
 }
@@ -266,7 +266,7 @@ func (m *PersistentSessionManager) GetOrCreate(sessionkey string) (*Session, boo
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	// 使用 Get 检查是否存在
+	// Check if exists using Get
 	sess, err := m.sessions.Get(m.ctx, sessionkey)
 	if err == nil {
 		m.currentSession = sess
@@ -281,15 +281,15 @@ func (m *PersistentSessionManager) GetOrCreate(sessionkey string) (*Session, boo
 	}
 	sess.setStores(m.sessionStore, m.sessionMetaStore)
 	if err := m.sessions.Register(m.ctx, sessionkey, sess); err != nil {
-		logger.L().Error().Err(err).Str("session_key", sessionkey).Msg("注册 session 失败")
+		logger.L().Error().Err(err).Str("session_key", sessionkey).Msg("Failed to register session")
 	}
 
-	// 检查 session meta 是否存在
+	// Check if session meta exists
 	_, err = m.sessionsMeta.Get(m.ctx, sessionkey)
 	if err != nil {
 		agentName, channelName, chatID, err := util.ParseSessionKey(sessionkey)
 		if err != nil {
-			logger.L().Error().Err(err).Str("session_key", sessionkey).Msg("解析 session key 失败")
+			logger.L().Error().Err(err).Str("session_key", sessionkey).Msg("Failed to parse session key")
 		}
 
 		if err := m.sessionsMeta.Register(m.ctx, sessionkey, &SessionMetadata{
@@ -302,9 +302,9 @@ func (m *PersistentSessionManager) GetOrCreate(sessionkey string) (*Session, boo
 			FirstUserMessage: "",
 		}); err != nil {
 
-			logger.L().Error().Err(err).Str("session_key", sessionkey).Msg("注册 session meta 失败")
+			logger.L().Error().Err(err).Str("session_key", sessionkey).Msg("Failed to register session meta")
 		}
-		// 将 meta 关联到 session
+		// Associate meta with session
 		if meta, err := m.sessionsMeta.Get(m.ctx, sessionkey); err == nil {
 			sess.setMeta(meta)
 		}
@@ -394,7 +394,7 @@ func (m *PersistentSessionManager) ClearSessionWithMeta(sessionKey string) (int,
 
 	sessMeta, err := m.sessionsMeta.Get(m.ctx, sessionKey)
 	if err != nil {
-		return 0, fmt.Errorf("session 和 sessionMeta 状态不一致: %s", sessionKey)
+		return 0, fmt.Errorf("session and sessionMeta state inconsistent: %s", sessionKey)
 	}
 
 	count := len(sess.Messages)
@@ -418,12 +418,12 @@ func (m *PersistentSessionManager) Update(session *Session, tokenUsed int) {
 
 	session.UpdatedAt = time.Now()
 	session.Modified = true
-	// 注意：session 已经存在于 registry 中（通过指针引用），
-	// 直接修改对象即可，无需重新注册
+	// Note: session already exists in registry (via pointer reference),
+	// directly modify the object, no need to re-register
 
 	sessionMeta, err := m.sessionsMeta.Get(m.ctx, session.Key)
 	if err != nil {
-		logger.L().Error().Err(err).Str("session_key", session.Key).Msg("session 和 sessionMeta 状态不一致")
+		logger.L().Error().Err(err).Str("session_key", session.Key).Msg("session and sessionMeta state inconsistent")
 		return
 	}
 
@@ -485,7 +485,7 @@ func (m *PersistentSessionManager) SaveSessionMeta(sessionKey string) error {
 	m.mu.RUnlock()
 
 	if err != nil {
-		return fmt.Errorf("session meta 不存在: %s", sessionKey)
+		return fmt.Errorf("session meta not found: %s", sessionKey)
 	}
 
 	if err := m.sessionMetaStore.Save(m.ctx, util.GetSessionMetaFile(util.SessionKeyToFile(sessionKey)), sessMeta); err != nil {
@@ -501,7 +501,7 @@ func (m *PersistentSessionManager) SaveSession(sessionKey string) error {
 	sess, err := m.sessions.Get(m.ctx, sessionKey)
 	if err != nil {
 		m.mu.RUnlock()
-		return fmt.Errorf("指定的 session key: %s 不存在", sessionKey)
+		return fmt.Errorf("specified session key: %s not found", sessionKey)
 	}
 
 	saveStartedAt := sess.UpdatedAt

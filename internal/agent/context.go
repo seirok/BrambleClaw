@@ -108,7 +108,7 @@ func (cb *ContextBuilder) LoadBootstrapFiles() string {
 
 		if _, err := os.Stat(filePath); os.IsNotExist(err) {
 			if err := cb.createDefaultBootstrapFile(file, filePath); err != nil {
-				logger.L().Warn().Err(err).Str("file", file).Msg("创建默认 bootstrap 文件失败")
+				logger.L().Warn().Err(err).Str("file", file).Msg("Failed to create default bootstrap file")
 				continue
 			}
 		}
@@ -208,7 +208,7 @@ func (cb *ContextBuilder) createDefaultBootstrapFile(filename, filePath string) 
 		return fmt.Errorf("failed to write default %s: %w", filename, err)
 	}
 
-	logger.L().Info().Str("file", filename).Msg("已创建默认 bootstrap 文件")
+	logger.L().Info().Str("file", filename).Msg("Created default bootstrap file")
 	return nil
 }
 

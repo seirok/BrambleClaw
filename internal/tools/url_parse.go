@@ -43,7 +43,7 @@ func NewUrlParseTool() *UrlParseTool {
 			var lastErr error
 			for _, ip := range ips {
 				if !isSafeIP(ip) {
-					logger.L().Warn().Str("ip", ip.String()).Msg("拦截到访问私有或本地IP地址")
+					logger.L().Warn().Str("ip", ip.String()).Msg("Blocked access to private or local IP address")
 					lastErr = fmt.Errorf("禁止访问私有或本地IP(%s)", ip.String())
 					continue
 				}
@@ -128,29 +128,29 @@ type UrlParseResult struct {
 
 // Execute 执行网页内容获取和解析
 func (u *UrlParseTool) Execute(ctx context.Context, args string) (interface{}, error) {
-	logger.L().Debug().Str("tool", u.Name()).Msg("开始执行 UrlParse 工具")
+	logger.L().Debug().Str("tool", u.Name()).Msg("Starting UrlParse tool execution")
 
 	var req UrlParseRequest
 	if err := json.Unmarshal([]byte(args), &req); err != nil {
 		err = fmt.Errorf("解析UrlParse参数失败(%s): %w", args, err)
-		logger.L().Error().Err(err).Msg("工具参数解析错误")
+		logger.L().Error().Err(err).Msg("Tool parameter parsing error")
 		return nil, err
 	}
 
 	result, err := u.doFetchAndParse(ctx, req.Url)
 	if err != nil {
-		logger.L().Error().Err(err).Str("url", req.Url).Msg("获取或解析网页内容失败")
+		logger.L().Error().Err(err).Str("url", req.Url).Msg("Failed to fetch or parse webpage content")
 		return nil, err
 	}
 
 	resBytes, err := json.MarshalIndent(result, "", "  ")
 	if err != nil {
 		err = fmt.Errorf("序列化UrlParseResult失败(%s): %w", req.Url, err)
-		logger.L().Error().Err(err).Msg("序列化结果错误")
+		logger.L().Error().Err(err).Msg("Result serialization error")
 		return nil, err
 	}
 
-	logger.L().Debug().Str("url", req.Url).Int("content_length", result.ContentLength).Msg("UrlParse 执行成功")
+	logger.L().Debug().Str("url", req.Url).Int("content_length", result.ContentLength).Msg("UrlParse executed successfully")
 	return string(resBytes), nil
 }
 
@@ -174,14 +174,14 @@ func (u *UrlParseTool) doFetchAndParse(ctx context.Context, targetUrl string) (*
 	httpReq.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
 	httpReq.Header.Set("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
 
-	logger.L().Debug().Str("url", targetUrl).Msg("开始发起HTTP请求")
+	logger.L().Debug().Str("url", targetUrl).Msg("Starting HTTP request")
 	resp, err := u.client.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("执行HTTP请求失败(%s): %w", targetUrl, err)
 	}
 	defer resp.Body.Close()
 
-	logger.L().Debug().Int("status_code", resp.StatusCode).Msg("收到HTTP响应")
+	logger.L().Debug().Int("status_code", resp.StatusCode).Msg("Received HTTP response")
 
 	limitReader := io.LimitReader(resp.Body, maxContentLength)
 	bodyBytes, err := io.ReadAll(limitReader)
@@ -193,7 +193,7 @@ func (u *UrlParseTool) doFetchAndParse(ctx context.Context, targetUrl string) (*
 	contentType := resp.Header.Get("Content-Type")
 	extractorType := "raw"
 
-	logger.L().Debug().Str("content_type", contentType).Msg("开始处理响应内容")
+	logger.L().Debug().Str("content_type", contentType).Msg("Starting to process response content")
 
 	if strings.Contains(strings.ToLower(contentType), "text/html") {
 		extractorType = "html"

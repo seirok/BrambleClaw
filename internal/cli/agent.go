@@ -55,7 +55,7 @@ func (a *toolAdapter) Parameters() map[string]interface{} {
 
 var agentCmd = &cobra.Command{
 	Use:   "agent",
-	Short: "启动 AI 代理服务",
+	Short: "Start AI agent service",
 	RunE:  runAgent,
 }
 
@@ -65,43 +65,43 @@ var (
 )
 
 func init() {
-	agentCmd.Flags().StringVarP(&agentMessage, "message", "m", "", "非交互式执行：发送一条消息后退出")
-	//	agentCmd.Flags().StringVarP(&agentSession, "session", "s", "default", "指定 Session Key，保留上下文对话")
+	agentCmd.Flags().StringVarP(&agentMessage, "message", "m", "", "Non-interactive execution: send one message and exit")
+	//	agentCmd.Flags().StringVarP(&agentSession, "session", "s", "default", "Specify Session Key, keep context conversation")
 
 	rootCmd.AddCommand(agentCmd)
 }
 
 func runAgent(cmd *cobra.Command, args []string) error {
-	logger.L().Debug().Msg("加载系统配置...")
+	logger.L().Debug().Msg("Loading system configuration...")
 
 	cfg := config.Get()
 	if cfg == nil {
-		return fmt.Errorf("系统配置加载失败")
+		return fmt.Errorf("failed to load system configuration")
 	}
 
 	logger.Setup(cfg.Log.Level, cfg.Log.ConsoleEnabled)
-	logger.L().Debug().Msg("日志配置已加载")
+	logger.L().Debug().Msg("Log configuration loaded")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// 1. 初始化消息总线
-	logger.L().Debug().Msg("初始化消息总线...")
+	// 1. Initialize message bus
+	logger.L().Debug().Msg("Initializing message bus...")
 	msgBus := bus.NewMessageBus(cfg.BusBufSize)
 
-	// 2. 初始化通道管理器
-	logger.L().Debug().Msg("初始化 ChannelManager...")
+	// 2. Initialize channel manager
+	logger.L().Debug().Msg("Initializing ChannelManager...")
 	channelManager := channel.NewChannelManager(msgBus)
 	logger.L().Debug().Msg("Initializing channel manager with config...")
 	if err := channelManager.Initialize(ctx, cfg); err != nil {
 		return fmt.Errorf("failed to initialize channel manager: %w", err)
 	}
 
-	// 5. 初始化 SkillManager 和 AgentManager
-	logger.L().Debug().Msg("初始化 SkillManager...")
+	// 5. Initialize SkillManager and AgentManager
+	logger.L().Debug().Msg("Initializing SkillManager...")
 	skillManager := skill.NewSkillManager(&cfg.Skill)
 
-	logger.L().Debug().Msg("初始化 AgentManager...")
+	logger.L().Debug().Msg("Initializing AgentManager...")
 	agentManager := agent.NewAgentManager(msgBus, runtime.NewAgentRuntime())
 	agentManager.SetSkillManager(skillManager)
 
@@ -130,8 +130,8 @@ func runAgent(cmd *cobra.Command, args []string) error {
 		return cmds
 	})
 
-	// 6. 初始化 Gateway
-	logger.L().Debug().Msg("初始化 Gateway...")
+	// 6. Initialize Gateway
+	logger.L().Debug().Msg("Initializing Gateway...")
 	gwCfg := config.Get().Gateway
 	gw := gateway.NewGateway(
 		gateway.WithRouter(gateway.NewRouter(gwCfg.Routes, agentManager)),
@@ -140,8 +140,8 @@ func runAgent(cmd *cobra.Command, args []string) error {
 		gateway.WithMessageBus(msgBus),
 	)
 
-	// 7. 启动 Gateway 和 Channel
-	logger.L().Debug().Msg("启动 Gateway 和 Channel...")
+	// 7. Start Gateway and Channel
+	logger.L().Debug().Msg("Starting Gateway and Channel...")
 	if err := gw.Start(ctx); err != nil {
 		return err
 	}
@@ -172,14 +172,14 @@ func runAgent(cmd *cobra.Command, args []string) error {
 		sessMgr = session.NewPersistentSessionManager(workDir)
 	}
 
-	// 等待 Gateway 准备好
+	// Wait for Gateway to be ready
 	time.Sleep(100 * time.Millisecond)
 
-	// 设置信号处理
+	// Set up signal handling
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
-	// ========== 交互式执行 ==========
+	// ========== Interactive execution ==========
 
 	// 创建 EventBus 并注册 observers
 	tvCfg := cfg.Hooks.ThinkingVisibility
@@ -224,23 +224,23 @@ func runAgent(cmd *cobra.Command, args []string) error {
 	}
 
 	if _, err := p.Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "TUI 错误: %v\n", err)
+		fmt.Fprintf(os.Stderr, "TUI error: %v\n", err)
 	}
 
 	close(responseChan)
 
-	// 停止
+	// Stop
 	fmt.Println("Shutting down... Hope to see you next time!😊")
 	stopCtx, stopCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer stopCancel()
 	if err := gw.Stop(stopCtx); err != nil {
-		logger.L().Error().Err(err).Msg("停止 Gateway 失败")
+		logger.L().Error().Err(err).Msg("Failed to stop Gateway")
 	}
 	if err := channelManager.StopAll(ctx); err != nil {
-		logger.L().Error().Err(err).Msg("停止 ChannelManager 失败")
+		logger.L().Error().Err(err).Msg("Failed to stop ChannelManager")
 	}
 	if err := agentManager.StopAll(ctx); err != nil {
-		logger.L().Error().Err(err).Msg("停止 AgentManager 失败")
+		logger.L().Error().Err(err).Msg("Failed to stop AgentManager")
 	}
 	os.Exit(0)
 	return nil

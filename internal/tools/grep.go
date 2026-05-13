@@ -136,7 +136,7 @@ func (t *GrepTool) Execute(ctx context.Context, argStr string) (interface{}, err
 
 	err := json.Unmarshal([]byte(argStr), &args)
 	if err != nil {
-		logger.L().Error().Err(err).Msg("解析失败")
+		logger.L().Error().Err(err).Msg("Parse failed")
 		return nil, fmt.Errorf("解析失败: %w", err)
 	}
 
@@ -175,7 +175,7 @@ func (t *GrepTool) Execute(ctx context.Context, argStr string) (interface{}, err
 	for _, file := range files {
 		fileMatches, err := t.searchFile(file, args.Pattern, re, args.ShowLineNum, args.BeforeContext, args.AfterContext)
 		if err != nil {
-			logger.L().Error().Err(err).Str("file", file).Msg("搜索文件失败")
+			logger.L().Error().Err(err).Str("file", file).Msg("Failed to search file")
 			continue
 		}
 		matches = append(matches, fileMatches...)

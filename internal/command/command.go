@@ -15,7 +15,7 @@ type ClearCommand struct{}
 func (c *ClearCommand) Name() string { return "clear" }
 
 // Description returns command description
-func (c *ClearCommand) Description() string { return "创建新会话（保留旧会话记录）" }
+func (c *ClearCommand) Description() string { return "Create new session (keep old session records)" }
 
 // Usage returns usage info
 func (c *ClearCommand) Usage() string { return "/clear" }
@@ -43,9 +43,9 @@ func (c *ClearCommand) Execute(ctx context.Context, agent interface{}, msg inter
 
 	var reply string
 	if err != nil {
-		reply = fmt.Sprintf("❌ 创建新会话失败: %v", err)
+		reply = fmt.Sprintf("❌ Failed to create new session: %v", err)
 	} else {
-		reply = fmt.Sprintf("✅ 已创建新会话，旧会话有 %d 条消息已保留。", count)
+		reply = fmt.Sprintf("✅ Created new session, old session has %d messages kept.", count)
 	}
 	logger.L().Info().Str("command", "clear").Msg(reply)
 	// fmt.Println(reply)

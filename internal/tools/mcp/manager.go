@@ -41,12 +41,12 @@ func (m *Manager) Start(ctx context.Context, registry *tools.ToolRegistry) error
 
 		client, err := m.createClient(name, srvCfg)
 		if err != nil {
-			logger.L().Error().Str("client", name).Err(err).Msg("创建 MCP 客户端失败")
+			logger.L().Error().Str("client", name).Err(err).Msg("Failed to create MCP client")
 			continue
 		}
 
 		if err := client.Start(ctx); err != nil {
-			logger.L().Error().Str("client", name).Err(err).Msg("启动 MCP 客户端失败")
+			logger.L().Error().Str("client", name).Err(err).Msg("Failed to start MCP client")
 			client.Close()
 			continue
 		}
@@ -58,7 +58,7 @@ func (m *Manager) Start(ctx context.Context, registry *tools.ToolRegistry) error
 		// 注册工具
 		mcpTools, err := client.ListTools(ctx)
 		if err != nil {
-			logger.L().Error().Str("client", name).Err(err).Msg("获取 MCP 客户端工具列表失败")
+			logger.L().Error().Str("client", name).Err(err).Msg("Failed to get MCP client tool list")
 			continue
 		}
 
@@ -66,9 +66,9 @@ func (m *Manager) Start(ctx context.Context, registry *tools.ToolRegistry) error
 			toolName := fmt.Sprintf("%s_%s", name, t.Name)
 			wrapper := NewMCPToolWrapper(toolName, t, client)
 			if err := registry.Register(ctx, toolName, wrapper); err != nil {
-				logger.L().Error().Err(err).Str("tool", toolName).Msg("注册 MCP 工具失败")
+				logger.L().Error().Err(err).Str("tool", toolName).Msg("Failed to register MCP tool")
 			}
-			logger.L().Debug().Str("tool", toolName).Msg("注册 MCP 工具")
+			logger.L().Debug().Str("tool", toolName).Msg("Registering MCP tool")
 		}
 	}
 
@@ -90,7 +90,7 @@ func (m *Manager) createClient(name string, cfg config.MCPServerConfig) (*Client
 		if cfg.EnvFile != "" {
 			content, err := os.ReadFile(cfg.EnvFile)
 			if err != nil {
-				logger.L().Error().Str("env_file", cfg.EnvFile).Err(err).Msg("读取环境变量文件失败")
+				logger.L().Error().Str("env_file", cfg.EnvFile).Err(err).Msg("Failed to read environment variable file")
 			} else {
 				lines := strings.Split(string(content), "\n")
 				for _, line := range lines {
@@ -124,9 +124,9 @@ func (m *Manager) Stop() {
 
 	for name, client := range m.clients {
 		if err := client.Close(); err != nil {
-			logger.L().Error().Str("client", name).Err(err).Msg("关闭 MCP 客户端失败")
+			logger.L().Error().Str("client", name).Err(err).Msg("Failed to close MCP client")
 		} else {
-			logger.L().Debug().Str("client", name).Msg("关闭 MCP 客户端成功")
+			logger.L().Debug().Str("client", name).Msg("MCP client closed successfully")
 		}
 	}
 	m.clients = make(map[string]*Client)
@@ -169,7 +169,7 @@ func (w *MCPToolWrapper) Description() string {
 func (w *MCPToolWrapper) Parameters() map[string]interface{} {
 	var schema map[string]interface{}
 	if err := json.Unmarshal(w.inputSchema, &schema); err != nil {
-		logger.L().Error().Err(err).Msg("解析工具参数 schema 失败")
+		logger.L().Error().Err(err).Msg("Failed to parse tool parameter schema")
 		return nil
 	}
 	return schema

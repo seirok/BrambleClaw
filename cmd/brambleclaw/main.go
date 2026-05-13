@@ -9,6 +9,6 @@ import (
 // the <icon src="AllIcons.Actions.Execute"/> icon in the gutter and select the <b>Run</b> menu item from here.</p>
 func main() {
 	if err := cli.Execute(); err != nil {
-		logger.L().Fatal().Err(err).Msg("CLI执行失败")
+		logger.L().Fatal().Err(err).Msg("CLI execution failed")
 	}
 }

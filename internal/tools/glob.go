@@ -57,7 +57,7 @@ func (t *GlobTool) Execute(ctx context.Context, argStr string) (interface{}, err
 	var args map[string]interface{}
 	err := json.Unmarshal([]byte(argStr), &args)
 	if err != nil {
-		logger.L().Error().Err(err).Msg("解析失败")
+		logger.L().Error().Err(err).Msg("Parse failed")
 		return nil, fmt.Errorf("解析失败: %w", err)
 	}
 
@@ -75,7 +75,7 @@ func (t *GlobTool) Execute(ctx context.Context, argStr string) (interface{}, err
 	fs := os.DirFS(basePath)
 	matches, err := doublestar.Glob(fs, pattern)
 	if err != nil {
-		logger.L().Error().Err(err).Str("pattern", pattern).Msg("glob 匹配失败")
+		logger.L().Error().Err(err).Str("pattern", pattern).Msg("glob matching failed")
 		return nil, fmt.Errorf("glob 匹配失败: %w", err)
 	}
 

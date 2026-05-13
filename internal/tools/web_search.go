@@ -61,7 +61,7 @@ func (w *WebSearchTool) Parameters() map[string]interface{} {
 
 // Execute 执行搜索工具
 func (w *WebSearchTool) Execute(ctx context.Context, args string) (interface{}, error) {
-	logger.L().Debug().Str("tool", w.Name()).Msg("开始执行 WebSearch 工具")
+	logger.L().Debug().Str("tool", w.Name()).Msg("Starting WebSearch tool execution")
 
 	var req WebSearchRequest
 	if err := json.Unmarshal([]byte(args), &req); err != nil {

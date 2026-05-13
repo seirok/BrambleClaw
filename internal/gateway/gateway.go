@@ -22,23 +22,23 @@ type Gateway struct {
 	msgBus         *bus.MessageBus
 	agentRuntime   *runtime.AgentRuntime
 
-	// 运行时状态
+	// Runtime state
 	mu      sync.RWMutex
 	running bool
 	wg      sync.WaitGroup
 	cancel  context.CancelFunc
 }
 
-// Option 是用于配置 Gateway 的函数类型
+// Option is function type for configuring Gateway
 type Option func(*Gateway)
 
-// NewGateway 创建新的 Gateway 实例，使用 Functional Options 模式
+// NewGateway creates new Gateway instance, using Functional Options pattern
 func NewGateway(opts ...Option) *Gateway {
 	g := &Gateway{
 		running: false,
 	}
 
-	// 应用所有选项
+	// Apply all options
 	for _, opt := range opts {
 		opt(g)
 	}
@@ -50,35 +50,35 @@ func NewGateway(opts ...Option) *Gateway {
 	return g
 }
 
-// WithRouter 设置路由
+// WithRouter sets router
 func WithRouter(router *Router) Option {
 	return func(g *Gateway) {
 		g.router = router
 	}
 }
 
-// WithAgentManager 设置 Agent 管理器
+// WithAgentManager sets Agent manager
 func WithAgentManager(am interfaces.Manager[*agent.Agent]) Option {
 	return func(g *Gateway) {
 		g.agentManager = am
 	}
 }
 
-// WithChannelManager 设置通道管理器
+// WithChannelManager sets channel manager
 func WithChannelManager(cm interfaces.Manager[channel.BaseChannel]) Option {
 	return func(g *Gateway) {
 		g.channelManager = cm
 	}
 }
 
-// WithMessageBus 设置消息总线
+// WithMessageBus sets message bus
 func WithMessageBus(msgBus *bus.MessageBus) Option {
 	return func(g *Gateway) {
 		g.msgBus = msgBus
 	}
 }
 
-// WithAgentRuntime 设置 Agent 运行时
+// WithAgentRuntime sets Agent runtime
 func WithAgentRuntime(rt *runtime.AgentRuntime) Option {
 	return func(g *Gateway) {
 		g.agentRuntime = rt
@@ -89,18 +89,18 @@ func (g *Gateway) Name() string {
 	return "Gateway service"
 }
 
-// Start 启动 Gateway
+// Start starts Gateway
 func (g *Gateway) Start(ctx context.Context) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
 	if g.running {
-		return fmt.Errorf("Gateway 已处于运行状态")
+		return fmt.Errorf("Gateway is already running")
 	}
 
 	ctx, g.cancel = context.WithCancel(ctx)
 	g.running = true
-	// 启动 Agent 管理
+	// Start Agent management
 	err := g.agentManager.Initialize(ctx, config.Get())
 	if err != nil {
 		return err
@@ -110,26 +110,26 @@ func (g *Gateway) Start(ctx context.Context) error {
 		return err
 	}
 
-	// 启动消息处理循环
+	// Start message processing loop
 	g.wg.Add(1)
 	go g.processMessageLoop(ctx)
 
-	// 启动出站消息分发
+	// Start outbound message dispatch
 	g.wg.Add(1)
 	go g.dispatchOutboundLoop(ctx)
 
-	// 启动健康检查
+	// Start health check
 
 	g.wg.Add(1)
 	go g.healthCheckLoop(ctx)
 
-	logger.L().Info().Str("component", "Gateway").Msg("已启动")
-	// 触发 Gateway 启动钩子（fire-and-forget）
+	logger.L().Info().Str("component", "Gateway").Msg("Started")
+	// Trigger Gateway start hook (fire-and-forget)
 	hook.Emit(ctx, "hook.point.gateway.start", g)
 	return nil
 }
 
-// Stop 停止 Gateway，依次关闭各组件
+// Stop stops Gateway, closes components in sequence
 func (g *Gateway) Stop(ctx context.Context) error {
 	g.mu.Lock()
 	if !g.running {
@@ -139,10 +139,10 @@ func (g *Gateway) Stop(ctx context.Context) error {
 	g.running = false
 	g.mu.Unlock()
 
-	// 1. 通知 Start 中创建的所有 goroutine 退出
+	// 1. Notify all goroutines created in Start to exit
 	g.cancel()
 
-	//  等待goroutine 结束
+	//  Wait for goroutines to finish
 	done := make(chan struct{})
 	go func() {
 		g.wg.Wait()
@@ -152,28 +152,28 @@ func (g *Gateway) Stop(ctx context.Context) error {
 	select {
 	case <-done:
 	case <-ctx.Done():
-		logger.L().Warn().Str("component", "Gateway").Msg("goroutine 停止超时，继续关闭组件")
+		logger.L().Warn().Str("component", "Gateway").Msg("goroutine stop timeout, continue closing components")
 	}
 
-	// 3. 关闭通道管理器（停止所有出站通道）
+	// 3. Close channel manager (stop all outbound channels)
 	if err := g.channelManager.StopAll(ctx); err != nil {
-		logger.L().Error().Err(err).Str("component", "Gateway").Msg("关闭通道管理器失败")
+		logger.L().Error().Err(err).Str("component", "Gateway").Msg("Failed to close channel manager")
 	}
 
-	// 4. 关闭 Agent 管理器（停止所有 Agent、Session、MCP）
+	// 4. Close Agent manager (stop all Agents, Sessions, MCP)
 	if err := g.agentManager.StopAll(ctx); err != nil {
-		logger.L().Error().Err(err).Str("component", "Gateway").Msg("关闭 Agent 管理器失败")
+		logger.L().Error().Err(err).Str("component", "Gateway").Msg("Failed to close Agent manager")
 	}
 
-	logger.L().Info().Str("component", "Gateway").Msg("已停止")
+	logger.L().Info().Str("component", "Gateway").Msg("Stopped")
 	return nil
 }
 
-// processMessageLoop 消息处理主循环
+// processMessageLoop main message processing loop
 func (g *Gateway) processMessageLoop(ctx context.Context) {
 	defer g.wg.Done()
 
-	logger.L().Debug().Str("component", "Gateway").Msg("消息处理循环启动")
+	logger.L().Debug().Str("component", "Gateway").Msg("Message processing loop started")
 	for {
 		select {
 		case <-ctx.Done():
@@ -181,54 +181,54 @@ func (g *Gateway) processMessageLoop(ctx context.Context) {
 		default:
 		}
 
-		// 消费入站消息
-		msg, err := g.msgBus.ConsumeInBoundMessage(ctx) // 阻塞等待
+		// Consume inbound message
+		msg, err := g.msgBus.ConsumeInBoundMessage(ctx) // blocking wait
 		if err != nil {
 			if ctx.Err() != nil {
 				return
 			}
-			logger.L().Error().Err(err).Str("component", "Gateway").Msg("消费消息失败，context 可能已取消")
+			logger.L().Error().Err(err).Str("component", "Gateway").Msg("Failed to consume message, context may have been canceled")
 			continue
 		}
 
-		// 处理消息
+		// Process message
 		if err := g.handleMessage(ctx, msg); err != nil {
-			logger.L().Error().Err(err).Str("component", "Gateway").Msg("处理消息失败")
+			logger.L().Error().Err(err).Str("component", "Gateway").Msg("Failed to process message")
 		}
 	}
 }
 
-// handleMessage 处理单条消息
+// handleMessage processes single message
 func (g *Gateway) handleMessage(ctx context.Context, msg *bus.InBoundMessage) error {
-	//  解析路由
+	//  Resolve route
 	route, err := g.router.ResolveRoute(ctx, msg)
 	if err != nil {
-		return fmt.Errorf("路由解析失败: %w", err)
+		return fmt.Errorf("failed to resolve route: %w", err)
 	}
 
-	// 触发路由钩子
+	// Trigger route hook
 	hook.Emit(ctx, "hook.point.message.route", route)
 
-	//  获取 Agent
+	//  Get Agent
 	agent_, err := g.agentManager.Get(ctx, route.AgentName)
 	if err != nil {
 		return err
 	}
 
-	// Agent 处理消息
+	// Agent handles message
 	agent_.HandleMessage(ctx, msg)
 	return nil
 }
 
-// dispatchOutboundLoop 出站消息分发循环
+// dispatchOutboundLoop outbound message dispatch loop
 func (g *Gateway) dispatchOutboundLoop(ctx context.Context) {
 	defer g.wg.Done()
 
-	// 启动订阅消息分发
-	logger.L().Debug().Str("component", "Gateway").Msg("订阅分发启动")
+	// Start subscription message dispatch
+	logger.L().Debug().Str("component", "Gateway").Msg("Subscription dispatch started")
 	go g.msgBus.DistributeOutBoundMessage(ctx)
 
-	logger.L().Debug().Str("component", "Gateway").Msg("响应分发启动")
+	logger.L().Debug().Str("component", "Gateway").Msg("Response dispatch started")
 	sub := g.msgBus.Subscribe()
 	defer g.msgBus.Unsubscribe(sub.ID)
 
@@ -241,21 +241,21 @@ func (g *Gateway) dispatchOutboundLoop(ctx context.Context) {
 				return
 			}
 
-			// 通过 Channel Manager 发送消息
+			// Send message through Channel Manager
 			ch, err := g.channelManager.Get(ctx, msg.OutChannel)
 			if err != nil {
-				logger.L().Error().Err(err).Str("component", "Gateway").Str("channel", msg.OutChannel).Msg("通道不存在")
+				logger.L().Error().Err(err).Str("component", "Gateway").Str("channel", msg.OutChannel).Msg("Channel does not exist")
 				continue
 			}
 
 			if err := ch.Send(ctx, msg); err != nil {
-				logger.L().Error().Err(err).Str("component", "Gateway").Str("channel", msg.OutChannel).Msg("发送消息失败")
+				logger.L().Error().Err(err).Str("component", "Gateway").Str("channel", msg.OutChannel).Msg("Failed to send message")
 			}
 		}
 	}
 }
 
-// healthCheckLoop 健康检查循环
+// healthCheckLoop health check loop
 func (g *Gateway) healthCheckLoop(ctx context.Context) {
 	defer g.wg.Done()
 
@@ -272,13 +272,13 @@ func (g *Gateway) healthCheckLoop(ctx context.Context) {
 	}
 }
 
-// performHealthCheck 执行健康检查
+// performHealthCheck performs health check
 func (g *Gateway) performHealthCheck() {
-	// 检查所有通道状态
-	// 这里可以实现具体的健康检查逻辑
+	// Check all channel status
+	// Specific health check logic can be implemented here
 }
 
-// IsRunning 检查 Gateway 是否正在运行
+// IsRunning checks if Gateway is running
 func (g *Gateway) IsRunning() bool {
 	g.mu.RLock()
 	defer g.mu.RUnlock()

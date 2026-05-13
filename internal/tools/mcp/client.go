@@ -81,13 +81,13 @@ func (c *Client) readLoop() {
 	for {
 		msg, err := c.transport.Receive(c.ctx)
 		if err != nil {
-			logger.L().Error().Str("client", c.name).Err(err).Msg("MCP 客户端读取消息失败")
+			logger.L().Error().Str("client", c.name).Err(err).Msg("MCP client failed to read message")
 			return
 		}
 
 		var rpcMsg JSONRPCMessage
 		if err := json.Unmarshal(msg, &rpcMsg); err != nil {
-			logger.L().Error().Str("client", c.name).Err(err).Msg("MCP 客户端解析消息失败")
+			logger.L().Error().Str("client", c.name).Err(err).Msg("MCP client failed to parse message")
 			continue
 		}
 
@@ -109,7 +109,7 @@ func (c *Client) readLoop() {
 			}
 		} else {
 			// 处理通知或请求 (暂时忽略来自服务端的请求)
-			logger.L().Debug().Str("client", c.name).Str("method", rpcMsg.Method).Msg("MCP 客户端收到通知")
+			logger.L().Debug().Str("client", c.name).Str("method", rpcMsg.Method).Msg("MCP client received notification")
 		}
 	}
 }

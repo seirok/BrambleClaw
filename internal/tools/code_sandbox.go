@@ -59,7 +59,7 @@ func (t *CodeSandboxTool) Parameters() map[string]interface{} {
 
 // Execute 执行代码沙箱
 func (t *CodeSandboxTool) Execute(ctx context.Context, args string) (interface{}, error) {
-	logger.L().Debug().Str("tool", t.Name()).Msg("开始执行 CodeSandbox 工具")
+	logger.L().Debug().Str("tool", t.Name()).Msg("Starting CodeSandbox tool execution")
 
 	// 1. 解析参数
 	var req struct {
@@ -67,7 +67,7 @@ func (t *CodeSandboxTool) Execute(ctx context.Context, args string) (interface{}
 		Code     string `json:"code"`
 	}
 	if err := json.Unmarshal([]byte(args), &req); err != nil {
-		logger.L().Error().Err(err).Msg("解析 CodeSandbox 参数失败")
+		logger.L().Error().Err(err).Msg("Failed to parse CodeSandbox parameters")
 		return nil, fmt.Errorf("解析参数失败: %w", err)
 	}
 
@@ -88,7 +88,7 @@ func (t *CodeSandboxTool) Execute(ctx context.Context, args string) (interface{}
 
 	resp, err := t.client.Do(httpReq)
 	if err != nil {
-		logger.L().Error().Err(err).Msg("连接沙箱服务失败")
+		logger.L().Error().Err(err).Msg("Failed to connect to sandbox service")
 		return nil, fmt.Errorf("沙箱服务暂不可用: %w", err)
 	}
 	defer resp.Body.Close()

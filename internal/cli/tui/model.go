@@ -349,7 +349,7 @@ func (m appModel) updateNormal(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				ctx := context.Background()
 				if err := m.msgBus.PublishInBoundMessage(ctx, inboundMsg); err != nil {
-					logger.L().Error().Err(err).Msg("发送消息失败")
+					logger.L().Error().Err(err).Msg("Failed to send message")
 				}
 			}()
 

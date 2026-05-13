@@ -59,13 +59,13 @@ func (t *FileSystemTool) Execute(ctx context.Context, argStr string) (interface{
 	var args map[string]interface{}
 	err := json.Unmarshal([]byte(argStr), &args)
 	if err != nil {
-		logger.L().Error().Err(err).Msg("解析失败")
+		logger.L().Error().Err(err).Msg("Parse failed")
 		return nil, fmt.Errorf("解析失败: %w", err)
 	}
 	cmd, ok := args["command"].(string)
 	if !ok {
-		logger.L().Error().Msg("参数解析有误")
-		return nil, fmt.Errorf("参数解析有误")
+		logger.L().Error().Msg("Invalid parameter parsing")
+		return nil, fmt.Errorf("Invalid parameter parsing")
 	}
 
 	switch cmd {
@@ -136,7 +136,7 @@ func (t *FileSystemTool) listFiles(args map[string]interface{}) (interface{}, er
 	for _, file := range files {
 		info, err := file.Info()
 		if err != nil {
-			logger.L().Error().Err(err).Str("File", file.Name()).Msg("获取文件信息失败")
+			logger.L().Error().Err(err).Str("File", file.Name()).Msg("Failed to get file info")
 			continue
 		}
 		fileList = append(fileList, map[string]interface{}{
