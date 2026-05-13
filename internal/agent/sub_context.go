@@ -2,7 +2,6 @@ package agent
 
 import (
 	"brambleclaw/internal/interfaces"
-	"brambleclaw/internal/tools"
 	"context"
 	"fmt"
 	"strings"
@@ -13,12 +12,12 @@ type SubContextBuilder struct {
 	name         string
 	description  string
 	systemPrompt string
-	subTools     interfaces.Registry[tools.Tool]
+	subTools     interfaces.Registry[interfaces.Tool]
 }
 
 func NewSubContextBuilder(
 	name, description, systemPrompt string,
-	subTools interfaces.Registry[tools.Tool],
+	subTools interfaces.Registry[interfaces.Tool],
 ) *SubContextBuilder {
 	return &SubContextBuilder{
 		name:         name,

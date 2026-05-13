@@ -24,10 +24,12 @@ type ExecutionConfig struct {
 
 // AuditConfig 审计配置
 type AuditConfig struct {
-	Enabled    bool   `yaml:"enabled" json:"enabled" mapstructure:"enabled"`             // 是否启用审计
-	LogPath    string `yaml:"log_path" json:"log_path" mapstructure:"log_path"`          // 审计日志路径
-	MaxSize    int    `yaml:"max_size" json:"max_size" mapstructure:"max_size"`          // 单个日志文件最大大小（MB）
-	MaxBackups int    `yaml:"max_backups" json:"max_backups" mapstructure:"max_backups"` // 最大备份数量
+	Enabled       bool   `yaml:"enabled" json:"enabled" mapstructure:"enabled"`                         // 是否启用审计
+	LogPath       string `yaml:"log_path" json:"log_path" mapstructure:"log_path"`                      // 审计日志路径
+	MaxSize       int    `yaml:"max_size" json:"max_size" mapstructure:"max_size"`                      // 单个日志文件最大大小（MB）
+	MaxBackups    int    `yaml:"max_backups" json:"max_backups" mapstructure:"max_backups"`             // 最大备份数量
+	MaxParamSize  int    `yaml:"max_param_size" json:"max_param_size" mapstructure:"max_param_size"`    // 最大参数字节数
+	MaxResultSize int    `yaml:"max_result_size" json:"max_result_size" mapstructure:"max_result_size"` // 最大结果字节数
 }
 
 // SandboxConfig 沙箱工具配置
@@ -65,10 +67,12 @@ func DefaultSandboxConfig() SandboxConfig {
 			MaxOutputSize:   1 * 1024 * 1024, // 1MB
 		},
 		Audit: AuditConfig{
-			Enabled:    false,
-			LogPath:    "audit.log",
-			MaxSize:    100,
-			MaxBackups: 7,
+			Enabled:       true,
+			LogPath:       "audit.log",
+			MaxSize:       100,
+			MaxBackups:    7,
+			MaxParamSize:  10 * 1024, // 10KB
+			MaxResultSize: 10 * 1024, // 10KB
 		},
 	}
 }
@@ -122,6 +126,14 @@ func (c *SandboxConfig) Validate() (hasError bool) {
 	if c.Audit.MaxBackups <= 0 {
 		logger.L().Warn().Int("invalid_max_backups", c.Audit.MaxBackups).Msg("Invalid max_backups, using default")
 		c.Audit.MaxBackups = defaults.Audit.MaxBackups
+	}
+	if c.Audit.MaxParamSize <= 0 {
+		logger.L().Warn().Int("invalid_max_param_size", c.Audit.MaxParamSize).Msg("Invalid max_param_size, using default")
+		c.Audit.MaxParamSize = defaults.Audit.MaxParamSize
+	}
+	if c.Audit.MaxResultSize <= 0 {
+		logger.L().Warn().Int("invalid_max_result_size", c.Audit.MaxResultSize).Msg("Invalid max_result_size, using default")
+		c.Audit.MaxResultSize = defaults.Audit.MaxResultSize
 	}
 
 	return false

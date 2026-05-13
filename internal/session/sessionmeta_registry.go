@@ -69,6 +69,12 @@ func (r *SessionMetadataRegistry) List(ctx context.Context) []*SessionMetadata {
 	return metas
 }
 
+func (r *SessionMetadataRegistry) Len() int {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return len(r.data)
+}
+
 // Has 检查 session metadata 是否存在（扩展方法，非接口必需）
 func (r *SessionMetadataRegistry) Has(name string) bool {
 	r.mu.RLock()

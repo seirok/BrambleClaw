@@ -100,11 +100,13 @@ func (g *Gateway) Start(ctx context.Context) error {
 
 	ctx, g.cancel = context.WithCancel(ctx)
 	g.running = true
+
 	// Start Agent management
 	err := g.agentManager.Initialize(ctx, config.Get())
 	if err != nil {
 		return err
 	}
+
 	err = g.agentManager.StartAll(ctx)
 	if err != nil {
 		return err

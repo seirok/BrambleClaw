@@ -13,45 +13,18 @@ import (
 	"brambleclaw/internal/interfaces"
 	"brambleclaw/internal/logger"
 	"brambleclaw/internal/runtime"
-	"brambleclaw/internal/session"
 	"brambleclaw/internal/skill"
 	"brambleclaw/internal/teamtool"
-	"brambleclaw/internal/tools"
 	"context"
 	"fmt"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 )
-
-// toolAdapter adapts skill.Tool to tools.Tool
-type toolAdapter struct {
-	name        string
-	description string
-	execute     func(ctx context.Context, args string) (interface{}, error)
-	parameters  map[string]interface{}
-}
-
-func (a *toolAdapter) Name() string {
-	return a.name
-}
-
-func (a *toolAdapter) Description() string {
-	return a.description
-}
-
-func (a *toolAdapter) Execute(ctx context.Context, args string) (interface{}, error) {
-	return a.execute(ctx, args)
-}
-
-func (a *toolAdapter) Parameters() map[string]interface{} {
-	return a.parameters
-}
 
 // responsePayload carries response content and message type from CLIChannel to TUI
 type responsePayload struct {
@@ -111,17 +84,11 @@ func runAgent(cmd *cobra.Command, args []string) error {
 	agentManager := agent.NewAgentManager(msgBus, runtime.NewAgentRuntime())
 	agentManager.SetSkillManager(skillManager)
 
-	agentManager.SetToolFactory(func(a *agent.Agent) []tools.Tool {
-		baseTools := []tools.Tool{teamtool.NewCreateTeamTool(a)}
-		// Add activate_skill tool with adapter
+	agentManager.SetToolFactory(func(a *agent.Agent) []interfaces.Tool {
+		baseTools := []interfaces.Tool{teamtool.NewCreateTeamTool(a)}
+		// Add activate_skill tool
 		skTool := skill.NewActivateSkillTool(skillManager)
-		adapted := &toolAdapter{
-			name:        skTool.Name(),
-			description: skTool.Description(),
-			execute:     skTool.Execute,
-			parameters:  skTool.Parameters(),
-		}
-		baseTools = append(baseTools, adapted)
+		baseTools = append(baseTools, skTool)
 		return baseTools
 	})
 
@@ -156,26 +123,10 @@ func runAgent(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Get the default agent to access its session manager
-	var sessMgr *session.PersistentSessionManager
-	agentName := "main"
-
-	// List agents and get the first one's session manager
-	agents := agentManager.List(context.Background())
-	if len(agents) > 0 {
-		a := agents[0]
-		sessMgr = a.SessionMgr()
-		agentName = a.Name()
-	}
-
-	// Fallback: if no agent or can't get session manager, create one
-	if sessMgr == nil {
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			homeDir = "."
-		}
-		workDir := filepath.Join(homeDir, ".brambleclaw", agentName)
-		sessMgr = session.NewPersistentSessionManager(workDir)
+	// Get the default agent
+	defaultAgent, err := agentManager.Get(context.Background(), interfaces.DefaultAgentName)
+	if err != nil {
+		return err
 	}
 
 	// 等待 Gateway 准备好
@@ -230,7 +181,7 @@ func runAgent(cmd *cobra.Command, args []string) error {
 			hook.RegisterObservers(eventBus, tvCfg)
 		}
 
-		model := tui.NewAppModel(msgBus, currentChatID, sessMgr, agentName)
+		model := tui.NewAppModel(msgBus, defaultAgent)
 		p := tea.NewProgram(model, tea.WithAltScreen())
 
 		// 获取 CLIChannel 并设置回调

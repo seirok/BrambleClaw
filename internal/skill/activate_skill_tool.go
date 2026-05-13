@@ -6,14 +6,6 @@ import (
 	"fmt"
 )
 
-// Tool defines the same interface as internal/tools.Tool (avoids import cycle)
-type Tool interface {
-	Name() string
-	Description() string
-	Execute(ctx context.Context, args string) (interface{}, error)
-	Parameters() map[string]interface{}
-}
-
 // ActivateSkillTool is the tool for activating skills
 type ActivateSkillTool struct {
 	skillManager *SkillManager

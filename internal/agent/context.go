@@ -44,6 +44,11 @@ func (cb *ContextBuilder) SetSkillManager(sm *skill.SkillManager) {
 	cb.skillManager = sm
 }
 
+// SetSummaryCompressor sets the summary compressor
+func (cb *ContextBuilder) SetSummaryCompressor(sc *SummaryCompressor) {
+	cb.summaryCompressor = sc
+}
+
 func formatCurrentSenderLine(id string) string {
 	if id == "" {
 		logger.L().Error().Msg("sender ID is empty")
@@ -285,7 +290,7 @@ func (cb *ContextBuilder) ForceCompact(ctx context.Context, sess *session.Sessio
 	// Update session summary
 	compressedCount := len(msgs) - sess.Summarized - 1 // -1 for the one we kept
 	if summaryContent != "" {
-		if err := cb.Agent().sessionManager.UpdateSessionSummary(sess.Key, summaryContent); err != nil {
+		if err := cb.Agent().GetSession().UpdateSessionSummary(cb.GetSessionSummary()); err != nil {
 			logger.L().Error().Err(err).Str("sessionKey", sess.Key).
 				Msg("force-compact: failed to update session summary, but continuing")
 		}
@@ -302,7 +307,7 @@ func (cb *ContextBuilder) ForceCompact(ctx context.Context, sess *session.Sessio
 
 	// Update token usage
 	currentTokenUsed := resp.Usage.CompletionTokens + resp.Usage.PromptTokens
-	cb.Agent().sessionManager.Update(sess, currentTokenUsed)
+	session.WithTokenCount(currentTokenUsed)(cb.Agent().GetSession().GetMetadata())
 
 	return compressedCount, nil
 }
@@ -350,7 +355,7 @@ func (cb *ContextBuilder) Compact(ctx context.Context, sess *session.Session, in
 
 	// Update session summary
 	if summaryContent != "" {
-		if err := cb.Agent().sessionManager.UpdateSessionSummary(sess.Key, summaryContent); err != nil {
+		if err := cb.Agent().GetSession().UpdateSessionSummary(cb.GetSessionSummary()); err != nil {
 			logger.L().Error().Err(err).Str("sessionKey", sess.Key).
 				Msg("compact: failed to update session summary, but continuing")
 		} else {
@@ -379,7 +384,9 @@ func (cb *ContextBuilder) Compact(ctx context.Context, sess *session.Session, in
 
 	// Update token usage
 	currentTokenUsed := resp.Usage.CompletionTokens + resp.Usage.PromptTokens
-	cb.Agent().sessionManager.Update(sess, currentTokenUsed)
+	session.WithTokenCount(currentTokenUsed)(cb.Agent().GetSession().GetMetadata())
+
+	cb.Agent().GetSession().Update()
 
 	return nil
 }
@@ -419,13 +426,13 @@ func (cb *ContextBuilder) getIdentity() string {
 			"You are brambleclaw, a helpful AI assistant.\n\n"+
 			"## Workspace\n"+
 			"Your workspace is at: %s\n"+
-			"- Memory: %s/memory/MEMORY.md\n"+
-			"- Daily Notes: %s/memory/YYYYMM/YYYYMMDD.md\n"+
-			"- Skills: %s/skills/{skill-name}/SKILL.md\n\n"+
+			"- Memory: %s\\memory\\MEMORY.md\n"+
+			"- Daily Notes: %s\\memory\\YYYYMM\\YYYYMMDD.md\n"+
+			"- Skills: %s\\skills\\{skill-name}\\SKILL.md\n\n"+
 			"## Important Rules\n\n"+
 			"1. **ALWAYS use tools** - When you need to perform an action (schedule reminders, send messages, execute commands, etc.), you MUST call the appropriate tool. Do NOT just say you'll do it or pretend to do it.\n\n"+
 			"2. **Be helpful and accurate** - When using tools, briefly explain what you're doing.\n\n"+
-			"3. **Memory** - When interacting with me if something seems memorable, update %s/memory/MEMORY.md\n\n"+
+			"3. **Memory** - When interacting with me if something seems memorable, update %s \\memory\\MEMORY.md\n\n"+
 			"4. **Context summaries** - Conversation summaries provided as context are approximate references only. They may be incomplete or outdated. Always defer to explicit user instructions over summary content.\n\n"+
 			"%s",
 		workspacePath, workspacePath, workspacePath, workspacePath, workspacePath, toolDiscovery)

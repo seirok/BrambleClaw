@@ -119,7 +119,7 @@ func (s *Sandbox) ValidatePath(ctx context.Context, path string, forWrite bool) 
 		"for_write":     forWrite,
 		"workspace":     s.config.Workspace,
 	}
-	if processedData, err := hook.Emit(context.Background(), "hook.point.sandbox.path.validate", data); err != nil {
+	if processedData, err := hook.Emit(ctx, "hook.point.sandbox.path.validate", data); err != nil {
 		return fmt.Errorf("路径验证钩子拒绝访问: %w", err)
 	} else if processedData != nil {
 		// 钩子可能修改了路径
@@ -148,18 +148,18 @@ func (s *Sandbox) ValidatePath(ctx context.Context, path string, forWrite bool) 
 			// 1. 检查 session 级别的临时权限
 			sessionKey := SessionKeyFromContext(ctx)
 			if sessionKey != "" && s.permissions.IsGranted(sessionKey, absPath) {
-				s.logAuditEvent(AuditEventPathEscape, absPath, true, "session 临时写入权限已授权")
+				s.logAuditEvent(ctx, AuditEventPathEscape, absPath, true, "session 临时写入权限已授权")
 				return nil
 			}
 
 			// 2. 检查 AllowWritePaths 配置
 			if s.isPathInAllowWritePathsList(absPath) {
-				s.logAuditEvent(AuditEventPathEscape, absPath, true, "允许写入配置的外部路径")
+				s.logAuditEvent(ctx, AuditEventPathEscape, absPath, true, "允许写入配置的外部路径")
 				return nil
 			}
 
 			// 3. 需要用户确认
-			s.logAuditEvent(AuditEventPathEscape, absPath, false, "路径需要用户确认")
+			s.logAuditEvent(ctx, AuditEventPathEscape, absPath, false, "路径需要用户确认")
 			return &PathNeedsConfirmationError{
 				Path:      absPath,
 				Workspace: workspaceAbs,
@@ -167,11 +167,11 @@ func (s *Sandbox) ValidatePath(ctx context.Context, path string, forWrite bool) 
 		} else {
 			// 读取操作：检查 AllowReadOutside
 			if s.config.AllowReadOutside {
-				s.logAuditEvent(AuditEventPathEscape, absPath, true, "允许读取工作目录外的文件")
+				s.logAuditEvent(ctx, AuditEventPathEscape, absPath, true, "允许读取工作目录外的文件")
 				return nil
 			}
 			// 不允许读取外部文件
-			s.logAuditEvent(AuditEventPathEscape, absPath, false, "路径逃逸被拒绝")
+			s.logAuditEvent(ctx, AuditEventPathEscape, absPath, false, "路径逃逸被拒绝")
 			s.metrics.IncrementBlocked()
 			return fmt.Errorf("路径逃逸: %s 超出工作目录 %s", absPath, workspaceAbs)
 		}
@@ -207,7 +207,7 @@ func (s *Sandbox) ValidateCommand(ctx context.Context, command string) error {
 		"cmd_name":    cmdName,
 		"working_dir": s.config.Workspace,
 	}
-	if processedData, err := hook.Emit(context.Background(), "hook.point.sandbox.command.validate", data); err != nil {
+	if processedData, err := hook.Emit(ctx, "hook.point.sandbox.command.validate", data); err != nil {
 		return fmt.Errorf("命令验证钩子拒绝执行: %w", err)
 	} else if processedData != nil {
 		// 钩子可能修改了命令
@@ -219,7 +219,7 @@ func (s *Sandbox) ValidateCommand(ctx context.Context, command string) error {
 
 	// 检查是否在白名单中
 	if IsCommandAllowed(s.config, cmdName) {
-		s.logAuditEvent(AuditEventCommandStart, command, true, "命令验证通过")
+		s.logAuditEvent(ctx, AuditEventCommandStart, command, true, "命令验证通过")
 		logger.L().Debug().Str("command", command).Msg("validation pass")
 		return nil
 	}
@@ -227,12 +227,12 @@ func (s *Sandbox) ValidateCommand(ctx context.Context, command string) error {
 	// 不在白名单：检查 session 级别的临时命令权限
 	sessionKey := SessionKeyFromContext(ctx)
 	if sessionKey != "" && s.permissions.IsCommandGranted(sessionKey, cmdName) {
-		s.logAuditEvent(AuditEventCommandStart, command, true, "session 临时命令权限已授权")
+		s.logAuditEvent(ctx, AuditEventCommandStart, command, true, "session 临时命令权限已授权")
 		return nil
 	}
 
 	// 需要用户确认
-	s.logAuditEvent(AuditEventCommandBlock, command, false, "命令不在白名单中，需要用户确认")
+	s.logAuditEvent(ctx, AuditEventCommandBlock, command, false, "命令不在白名单中，需要用户确认")
 	s.metrics.IncrementBlocked()
 	return &CommandNeedsConfirmationError{
 		Command: cmdName,
@@ -272,15 +272,15 @@ func (s *Sandbox) ExecuteCommand(ctx context.Context, command string) (string, e
 
 	if err != nil {
 		if ctx.Err() == context.DeadlineExceeded {
-			s.logAuditEvent(AuditEventTimeout, command, false, fmt.Sprintf("命令执行超时（%v）", timeout))
+			s.logAuditEvent(ctx, AuditEventTimeout, command, false, fmt.Sprintf("命令执行超时（%v）", timeout))
 			s.metrics.IncrementBlocked()
 			return "", fmt.Errorf("命令执行超时（限制: %v）", timeout)
 		}
-		s.logAuditEvent(AuditEventCommandEnd, command, false, fmt.Sprintf("执行失败: %v", err))
+		s.logAuditEvent(ctx, AuditEventCommandEnd, command, false, fmt.Sprintf("执行失败: %v", err))
 		return output, fmt.Errorf("命令执行失败: %w", err)
 	}
 
-	s.logAuditEvent(AuditEventCommandEnd, command, true, fmt.Sprintf("执行成功，耗时: %v", duration))
+	s.logAuditEvent(ctx, AuditEventCommandEnd, command, true, fmt.Sprintf("执行成功，耗时: %v", duration))
 	return output, nil
 }
 
@@ -317,10 +317,13 @@ func extractCommandName(command string) string {
 }
 
 // logAuditEvent 记录审计事件
-func (s *Sandbox) logAuditEvent(eventType AuditEventType, target string, success bool, message string) {
+func (s *Sandbox) logAuditEvent(ctx context.Context, eventType AuditEventType, target string, success bool, message string) {
 	if s.auditLogger == nil {
 		return
 	}
+
+	sessionKey := SessionKeyFromContext(ctx)
+	agentName, channel := parseSessionKey(sessionKey)
 
 	event := &AuditEvent{
 		Timestamp: time.Now(),
@@ -328,9 +331,23 @@ func (s *Sandbox) logAuditEvent(eventType AuditEventType, target string, success
 		Target:    target,
 		Success:   success,
 		Error:     message,
+		SessionID: sessionKey,
+		AgentName: agentName,
+		Channel:   channel,
+		Workspace: s.config.Workspace,
 	}
 
 	s.auditLogger.Log(event)
+}
+
+// parseSessionKey 解析 session key 为 agent name 和 channel
+func parseSessionKey(sessionKey string) (agentName, channel string) {
+	parts := strings.SplitN(sessionKey, "::", 3)
+	if len(parts) >= 2 {
+		channel = parts[0]
+		agentName = parts[1]
+	}
+	return
 }
 
 // Config 返回沙箱配置
@@ -345,7 +362,12 @@ func (s *Sandbox) Permissions() *SessionPermissionStore {
 
 // LogAuditEvent 记录审计事件
 func (s *Sandbox) LogAuditEvent(eventType AuditEventType, target string, success bool, message string) {
-	s.logAuditEvent(eventType, target, success, message)
+	s.LogAuditEventWithCtx(context.Background(), eventType, target, success, message)
+}
+
+// LogAuditEventWithCtx 记录审计事件（带 context）
+func (s *Sandbox) LogAuditEventWithCtx(ctx context.Context, eventType AuditEventType, target string, success bool, message string) {
+	s.logAuditEvent(ctx, eventType, target, success, message)
 }
 
 // GetMetrics 获取沙箱指标

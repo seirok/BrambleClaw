@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"brambleclaw/internal/audit"
 	"brambleclaw/internal/interfaces"
 	"brambleclaw/internal/messages"
 	"brambleclaw/internal/tools"
@@ -22,8 +23,9 @@ type SubAgent struct {
 func NewSubAgent(
 	name, description, systemPrompt string,
 	llm LLMProcessor,
-	parentTools interfaces.Registry[tools.Tool],
+	parentTools interfaces.Registry[interfaces.Tool],
 	toolNames []string,
+	auditLogger interface{},
 ) (*SubAgent, error) {
 	subTools := tools.NewToolRegistry()
 	for _, n := range toolNames {
@@ -37,7 +39,15 @@ func NewSubAgent(
 	}
 
 	builder := NewSubContextBuilder(name, description, systemPrompt, subTools)
-	orche := NewOrchestrator(llm, subTools)
+
+	// 处理 auditLogger 参数，类型转换
+	var al *audit.AuditLogger
+	if auditLogger != nil {
+		if logger, ok := auditLogger.(*audit.AuditLogger); ok {
+			al = logger
+		}
+	}
+	orche := NewOrchestrator(llm, subTools, al)
 
 	return &SubAgent{
 		BaseChatAgent: NewBaseChatAgent(name, description),

@@ -1,15 +1,17 @@
 package agent
 
 import (
+	"brambleclaw/internal/audit"
 	"brambleclaw/internal/hook"
 	"brambleclaw/internal/interfaces"
 	"brambleclaw/internal/logger"
 	"brambleclaw/internal/messages"
-	"brambleclaw/internal/tools"
+	"brambleclaw/internal/sandbox"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 )
 
 type LLMProcessor interface {
@@ -20,17 +22,24 @@ type LLMProcessor interface {
 
 // Orchestrator 编排器
 type Orchestrator struct {
-	llm      LLMProcessor
-	tools    interfaces.Registry[tools.Tool]
-	toolDefs []map[string]interface{}
-	ctx      context.Context
+	llm         LLMProcessor
+	tools       interfaces.Registry[interfaces.Tool]
+	toolDefs    []map[string]interface{}
+	ctx         context.Context
+	auditLogger *audit.AuditLogger
+}
+
+// AuditLogger 返回审计日志记录器
+func (o *Orchestrator) AuditLogger() *audit.AuditLogger {
+	return o.auditLogger
 }
 
 // NewOrchestrator 创建编排器
-func NewOrchestrator(llm LLMProcessor, tools interfaces.Registry[tools.Tool]) *Orchestrator {
+func NewOrchestrator(llm LLMProcessor, tools interfaces.Registry[interfaces.Tool], auditLogger *audit.AuditLogger) *Orchestrator {
 	orch := &Orchestrator{
-		llm:   llm,
-		tools: tools,
+		llm:         llm,
+		tools:       tools,
+		auditLogger: auditLogger,
 	}
 	orch.toolDefs = orch.prepareToolDefinitions()
 	return orch
@@ -209,7 +218,30 @@ func (o *Orchestrator) executeToolCall(ctx context.Context, toolCall ToolFunctio
 		}
 	}
 
+	// 记录开始时间
+	startTime := time.Now()
+
 	result, err := tool.Execute(ctx, args)
+	duration := time.Since(startTime)
+
+	// 审计记录（在 hook 之前，记录原始结果）
+	if o.auditLogger != nil {
+		resultStr := o.serializeResult(result)
+		errorMsg := ""
+		if err != nil {
+			errorMsg = err.Error()
+		}
+		o.auditLogger.LogToolCall(&audit.ToolCallAuditEvent{
+			ToolName:   toolName,
+			Arguments:  args,
+			Result:     resultStr,
+			Success:    err == nil,
+			Error:      errorMsg,
+			Duration:   duration,
+			SessionKey: sandbox.SessionKeyFromContext(ctx),
+		})
+	}
+
 	if err != nil {
 		// 触发工具错误钩子
 		hook.Emit(ctx, "hook.point.tool.error", err)
@@ -224,18 +256,7 @@ func (o *Orchestrator) executeToolCall(ctx context.Context, toolCall ToolFunctio
 	}
 
 	// 转换结果为字符串
-	resultStr := ""
-	switch v := result.(type) {
-	case string:
-		resultStr = v
-	default:
-		jsonData, err := json.Marshal(result)
-		if err == nil {
-			resultStr = string(jsonData)
-		} else {
-			resultStr = fmt.Sprintf("%v", result)
-		}
-	}
+	resultStr := o.serializeResult(result)
 
 	// Return Result
 	toolResult := ToolResult{
@@ -244,4 +265,18 @@ func (o *Orchestrator) executeToolCall(ctx context.Context, toolCall ToolFunctio
 	}
 
 	return toolResult, nil
+}
+
+// serializeResult 序列化工具执行结果为字符串
+func (o *Orchestrator) serializeResult(result interface{}) string {
+	switch v := result.(type) {
+	case string:
+		return v
+	default:
+		jsonData, err := json.Marshal(result)
+		if err == nil {
+			return string(jsonData)
+		}
+		return fmt.Sprintf("%v", result)
+	}
 }

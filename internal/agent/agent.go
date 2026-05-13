@@ -3,7 +3,6 @@ package agent
 import (
 	util "brambleclaw/internal"
 	"brambleclaw/internal/bus"
-	"brambleclaw/internal/config"
 	"brambleclaw/internal/hook"
 	"brambleclaw/internal/interfaces"
 	"brambleclaw/internal/logger"
@@ -11,11 +10,24 @@ import (
 	"brambleclaw/internal/sandbox"
 	"brambleclaw/internal/session"
 	"brambleclaw/internal/skill"
-	"brambleclaw/internal/tools"
+	"brambleclaw/internal/store"
 	"brambleclaw/internal/tools/mcp"
 	"context"
+	"encoding/json"
+	"path/filepath"
 	"strings"
+	"time"
 )
+
+func init() {
+	session.RegisterMessageType(string(messages.MessageTypeText), func(raw json.RawMessage) (messages.BaseMessage, error) {
+		var am AgentMessage
+		if err := json.Unmarshal(raw, &am); err != nil {
+			return nil, err
+		}
+		return &am, nil
+	})
+}
 
 //// SkillInfo 是 /help 命令展示的技能信息（避免暴露 skill 包类型）
 //type SkillInfo struct {
@@ -24,19 +36,19 @@ import (
 //}
 
 type Agent struct {
-	name           string
-	description    string
-	workspace      string
-	bus            *bus.MessageBus
-	orche          *Orchestrator
-	tools          interfaces.Registry[tools.Tool]
-	sessionManager *session.PersistentSessionManager
-	mcp            *mcp.Manager
-	builder        *ContextBuilder
-	commands       interfaces.Registry[interfaces.Command]
-	skillManager   interface{} // *skill.SkillManager
-	base           *BaseChatAgent
-	runtime        messages.RuntimeProvider
+	name         string
+	description  string
+	workspace    string
+	bus          *bus.MessageBus
+	orche        *Orchestrator
+	tools        interfaces.Registry[interfaces.Tool]
+	session      *session.Session
+	mcp          *mcp.Manager
+	builder      *ContextBuilder
+	commands     interfaces.Registry[interfaces.Command]
+	skillManager interface{} // *skill.SkillManager
+	base         *BaseChatAgent
+	runtime      messages.RuntimeProvider
 }
 
 // Option 是用于配置 Agent 的函数类型
@@ -60,6 +72,13 @@ func NewAgent(name string, opts ...Option) *Agent {
 	return agent
 }
 
+// WithSession 设置当前会话
+func WithSession(sess *session.Session) Option {
+	return func(a *Agent) {
+		a.session = sess
+	}
+}
+
 // WithBus 设置消息总线
 func WithBus(bus *bus.MessageBus) Option {
 	return func(a *Agent) {
@@ -75,16 +94,9 @@ func WithOrchestrator(orche *Orchestrator) Option {
 }
 
 // WithTools 设置工具注册表
-func WithTools(t interfaces.Registry[tools.Tool]) Option {
+func WithTools(t interfaces.Registry[interfaces.Tool]) Option {
 	return func(a *Agent) {
 		a.tools = t
-	}
-}
-
-// WithSessionManager 设置会话管理器
-func WithSessionManager(sm *session.PersistentSessionManager) Option {
-	return func(a *Agent) {
-		a.sessionManager = sm
 	}
 }
 
@@ -142,15 +154,13 @@ func WithSkillManager(sm *skill.SkillManager) Option {
 
 func (a *Agent) Bus() *bus.MessageBus { return a.bus }
 
-func (a *Agent) SessionMgr() *session.PersistentSessionManager { return a.sessionManager }
-
 func (a *Agent) Orchestrator() *Orchestrator { return a.orche }
 
 func (a *Agent) ContextBuilder() *ContextBuilder { return a.builder }
 
 func (a *Agent) Commands() interfaces.Registry[interfaces.Command] { return a.commands }
 
-func (a *Agent) Tools() interfaces.Registry[tools.Tool] { return a.tools }
+func (a *Agent) Tools() interfaces.Registry[interfaces.Tool] { return a.tools }
 
 func (a *Agent) Workspace() string { return a.workspace }
 
@@ -250,9 +260,7 @@ func (a *Agent) SwitchModel(model string) error {
 
 // ResetSession 重置当前会话，清空消息但不创建新会话
 func (a *Agent) ResetSession(sessionKey string) error {
-	if _, err := a.SessionMgr().ClearSessionWithMeta(sessionKey); err != nil {
-		return err
-	}
+	a.session.Reset()
 	if a.builder != nil {
 		a.builder.ResetCompressor()
 	}
@@ -261,49 +269,61 @@ func (a *Agent) ResetSession(sessionKey string) error {
 
 // UndoLastRound 撤销上一轮对话（移除最后一条 user + 最后一条 assistant 消息）
 func (a *Agent) UndoLastRound(sessionKey string) (int, error) {
-	sess, err := a.SessionMgr().Get(context.Background(), sessionKey)
-	if err != nil {
-		return 0, err
-	}
-	if len(sess.Messages) <= 1 {
+	if a.session.Len() <= 1 {
 		return 0, nil
 	}
 	removed := 0
 	// 从末尾移除 assistant
-	for i := len(sess.Messages) - 1; i >= 0; i-- {
-		if am, ok := sess.Messages[i].(*AgentMessage); ok && am.Role == RoleAssistant {
-			sess.Messages = append(sess.Messages[:i], sess.Messages[i+1:]...)
+	for i := a.session.Len() - 1; i >= 0; i-- {
+		msg, err := a.session.Get(i)
+		if err != nil {
+			return 0, err
+		}
+
+		if am, ok := msg.(*AgentMessage); ok && am.Role == RoleAssistant {
+			if err = a.session.Remove(i); err != nil {
+				return 0, err
+			}
+
 			removed++
 			break
 		}
 	}
+
 	// 从末尾移除 user
-	for i := len(sess.Messages) - 1; i >= 0; i-- {
-		if am, ok := sess.Messages[i].(*AgentMessage); ok && am.Role == RoleUser {
-			sess.Messages = append(sess.Messages[:i], sess.Messages[i+1:]...)
+	for i := a.session.Len() - 1; i >= 0; i-- {
+		msg, err := a.session.Get(i)
+		if err != nil {
+			return 0, err
+		}
+
+		if am, ok := msg.(*AgentMessage); ok && am.Role == RoleUser {
+			if err = a.session.Remove(i); err != nil {
+				return 0, err
+			}
+
 			removed++
 			break
 		}
 	}
+
 	// 调整 Summarized 指针
-	if sess.Summarized > len(sess.Messages) {
-		sess.Summarized = len(sess.Messages)
-		if sess.Summarized < 1 {
-			sess.Summarized = 1
+	newLen := a.session.Len()
+	if a.session.Summarized > newLen {
+		a.session.Summarized = newLen
+		if a.session.Summarized < 1 {
+			a.session.Summarized = 1
 		}
 	}
 	if removed > 0 {
-		sess.Modified = true
+		a.session.Modified = true
 	}
 	return removed, nil
 }
 
 // ForceCompactSession 手动触发上下文压缩，忽略阈值
 func (a *Agent) ForceCompactSession(ctx context.Context, sessionKey string) (int, error) {
-	sess, err := a.SessionMgr().Get(ctx, sessionKey)
-	if err != nil {
-		return 0, err
-	}
+
 	if a.builder == nil {
 		return 0, nil
 	}
@@ -313,7 +333,7 @@ func (a *Agent) ForceCompactSession(ctx context.Context, sessionKey string) (int
 		channel: channel,
 		chatID:  chatID,
 	}
-	return a.builder.ForceCompact(ctx, sess, info)
+	return a.builder.ForceCompact(ctx, a.session, info)
 }
 
 // Description 返回 Agent 描述（ChatAgent 接口）
@@ -349,7 +369,6 @@ func (a *Agent) OnMessages(ctx context.Context, msgs []messages.ChatMessage) (*R
 	}
 
 	sessKey := util.BuildSessionKey(a.name, channel, chatID)
-	sess, isNewSession := a.SessionMgr().GetOrCreate(sessKey)
 
 	dynamicInfo := &DynamicInfo{
 		channel:  channel,
@@ -357,25 +376,34 @@ func (a *Agent) OnMessages(ctx context.Context, msgs []messages.ChatMessage) (*R
 		senderID: senderID,
 	}
 
-	if isNewSession || len(sess.Messages) == 0 {
+	// 第一次对话前， session 为空
+	if !a.session.IsValid() {
 		fullSystemPrompt, err := a.ContextBuilder().Build(dynamicInfo)
 		if err != nil {
 			logger.L().Error().Err(err).Str("agent", a.name).Str("channel", channel).Msg("Failed to build full system prompt")
 			fullSystemPrompt = ""
 		} else {
-			sess.AddMessage(NewAgentMessage(a.name, RoleSystem, fullSystemPrompt))
+			a.session.Append(NewAgentMessage(a.name, RoleSystem, fullSystemPrompt))
+		}
+
+		// 设置 session key 和 session meta
+		session.WithKey(sessKey)(a.session)
+		err = a.session.ParseKeyToSetMeta()
+		if err != nil {
+			return nil, err
 		}
 	}
 
 	// 添加用户消息到 session
 	for _, am := range agentMsgs {
-		sess.AddMessage(am)
+		a.session.Append(am)
 	}
 
-	historyMsg := sess.LoadHistory()
+	historyMsg := a.session.LoadHistory()
 
 	// 使用 Orchestrator 处理（注入 session key 到 context）
 	toolCtx := sandbox.ContextWithSessionKey(ctx, sessKey)
+
 	resp, err := a.Orchestrator().Run(toolCtx, historyMsg)
 	if err != nil {
 		return nil, err
@@ -388,15 +416,15 @@ func (a *Agent) OnMessages(ctx context.Context, msgs []messages.ChatMessage) (*R
 
 	// 添加回复到 session
 	replyMsg := NewAgentMessage(a.name, RoleAssistant, replyContent)
-	sess.AddMessage(replyMsg)
+	a.session.Append(replyMsg)
 
-	// 更新 session
+	// 更新 session token used
 	currentTokenUsed := resp.Usage.CompletionTokens + resp.Usage.PromptTokens
-	a.SessionMgr().Update(sess, currentTokenUsed)
+	a.session.GetMetadata().TokenCount = currentTokenUsed
 
 	go func() {
 		dynamicInfo.usage = currentTokenUsed
-		if err = a.ContextBuilder().Compact(ctx, sess, dynamicInfo); err != nil {
+		if err = a.ContextBuilder().Compact(ctx, a.session, dynamicInfo); err != nil {
 			logger.L().Error().Err(err).Str("session_key", sessKey).Msg("Failed to compact session")
 		}
 	}()
@@ -540,14 +568,16 @@ func (a *Agent) HandleMessage(ctx context.Context, msg *bus.InBoundMessage) {
 	}
 }
 
-func (a *Agent) ClearSession(sessionKey string) (int, error) {
-	_, count, err := a.SessionMgr().RenewSession(sessionKey)
-	if err != nil {
-		logger.L().Error().Err(err).Msg("Failed to renew session")
-		return 0, err
+func (a *Agent) ClearSession() error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+	if err := a.session.Clear(ctx); err != nil {
+		logger.L().Error().Err(err).Msg("Failed to renew session, time out")
+		return err
 	}
-	logger.L().Info().Int("count", count).Msg("Session renewed with new key")
-	return count, nil
+
+	logger.L().Info().Msg("Session renewed with new key")
+	return nil
 }
 
 func (a *Agent) Start(ctx context.Context) error {
@@ -556,16 +586,7 @@ func (a *Agent) Start(ctx context.Context) error {
 		return err
 	}
 
-	cfg := config.Get()
-	err := a.SessionMgr().Initialize(context.Background(), &cfg.Session)
-	if err != nil {
-		return err
-	}
-
-	err = a.SessionMgr().StartAll(ctx)
-	if err != nil {
-		return err
-	}
+	// TODO: MCP 启动
 
 	// 触发 Agent 启动后钩子
 	if _, err := hook.Emit(ctx, "hook.point.agent.start", a); err != nil {
@@ -582,8 +603,8 @@ func (a *Agent) Stop(ctx context.Context) error {
 		logger.L().Error().Err(err).Msg("Failed to execute pre-stop hook")
 	}
 
-	// 停止 session manager
-	err := a.sessionManager.StopAll(ctx)
+	// 持久化当前 session
+	err := a.session.Save(ctx)
 	if err != nil {
 		return err
 	}
@@ -599,14 +620,25 @@ func (a *Agent) Stop(ctx context.Context) error {
 	return nil
 }
 
-// GetOrCreateSession 获取或创建会话
-// 这是提供给 Gateway 的公共方法
-func (a *Agent) GetOrCreateSession(key string) *session.Session {
-	sess, _ := a.SessionMgr().GetOrCreate(key)
-	return sess
+func (a *Agent) GetSession() *session.Session {
+	return a.session
 }
 
-// GetSession 获取会话（如果不存在则返回 nil）
-func (a *Agent) GetSession(key string) (*session.Session, error) {
-	return a.SessionMgr().Get(context.Background(), key)
+// LoadSession  从磁盘中加载指定 key 的 session 到当前 session
+func (a *Agent) LoadSession(ctx context.Context, key string) (*session.Session, error) {
+	sessionStore := store.NewFileStorage[session.Session](filepath.Join(a.workspace, "memory"))
+	metaStore := store.NewFileStorage[session.SessionMetadata](filepath.Join(a.workspace, "memory", "meta_data"))
+
+	sess := session.NewSession(session.WithKey(key), session.WithStores(sessionStore, metaStore))
+
+	err := sess.Load(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return sess, nil
+}
+
+func (a *Agent) SetSession(sess *session.Session) {
+	a.session = sess
 }

@@ -105,10 +105,36 @@ func (m appModel) View() string {
 	helpView := m.help.View(keys)
 
 	// 组装最终布局
-	mainLayout := lipgloss.JoinHorizontal(lipgloss.Top, leftPanel, rightPanel)
+	safeLeftPanel := lipgloss.Place(
+		mainWidth,                  // 目标宽度
+		lipgloss.Height(leftPanel), // 保持原有高度
+		lipgloss.Left,              // 水平靠左
+		lipgloss.Top,               // 垂直靠顶
+		leftPanel,
+	)
+	var finalMainLayout string
 
-	return lipgloss.JoinVertical(lipgloss.Left,
-		mainLayout,
+	if m.sidebarEnabled {
+		// 2. 约束右侧面板 (Sidebar)
+		safeRightPanel := lipgloss.Place(
+			sidebarWidth,
+			lipgloss.Height(leftPanel), // 强制侧边栏与左侧对齐高度
+			lipgloss.Left,
+			lipgloss.Top,
+			rightPanel,
+		)
+
+		// 3. 水平拼接两个经过“脱水处理”的安全面板
+		finalMainLayout = lipgloss.JoinHorizontal(lipgloss.Top, safeLeftPanel, safeRightPanel)
+	} else {
+		finalMainLayout = safeLeftPanel
+	}
+
+	// mainLayout := lipgloss.JoinHorizontal(lipgloss.Top, leftPanel, rightPanel)
+
+	return lipgloss.JoinVertical(
+		lipgloss.Left,
+		lipgloss.NewStyle().MaxWidth(m.width).Render(finalMainLayout),
 		inputBox,
 		helpView,
 	)

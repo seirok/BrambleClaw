@@ -1,13 +1,12 @@
 package tui
 
 import (
-	util "brambleclaw/internal"
+	"brambleclaw/internal/agent"
 	"brambleclaw/internal/bus"
 	"brambleclaw/internal/config"
 	"brambleclaw/internal/config/structs"
 	"brambleclaw/internal/events"
 	"brambleclaw/internal/logger"
-	"brambleclaw/internal/session"
 	"context"
 	"reflect"
 	"strings"
@@ -84,7 +83,7 @@ type appModel struct {
 	width           int
 	height          int
 	msgBus          *bus.MessageBus
-	currentChatID   string
+	//	currentChatID   string
 	quitting        bool
 	err             error
 	eventFocused    bool // true=event 面板有焦点
@@ -95,8 +94,9 @@ type appModel struct {
 	focus           focusRegion
 	mode            appMode
 	resumeList      list.Model
-	sessionManager  *session.PersistentSessionManager
-	agentName       string
+	// 	session         *session.Session
+	// agentName       string
+	agent *agent.Agent
 }
 
 type keyMap struct {
@@ -169,7 +169,7 @@ type errMsg struct {
 }
 
 // NewAppModel 创建 TUI 模型
-func NewAppModel(msgBus *bus.MessageBus, session string, sessMgr *session.PersistentSessionManager, agentName string) appModel {
+func NewAppModel(msgBus *bus.MessageBus, agent *agent.Agent) appModel {
 	cfg := config.Get()
 	sidebarCfg := cfg.Sidebar
 
@@ -188,9 +188,6 @@ func NewAppModel(msgBus *bus.MessageBus, session string, sessMgr *session.Persis
 
 	vp := viewport.New(80, 20)
 	eventVp := viewport.New(80, 10)
-	// eventVp.Style = lipgloss.NewStyle().
-	//	Border(lipgloss.RoundedBorder()).
-	//	BorderForeground(lipgloss.Color("240"))
 
 	sidebarVp := viewport.New(sidebarCfg.Width, 30)
 	sidebarVp.Style = lipgloss.NewStyle().
@@ -208,7 +205,6 @@ func NewAppModel(msgBus *bus.MessageBus, session string, sessMgr *session.Persis
 		waiting:         false,
 		showBanner:      true,
 		msgBus:          msgBus,
-		currentChatID:   session,
 		help:            help.New(),
 		sidebarEnabled:  sidebarCfg.Enabled,
 		sidebarWidth:    sidebarCfg.Width,
@@ -218,9 +214,8 @@ func NewAppModel(msgBus *bus.MessageBus, session string, sessMgr *session.Persis
 			HookErrors: make(map[string]int64),
 			HookAvgMs:  make(map[string]float64),
 		},
-		mode:           modeInput,
-		sessionManager: sessMgr,
-		agentName:      agentName,
+		mode:  modeInput,
+		agent: agent,
 	}
 }
 
@@ -291,39 +286,40 @@ func (m appModel) updateNormal(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			if input == "/resume" {
 				// 先持久化当前会话
-				if m.sessionManager != nil {
-					currentSession := m.sessionManager.GetCurrentSession()
-					if currentSession != nil {
-						if currentSession.GetFirstUserMessage() != "" {
-							err := m.sessionManager.SaveCurrentSession()
-							if err != nil {
-								logger.L().Error().Msg("Failed to save current session")
-							}
+				if m.agent == nil {
+					logger.L().Fatal().Msg("main agent is nil")
+				}
+				sess := m.agent.GetSession()
+				if sess != nil {
+					if sess.IsValid() {
+						ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+						defer cancel()
+
+						err := sess.Save(ctx)
+						if err != nil {
+							logger.L().Error().Msg("Failed to save current session")
 						}
 					}
 				}
-				newModel, cmd, _ := m.initResumeList()
+
+				newModel, cmd, err := m.initResumeList()
+				if err != nil {
+					logger.L().Error().Err(err).Msg("Failed to init resume list")
+					return m, nil
+				}
 				newModel.mode = modeResume
 				return newModel, cmd
 			}
+
 			if input == "/clear" {
 				// 创建新会话
-				if m.sessionManager != nil {
-					oldSessionKey := m.sessionManager.GetCurrentSession().Name()
-					newSessionKey, oldMsgCount, err := m.sessionManager.RenewSession(oldSessionKey)
-					if err != nil {
-						logger.L().Error().Err(err).Msg("Failed to renew session")
-						return m, nil
-					}
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
 
-					// 解析新的 session key 获取新的 chatID
-					_, _, newChatID, err := util.ParseSessionKey(newSessionKey)
-					if err == nil {
-						// 更新为新的 chatID
-						m.currentChatID = newChatID
-					}
-
-					logger.L().Info().Int("oldMessageCount", oldMsgCount).Msg("Session cleared, created new session")
+				sess := m.agent.GetSession()
+				err := sess.Clear(ctx)
+				if err != nil {
+					return nil, nil
 				}
 
 				// 清空消息显示
@@ -347,11 +343,12 @@ func (m appModel) updateNormal(msg tea.Msg) (tea.Model, tea.Cmd) {
 			go func() {
 				inboundMsg := &bus.InBoundMessage{
 					InChannel: "cli",
-					SenderID:  "cli",
-					ChatID:    m.currentChatID,
+					SenderID:  "user",
+					ChatID:    m.agent.GetSession().GetMetadata().ChatID,
 					Content:   input,
 					TimeStamp: time.Now(),
 				}
+
 				ctx := context.Background()
 				if err := m.msgBus.PublishInBoundMessage(ctx, inboundMsg); err != nil {
 					logger.L().Error().Err(err).Msg("Failed to send message")
@@ -515,9 +512,22 @@ func (m appModel) updateNormal(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	}
 
-	m.textInput, tiCmd = m.textInput.Update(msg)
-	m.viewport, vpCmd = m.viewport.Update(msg)
-	m.eventViewport, evpCmd = m.eventViewport.Update(msg)
+	if m.focus == focusInput {
+		m.textInput, tiCmd = m.textInput.Update(msg)
+	}
+
+	switch m.focus {
+	case focusChat:
+		// 只有焦点在对话区时，对话区才响应 Update（处理滚动等）
+		m.viewport, vpCmd = m.viewport.Update(msg)
+	case focusEvent:
+		// 只有焦点在思考区时，思考区才响应 Update
+		m.eventViewport, evpCmd = m.eventViewport.Update(msg)
+	default:
+		// 当焦点在输入框时，如果你希望此时按上下键也能滚动对话区，可以保留下面这行
+		// 如果不希望滚动，则留空
+		m.viewport, vpCmd = m.viewport.Update(msg)
+	}
 	m.sidebarViewport, _ = m.sidebarViewport.Update(msg)
 
 	return m, tea.Batch(tiCmd, vpCmd, evpCmd, spCmd)

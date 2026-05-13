@@ -2,10 +2,10 @@ package teamtool
 
 import (
 	"brambleclaw/internal/agent"
+	"brambleclaw/internal/interfaces"
 	"brambleclaw/internal/logger"
 	"brambleclaw/internal/messages"
 	"brambleclaw/internal/team"
-	"brambleclaw/internal/tools"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -127,12 +127,13 @@ func (t *CreateTeamTool) Execute(ctx context.Context, args string) (interface{},
 
 	llmClient := t.parentAgent.Orchestrator().LLM()
 	parentTools := t.parentAgent.Tools()
+	auditLogger := t.parentAgent.Orchestrator().AuditLogger()
 
 	participants := make([]agent.ChatAgent, 0, len(req.Participants))
 	for _, p := range req.Participants {
 		sub, err := agent.NewSubAgent(
 			p.Name, p.Description, p.SystemPrompt,
-			llmClient, parentTools, p.Tools,
+			llmClient, parentTools, p.Tools, auditLogger,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("create_team: failed to create sub-agent %q: %w", p.Name, err)
@@ -171,4 +172,4 @@ func (t *CreateTeamTool) Execute(ctx context.Context, args string) (interface{},
 }
 
 // 编译时检查：确保 CreateTeamTool 实现了 Tool 接口
-var _ tools.Tool = (*CreateTeamTool)(nil)
+var _ interfaces.Tool = (*CreateTeamTool)(nil)

@@ -2,6 +2,7 @@ package agent
 
 import (
 	util "brambleclaw/internal"
+	"brambleclaw/internal/audit"
 	"brambleclaw/internal/bus"
 	"brambleclaw/internal/command"
 	"brambleclaw/internal/config"
@@ -11,6 +12,7 @@ import (
 	"brambleclaw/internal/sandbox"
 	"brambleclaw/internal/session"
 	"brambleclaw/internal/skill"
+	"brambleclaw/internal/store"
 	"brambleclaw/internal/tools"
 	"brambleclaw/internal/tools/mcp"
 	"context"
@@ -20,16 +22,18 @@ import (
 )
 
 type AgentManager struct {
+	//	currentAgent  *Agent
 	agentRegistry interfaces.Registry[*Agent]
-	toolRegistry  interfaces.Registry[tools.Tool]
+	toolRegistry  interfaces.Registry[interfaces.Tool]
 	msgBus        *bus.MessageBus
 	runtime       messages.RuntimeProvider
 	skillManager  *skill.SkillManager // Will be *skill.SkillManager
 	mu            sync.RWMutex
 	status        interfaces.ManagerStatus
+	auditLoggers  []*audit.AuditLogger
 
 	// toolFactory 注入额外的工具到每个 Agent
-	toolFactory func(*Agent) []tools.Tool
+	toolFactory func(*Agent) []interfaces.Tool
 	// commandFactory 注入额外的命令到每个 Agent（由外部设置，避免循环依赖）
 	commandFactory func(*Agent) []interfaces.Command
 }
@@ -43,7 +47,7 @@ func NewAgentManager(msgBus *bus.MessageBus, rt messages.RuntimeProvider) *Agent
 }
 
 // SetToolFactory 设置工具工厂，用于向每个 Agent 注入额外工具
-func (a *AgentManager) SetToolFactory(factory func(*Agent) []tools.Tool) {
+func (a *AgentManager) SetToolFactory(factory func(*Agent) []interfaces.Tool) {
 	a.toolFactory = factory
 }
 
@@ -94,9 +98,27 @@ func (a *AgentManager) Initialize(ctx context.Context, cfg any) error {
 
 		// Tool registry
 		llmClient := NewLLMClient(fullCfg.LLMConfig)
+
+		// Initialize summary compressor
+		contextBuilder.SetSummaryCompressor(NewSummaryCompressor(fullCfg.Compact, llmClient))
+
+		// Session
+		agentWorkspace := filepath.Join(util.GetSystemPath(), agentCfg.Name)
+
+		// 每个 Agent 创建独立的审计日志
+		auditLogPath := filepath.Join(agentWorkspace, "audit.log")
+		agentAuditLogger, err := audit.NewAuditLoggerWithPath(fullCfg.Sandbox.Audit, auditLogPath)
+		if err != nil {
+			logger.L().Warn().Err(err).Str("agent", agentCfg.Name).Msg("Failed to initialize AuditLogger")
+			agentAuditLogger = nil
+		}
+		if agentAuditLogger != nil {
+			a.auditLoggers = append(a.auditLoggers, agentAuditLogger)
+		}
+
 		websearchTool := tools.NewWebSearchTool(fullCfg.Tools.WebSearch.APIKey)
 		urlparsetool := tools.NewUrlParseTool()
-		sandBox, err := sandbox.NewSandbox(&fullCfg.Sandbox, nil)
+		sandBox, err := sandbox.NewSandbox(&fullCfg.Sandbox, agentAuditLogger)
 		if err != nil {
 			return fmt.Errorf("创建 Sandbox 失败: %w", err)
 		}
@@ -151,10 +173,7 @@ func (a *AgentManager) Initialize(ctx context.Context, cfg any) error {
 		}
 
 		// Orchestrator
-		orche := NewOrchestrator(llmClient, agentToolRegistry)
-		// Session manager
-		agentWorkspace := filepath.Join(util.GetSystemPath(), agentCfg.Name)
-		sm := session.NewPersistentSessionManager(agentWorkspace)
+		orche := NewOrchestrator(llmClient, agentToolRegistry, agentAuditLogger)
 
 		// Build command registry
 		cmdRegistry := command.NewCommandRegistry()
@@ -180,6 +199,11 @@ func (a *AgentManager) Initialize(ctx context.Context, cfg any) error {
 			logger.L().Error().Err(err).Msg("Failed to register skills command")
 		}
 
+		// Session
+		sessionStore := store.NewFileStorage[session.Session](filepath.Join(agentWorkspace, "memory"))
+		metaStore := store.NewFileStorage[session.SessionMetadata](filepath.Join(agentWorkspace, "memory", "meta_data"))
+		sess := session.NewSession(session.WithStores(sessionStore, metaStore)) // session key 需要由对话确定
+
 		// Set skill manager on agent
 		agent := NewAgent(agentCfg.Name,
 			WithContextBuilder(contextBuilder),
@@ -188,12 +212,16 @@ func (a *AgentManager) Initialize(ctx context.Context, cfg any) error {
 			WithTools(agentToolRegistry),
 			WithCommands(cmdRegistry),
 			WithOrchestrator(orche),
-			WithSessionManager(sm),
 			WithDescription(agentCfg.Description),
 			WithRuntime(a.runtime),
 			WithWorkspace(agentWorkspace),
 			WithSkillManager(a.skillManager),
+			WithSession(sess),
 		)
+
+		// agent 应该拥有写自己的 memory.md 的权限
+		config.Get().Sandbox.FileSystem.AllowWritePaths = append(config.Get().Sandbox.FileSystem.AllowWritePaths,
+			filepath.Join(agentWorkspace, "memory"))
 
 		// Initialize workspace skills
 		if err := a.skillManager.AddWorkspace(ctx, agentWorkspace); err != nil {
@@ -225,12 +253,16 @@ func (a *AgentManager) Initialize(ctx context.Context, cfg any) error {
 			logger.L().Error().Err(err).Str("agent", agentCfg.Name).Msg("Failed to register Agent")
 			continue
 		}
+
 	}
 
-	// Check at least one agent is available
-	if len(a.agentRegistry.List(ctx)) == 0 {
-		return fmt.Errorf("没有可用的 Agent")
-	}
+	// 设置当前 agent
+	//defaultAgent, err := a.agentRegistry.Get(ctx, interfaces.DefaultAgentName)
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//a.currentAgent = defaultAgent
 
 	a.mu.Lock()
 	a.status = interfaces.StatusRunning
@@ -299,6 +331,14 @@ func (a *AgentManager) StopAll(ctx context.Context) error {
 
 	if len(errs) > 0 {
 		return fmt.Errorf("errors stopping agents: %v", errs)
+	}
+	// 关闭所有审计日志记录器
+	for _, auditLogger := range a.auditLoggers {
+		if auditLogger != nil {
+			if err := auditLogger.Close(); err != nil {
+				logger.L().Warn().Err(err).Msg("Failed to close AuditLogger")
+			}
+		}
 	}
 
 	a.status = interfaces.StatusStopped
