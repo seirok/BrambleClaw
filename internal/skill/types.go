@@ -14,6 +14,14 @@ const (
 	ScopeEnterprise              // 3: enterprise-managed (future, highest priority)
 )
 
+type SkillInfo struct {
+	Name               string
+	Description        string
+	UserInvocable      bool
+	DisableModelInvoke bool
+	Scope              string
+	Arguments          []SkillArg
+}
 type SkillFrontmatter struct {
 	Name               string         `yaml:"name"`
 	Description        string         `yaml:"description"`

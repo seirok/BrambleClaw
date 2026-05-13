@@ -17,11 +17,11 @@ import (
 	"strings"
 )
 
-// SkillInfo 是 /help 命令展示的技能信息（避免暴露 skill 包类型）
-type SkillInfo struct {
-	Name        string
-	Description string
-}
+//// SkillInfo 是 /help 命令展示的技能信息（避免暴露 skill 包类型）
+//type SkillInfo struct {
+//	Name        string
+//	Description string
+//}
 
 type Agent struct {
 	name           string
@@ -181,7 +181,7 @@ func (a *Agent) ListUserInvocableSkills() interface{} {
 }
 
 // ListAllSkills 返回所有技能的详细信息（不做 UserInvocable 过滤），给 /skills 命令用
-func (a *Agent) ListAllSkills() interface{} {
+func (a *Agent) ListAllSkills() []skill.SkillInfo {
 	if a.skillManager == nil {
 		return nil
 	}
@@ -190,24 +190,12 @@ func (a *Agent) ListAllSkills() interface{} {
 		return nil
 	}
 	metas := sm.ListMeta(context.Background())
-	type skillArg struct {
-		Name        string
-		Description string
-		Required    bool
-		Default     string
-	}
-	result := make([]struct {
-		Name               string
-		Description        string
-		UserInvocable      bool
-		DisableModelInvoke bool
-		Scope              string
-		Arguments          []skillArg
-	}, 0, len(metas))
+
+	result := make([]skill.SkillInfo, 0, len(metas))
 	for _, m := range metas {
-		args := make([]skillArg, 0, len(m.Arguments))
+		args := make([]skill.SkillArg, 0, len(m.Arguments))
 		for _, arg := range m.Arguments {
-			args = append(args, skillArg{
+			args = append(args, skill.SkillArg{
 				Name:        arg.Name,
 				Description: arg.Description,
 				Required:    arg.Required,
@@ -227,14 +215,7 @@ func (a *Agent) ListAllSkills() interface{} {
 		default:
 			scopeStr = "unknown"
 		}
-		result = append(result, struct {
-			Name               string
-			Description        string
-			UserInvocable      bool
-			DisableModelInvoke bool
-			Scope              string
-			Arguments          []skillArg
-		}{
+		result = append(result, skill.SkillInfo{
 			Name:               m.Name,
 			Description:        m.Description,
 			UserInvocable:      m.UserInvocable,

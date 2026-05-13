@@ -2,6 +2,7 @@ package command
 
 import (
 	"brambleclaw/internal/bus"
+	"brambleclaw/internal/skill"
 	"context"
 	"fmt"
 	"strings"
@@ -22,7 +23,7 @@ func (c *SkillsCommand) Usage() string { return "/skills" }
 // Execute runs the command
 func (c *SkillsCommand) Execute(ctx context.Context, agent interface{}, msg interface{}, args []string) error {
 	type agentWithSkills interface {
-		ListAllSkills() interface{}
+		ListAllSkills() []skill.SkillInfo
 		Name() string
 	}
 
@@ -37,31 +38,7 @@ func (c *SkillsCommand) Execute(ctx context.Context, agent interface{}, msg inte
 	}
 
 	var sb strings.Builder
-	skillsRaw := a.ListAllSkills()
-	if skillsRaw == nil {
-		sb.WriteString("No skills available.")
-		return publishReply(ctx, agent, m, sb.String())
-	}
-
-	type skillArg struct {
-		Name        string
-		Description string
-		Required    bool
-		Default     string
-	}
-	type skillInfo struct {
-		Name               string
-		Description        string
-		UserInvocable      bool
-		DisableModelInvoke bool
-		Scope              string
-		Arguments          []skillArg
-	}
-	skills, ok := skillsRaw.([]skillInfo)
-	if !ok {
-		sb.WriteString("No skills available.")
-		return publishReply(ctx, agent, m, sb.String())
-	}
+	skills := a.ListAllSkills()
 
 	if len(skills) == 0 {
 		sb.WriteString("No skills available.")
