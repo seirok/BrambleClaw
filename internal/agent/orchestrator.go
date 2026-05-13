@@ -3,6 +3,7 @@ package agent
 import (
 	"brambleclaw/internal/hook"
 	"brambleclaw/internal/interfaces"
+	"brambleclaw/internal/logger"
 	"brambleclaw/internal/messages"
 	"brambleclaw/internal/tools"
 	"context"
@@ -74,10 +75,11 @@ func (o *Orchestrator) UpdateHistory(llmResp *LLMResponse, historyMsg *[]ChatMsg
 
 	//
 	rawMsg := llmResp.Choices[0].Message
+
 	respMsg := ChatMsg{
-		Role:      Role(rawMsg.Role), // 如果 Role 是别名，记得转换
+		Role:      Role(rawMsg.Role),
 		Content:   rawMsg.Content,
-		ToolCalls: rawMsg.ToolCalls, // 只要 ToolCall 的结构一致，可以直接赋值
+		ToolCalls: rawMsg.ToolCalls,
 	}
 	*historyMsg = append(*historyMsg, respMsg)
 	return nil
@@ -141,7 +143,15 @@ func (o *Orchestrator) Run(ctx context.Context, messages []messages.BaseMessage)
 		for _, call := range toolCalls {
 			result, err := o.executeToolCall(ctx, call.Function, call.ID)
 			if err != nil {
-				return nil, err
+				// Type 1: feed error back to LLM as tool result
+				logger.L().Error().Err(err).Str("tool", call.Function.Name).Msg("Tool execution failed")
+				msgWithToolError := ChatMsg{
+					Role:       RoleTool,
+					Content:    fmt.Sprintf("Error: tool execution failed - %s", err.Error()),
+					ToolCallID: call.ID,
+				}
+				chatMsgs = append(chatMsgs, msgWithToolError)
+				continue
 			}
 			msgWithToolresult := ChatMsg{
 				Role:       RoleTool,
@@ -183,6 +193,7 @@ func (o *Orchestrator) executeToolCall(ctx context.Context, toolCall ToolFunctio
 	toolName := toolCall.Name
 	tool, ok := o.tools.Get(ctx, toolName)
 	if ok != nil {
+		hook.Emit(ctx, "hook.point.tool.error", fmt.Errorf("tool %s not found", toolName))
 		return ToolResult{}, fmt.Errorf("tool %s not found", toolName)
 	}
 

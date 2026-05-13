@@ -1,8 +1,10 @@
 package sandbox
 
 import (
+	"brambleclaw/internal/logger"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -54,6 +56,7 @@ func (t *ShellTool) Parameters() map[string]interface{} {
 
 // Execute 执行工具
 func (t *ShellTool) Execute(ctx context.Context, argStr string) (interface{}, error) {
+	logger.L().Info().Str("tool", t.name).Msg("tool start to execute")
 	// 解析参数
 	var args struct {
 		Command    string `json:"command"`
@@ -71,6 +74,17 @@ func (t *ShellTool) Execute(ctx context.Context, argStr string) (interface{}, er
 	// 在沙箱中执行命令
 	output, err := t.sandbox.ExecuteCommand(ctx, args.Command)
 	if err != nil {
+		// 检查是否是命令需要确认的错误
+		var cncErr *CommandNeedsConfirmationError
+		if errors.As(err, &cncErr) {
+			return map[string]interface{}{
+				"status":      "needs_confirmation",
+				"command":     cncErr.Command,
+				"message":     fmt.Sprintf("需要用户确认才能执行命令 '%s'（不在白名单中）", cncErr.Command),
+				"instruction": "请先询问用户是否允许执行该命令，用户同意后调用 grant_permission 工具授权命令，再重试执行。",
+			}, nil
+		}
+
 		return map[string]interface{}{
 			"output":        output,
 			"error":         true,
@@ -85,11 +99,11 @@ func (t *ShellTool) Execute(ctx context.Context, argStr string) (interface{}, er
 }
 
 // ValidateCommand 验证命令是否在白名单中（供外部使用）
-func (t *ShellTool) ValidateCommand(command string) error {
+func (t *ShellTool) ValidateCommand(ctx context.Context, command string) error {
 	if t.sandbox == nil {
 		return nil
 	}
-	return t.sandbox.ValidateCommand(command)
+	return t.sandbox.ValidateCommand(ctx, command)
 }
 
 // extractCommandName 提取命令名称（与 sandbox.go 中的实现相同，保持兼容）

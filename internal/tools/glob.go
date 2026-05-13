@@ -54,6 +54,7 @@ func (t *GlobTool) Parameters() map[string]interface{} {
 
 // Execute 执行工具
 func (t *GlobTool) Execute(ctx context.Context, argStr string) (interface{}, error) {
+	logger.L().Info().Str("tool", t.name).Msg("tool start to execute")
 	var args map[string]interface{}
 	err := json.Unmarshal([]byte(argStr), &args)
 	if err != nil {

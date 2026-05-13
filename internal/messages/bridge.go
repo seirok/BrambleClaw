@@ -11,6 +11,7 @@ type OutBoundData struct {
 	ChatID    string
 	Channel   string
 	Content   string
+	MsgType   string
 	ReplyTo   string
 	TimeStamp time.Time
 }
@@ -38,6 +39,7 @@ func ToOutBoundData(msg ChatMessage, chatID, channel, replyTo string) OutBoundDa
 		ChatID:    chatID,
 		Channel:   channel,
 		Content:   msg.ToText(),
+		MsgType:   string(msg.GetType()),
 		ReplyTo:   replyTo,
 		TimeStamp: time.Now(),
 	}

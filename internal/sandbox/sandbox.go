@@ -3,7 +3,9 @@ package sandbox
 import (
 	"brambleclaw/internal/config"
 	"brambleclaw/internal/hook"
+	"brambleclaw/internal/logger"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -18,8 +20,42 @@ import (
 type Sandbox struct {
 	config      *config.SandboxConfig
 	auditLogger *AuditLogger
+	permissions *SessionPermissionStore
 	mu          sync.RWMutex
 	metrics     *Metrics
+}
+
+// ErrPathNeedsConfirmation 表示路径需要用户确认才能写入
+var ErrPathNeedsConfirmation = errors.New("path requires user confirmation")
+
+// PathNeedsConfirmationError 需要用户确认的路径错误
+type PathNeedsConfirmationError struct {
+	Path      string
+	Workspace string
+}
+
+func (e *PathNeedsConfirmationError) Error() string {
+	return fmt.Sprintf("需要用户确认才能写入: %s (超出工作目录 %s)", e.Path, e.Workspace)
+}
+
+func (e *PathNeedsConfirmationError) Unwrap() error {
+	return ErrPathNeedsConfirmation
+}
+
+// ErrCommandNeedsConfirmation 表示命令需要用户确认才能执行
+var ErrCommandNeedsConfirmation = errors.New("command requires user confirmation")
+
+// CommandNeedsConfirmationError 需要用户确认的命令错误
+type CommandNeedsConfirmationError struct {
+	Command string
+}
+
+func (e *CommandNeedsConfirmationError) Error() string {
+	return fmt.Sprintf("需要用户确认才能执行命令: %s (不在白名单中)", e.Command)
+}
+
+func (e *CommandNeedsConfirmationError) Unwrap() error {
+	return ErrCommandNeedsConfirmation
 }
 
 // Metrics 沙箱指标
@@ -49,6 +85,7 @@ func NewSandbox(config *config.SandboxConfig, auditLogger *AuditLogger) (*Sandbo
 	s := &Sandbox{
 		config:      config,
 		auditLogger: auditLogger,
+		permissions: NewSessionPermissionStore(),
 		metrics:     &Metrics{},
 	}
 
@@ -64,7 +101,7 @@ func (s *Sandbox) IsEnabled() bool {
 }
 
 // ValidatePath 验证路径是否在允许范围内
-func (s *Sandbox) ValidatePath(path string, forWrite bool) error {
+func (s *Sandbox) ValidatePath(ctx context.Context, path string, forWrite bool) error {
 	if !s.IsEnabled() {
 		return nil
 	}
@@ -104,55 +141,59 @@ func (s *Sandbox) ValidatePath(path string, forWrite bool) error {
 		return fmt.Errorf("计算相对路径失败: %w", err)
 	}
 
-	// 检查是否逃逸出工作目录
+	// 检查路径是否被允许
 	if strings.HasPrefix(rel, "..") {
-		// 尝试读取外部文件
-		if !forWrite && s.config.AllowReadOutside {
-			// 允许读取，但需要审计
-			s.logAuditEvent(AuditEventPathEscape, absPath, true, "允许读取工作目录外的文件")
-			return nil
-		}
+		// 路径在工作目录外
+		if forWrite {
+			// 1. 检查 session 级别的临时权限
+			sessionKey := SessionKeyFromContext(ctx)
+			if sessionKey != "" && s.permissions.IsGranted(sessionKey, absPath) {
+				s.logAuditEvent(AuditEventPathEscape, absPath, true, "session 临时写入权限已授权")
+				return nil
+			}
 
-		// 写入操作或不允许读取外部文件
-		s.logAuditEvent(AuditEventPathEscape, absPath, false, "路径逃逸被拒绝")
-		s.metrics.IncrementBlocked()
-		return fmt.Errorf("路径逃逸: %s 超出工作目录 %s", absPath, workspaceAbs)
-	}
+			// 2. 检查 AllowWritePaths 配置
+			if s.isPathInAllowWritePathsList(absPath) {
+				s.logAuditEvent(AuditEventPathEscape, absPath, true, "允许写入配置的外部路径")
+				return nil
+			}
 
-	// 检查写入权限
-	if forWrite {
-		// 检查是否在允许的写入路径列表中
-		if !s.isPathInAllowedWritePaths(absPath) {
-			s.logAuditEvent(AuditEventAccessDenied, absPath, false, "写入路径不在允许列表中")
+			// 3. 需要用户确认
+			s.logAuditEvent(AuditEventPathEscape, absPath, false, "路径需要用户确认")
+			return &PathNeedsConfirmationError{
+				Path:      absPath,
+				Workspace: workspaceAbs,
+			}
+		} else {
+			// 读取操作：检查 AllowReadOutside
+			if s.config.AllowReadOutside {
+				s.logAuditEvent(AuditEventPathEscape, absPath, true, "允许读取工作目录外的文件")
+				return nil
+			}
+			// 不允许读取外部文件
+			s.logAuditEvent(AuditEventPathEscape, absPath, false, "路径逃逸被拒绝")
 			s.metrics.IncrementBlocked()
-			return fmt.Errorf("写入路径不在允许列表中: %s", absPath)
+			return fmt.Errorf("路径逃逸: %s 超出工作目录 %s", absPath, workspaceAbs)
 		}
 	}
 
+	// 路径在工作目录内：总是允许
 	return nil
 }
 
-// 检查路径是否在允许的写入路径列表中
-func (s *Sandbox) isPathInAllowedWritePaths(path string) bool {
-	// 首先检查是否在工作目录内
-	workspaceAbs, _ := filepath.Abs(s.config.Workspace)
-	if strings.HasPrefix(path, workspaceAbs) {
-		return true
-	}
-
-	// 检查是否在额外允许的写入路径中
+// 检查路径是否在允许的写入路径列表中（仅检查 AllowWritePaths，不包含工作目录）
+func (s *Sandbox) isPathInAllowWritePathsList(path string) bool {
 	for _, pattern := range s.config.FileSystem.AllowWritePaths {
 		matched, err := regexp.MatchString(pattern, path)
 		if err == nil && matched {
 			return true
 		}
 	}
-
 	return false
 }
 
 // ValidateCommand 验证命令是否在白名单中
-func (s *Sandbox) ValidateCommand(command string) error {
+func (s *Sandbox) ValidateCommand(ctx context.Context, command string) error {
 	if !s.IsEnabled() {
 		return nil
 	}
@@ -177,14 +218,25 @@ func (s *Sandbox) ValidateCommand(command string) error {
 	}
 
 	// 检查是否在白名单中
-	if !IsCommandAllowed(s.config, cmdName) {
-		s.logAuditEvent(AuditEventCommandBlock, command, false, "命令不在白名单中")
-		s.metrics.IncrementBlocked()
-		return fmt.Errorf("命令 '%s' 不在允许的白名单中", cmdName)
+	if IsCommandAllowed(s.config, cmdName) {
+		s.logAuditEvent(AuditEventCommandStart, command, true, "命令验证通过")
+		logger.L().Debug().Str("command", command).Msg("validation pass")
+		return nil
 	}
 
-	s.logAuditEvent(AuditEventCommandStart, command, true, "命令验证通过")
-	return nil
+	// 不在白名单：检查 session 级别的临时命令权限
+	sessionKey := SessionKeyFromContext(ctx)
+	if sessionKey != "" && s.permissions.IsCommandGranted(sessionKey, cmdName) {
+		s.logAuditEvent(AuditEventCommandStart, command, true, "session 临时命令权限已授权")
+		return nil
+	}
+
+	// 需要用户确认
+	s.logAuditEvent(AuditEventCommandBlock, command, false, "命令不在白名单中，需要用户确认")
+	s.metrics.IncrementBlocked()
+	return &CommandNeedsConfirmationError{
+		Command: cmdName,
+	}
 }
 
 // ExecuteCommand 在沙箱中执行命令
@@ -195,7 +247,7 @@ func (s *Sandbox) ExecuteCommand(ctx context.Context, command string) (string, e
 	}
 
 	// 验证命令
-	if err := s.ValidateCommand(command); err != nil {
+	if err := s.ValidateCommand(ctx, command); err != nil {
 		return "", err
 	}
 
@@ -284,6 +336,11 @@ func (s *Sandbox) logAuditEvent(eventType AuditEventType, target string, success
 // Config 返回沙箱配置
 func (s *Sandbox) Config() *config.SandboxConfig {
 	return s.config
+}
+
+// Permissions 返回 session 权限存储
+func (s *Sandbox) Permissions() *SessionPermissionStore {
+	return s.permissions
 }
 
 // LogAuditEvent 记录审计事件

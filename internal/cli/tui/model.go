@@ -27,12 +27,14 @@ import (
 type chatMessage struct {
 	Content   string
 	IsUser    bool
+	IsError   bool
 	Timestamp time.Time
 }
 
 // AgentResponseMsg 用于传递 Agent 回复
 type AgentResponseMsg struct {
 	Content string
+	MsgType string
 }
 
 // ThinkingEventMsg 用于传递思考事件
@@ -130,6 +132,9 @@ var (
 	agentStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("86")) // 青色
 
+	errorStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("196")) // 红色
+
 	spinnerStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("205")) // 粉色
 
@@ -183,9 +188,9 @@ func NewAppModel(msgBus *bus.MessageBus, session string, sessMgr *session.Persis
 
 	vp := viewport.New(80, 20)
 	eventVp := viewport.New(80, 10)
-	eventVp.Style = lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("240"))
+	// eventVp.Style = lipgloss.NewStyle().
+	//	Border(lipgloss.RoundedBorder()).
+	//	BorderForeground(lipgloss.Color("240"))
 
 	sidebarVp := viewport.New(sidebarCfg.Width, 30)
 	sidebarVp.Style = lipgloss.NewStyle().
@@ -263,7 +268,7 @@ func (m appModel) updateNormal(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyTab:
 			// 循环切换：0 -> 1 -> 2 -> 0
 			m.focus = (m.focus + 1) % 3
-
+			m.eventFocused = (m.focus == focusEvent)
 			// 只有在输入区时，textInput 才获取焦点
 			if m.focus == focusInput {
 				m.textInput.Focus()
@@ -357,16 +362,19 @@ func (m appModel) updateNormal(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.spinner.Tick
 
 		case tea.KeyUp:
-			if m.eventFocused {
-				m.eventViewport.ScrollUp(1)
-			} else {
+			switch m.focus {
+			case focusChat:
 				m.viewport.ScrollUp(1)
+			case focusEvent:
+				m.eventViewport.ScrollUp(1)
 			}
+
 		case tea.KeyDown:
-			if m.eventFocused {
-				m.eventViewport.ScrollDown(1)
-			} else {
+			switch m.focus {
+			case focusChat:
 				m.viewport.ScrollDown(1)
+			case focusEvent:
+				m.eventViewport.ScrollDown(1)
 			}
 		}
 		switch msg.String() {
@@ -433,6 +441,7 @@ func (m appModel) updateNormal(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.messages = append(m.messages, chatMessage{
 			Content:   msg.Content,
 			IsUser:    false,
+			IsError:   msg.MsgType == "error",
 			Timestamp: time.Now(),
 		})
 		m.mode = modeInput

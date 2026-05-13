@@ -5,6 +5,7 @@ import (
 	"brambleclaw/internal/sandbox"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -60,6 +61,7 @@ func (t *WriteTool) Parameters() map[string]interface{} {
 
 // Execute 执行工具
 func (t *WriteTool) Execute(ctx context.Context, argStr string) (interface{}, error) {
+	logger.L().Info().Str("tool", t.name).Msg("tool start to execute")
 	// 解析参数
 	var args map[string]interface{}
 	if err := json.Unmarshal([]byte(argStr), &args); err != nil {
@@ -113,7 +115,17 @@ func (t *WriteTool) writeFile(ctx context.Context, path string, content string, 
 	}
 
 	// 验证路径
-	if err := t.sandbox.ValidatePath(path, true); err != nil {
+	if err := t.sandbox.ValidatePath(ctx, path, true); err != nil {
+		var pncErr *sandbox.PathNeedsConfirmationError
+		if errors.As(err, &pncErr) {
+			return map[string]interface{}{
+				"status":      "needs_confirmation",
+				"path":        pncErr.Path,
+				"workspace":   pncErr.Workspace,
+				"message":     fmt.Sprintf("需要用户确认才能写入 %s，该路径在工作目录外", pncErr.Path),
+				"instruction": "请先询问用户是否允许写入该路径，用户同意后调用 grant_permission 工具授权，再重试写入。",
+			}, nil
+		}
 		logger.L().Error().Err(err).Str("path", path).Msg("WriteTool: path validation failed")
 		return nil, err
 	}

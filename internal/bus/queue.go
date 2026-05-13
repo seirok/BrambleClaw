@@ -22,7 +22,8 @@ type OutBoundMessage struct {
 	ChatID     string `json:"chat_id"` // 聊天ID
 	OutChannel string
 	Content    string
-	ReplyTo    string `json:"reply_to"` // 回复的消息ID
+	MsgType    string `json:"msg_type,omitempty"` // 消息类型: "text" | "error"
+	ReplyTo    string `json:"reply_to"`           // 回复的消息ID
 	TimeStamp  time.Time
 }
 

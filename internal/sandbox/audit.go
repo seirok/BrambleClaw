@@ -29,9 +29,11 @@ const (
 	AuditEventCommandBlock AuditEventType = "COMMAND_BLOCK"
 
 	// 安全事件
-	AuditEventAccessDenied AuditEventType = "ACCESS_DENIED"
-	AuditEventPathEscape   AuditEventType = "PATH_ESCAPE"
-	AuditEventTimeout      AuditEventType = "TIMEOUT"
+	AuditEventAccessDenied           AuditEventType = "ACCESS_DENIED"
+	AuditEventPathEscape             AuditEventType = "PATH_ESCAPE"
+	AuditEventTimeout                AuditEventType = "TIMEOUT"
+	AuditEventPermissionGrant        AuditEventType = "PERMISSION_GRANT"
+	AuditEventCommandPermissionGrant AuditEventType = "COMMAND_PERMISSION_GRANT"
 )
 
 // AuditEvent 审计事件

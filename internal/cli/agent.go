@@ -53,9 +53,15 @@ func (a *toolAdapter) Parameters() map[string]interface{} {
 	return a.parameters
 }
 
+// responsePayload carries response content and message type from CLIChannel to TUI
+type responsePayload struct {
+	Content string
+	MsgType string
+}
+
 var agentCmd = &cobra.Command{
 	Use:   "agent",
-	Short: "Start AI agent service",
+	Short: "启动 AI 代理服务",
 	RunE:  runAgent,
 }
 
@@ -72,36 +78,36 @@ func init() {
 }
 
 func runAgent(cmd *cobra.Command, args []string) error {
-	logger.L().Debug().Msg("Loading system configuration...")
+	logger.L().Debug().Msg("加载系统配置...")
 
 	cfg := config.Get()
 	if cfg == nil {
-		return fmt.Errorf("failed to load system configuration")
+		return fmt.Errorf("系统配置加载失败")
 	}
 
 	logger.Setup(cfg.Log.Level, cfg.Log.ConsoleEnabled)
-	logger.L().Debug().Msg("Log configuration loaded")
+	logger.L().Debug().Msg("日志配置已加载")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// 1. Initialize message bus
-	logger.L().Debug().Msg("Initializing message bus...")
+	// 1. 初始化消息总线
+	logger.L().Debug().Msg("初始化消息总线...")
 	msgBus := bus.NewMessageBus(cfg.BusBufSize)
 
-	// 2. Initialize channel manager
-	logger.L().Debug().Msg("Initializing ChannelManager...")
+	// 2. 初始化通道管理器
+	logger.L().Debug().Msg("初始化 ChannelManager...")
 	channelManager := channel.NewChannelManager(msgBus)
 	logger.L().Debug().Msg("Initializing channel manager with config...")
 	if err := channelManager.Initialize(ctx, cfg); err != nil {
 		return fmt.Errorf("failed to initialize channel manager: %w", err)
 	}
 
-	// 5. Initialize SkillManager and AgentManager
-	logger.L().Debug().Msg("Initializing SkillManager...")
+	// 5. 初始化 SkillManager 和 AgentManager
+	logger.L().Debug().Msg("初始化 SkillManager...")
 	skillManager := skill.NewSkillManager(&cfg.Skill)
 
-	logger.L().Debug().Msg("Initializing AgentManager...")
+	logger.L().Debug().Msg("初始化 AgentManager...")
 	agentManager := agent.NewAgentManager(msgBus, runtime.NewAgentRuntime())
 	agentManager.SetSkillManager(skillManager)
 
@@ -130,8 +136,8 @@ func runAgent(cmd *cobra.Command, args []string) error {
 		return cmds
 	})
 
-	// 6. Initialize Gateway
-	logger.L().Debug().Msg("Initializing Gateway...")
+	// 6. 初始化 Gateway
+	logger.L().Debug().Msg("初始化 Gateway...")
 	gwCfg := config.Get().Gateway
 	gw := gateway.NewGateway(
 		gateway.WithRouter(gateway.NewRouter(gwCfg.Routes, agentManager)),
@@ -140,8 +146,8 @@ func runAgent(cmd *cobra.Command, args []string) error {
 		gateway.WithMessageBus(msgBus),
 	)
 
-	// 7. Start Gateway and Channel
-	logger.L().Debug().Msg("Starting Gateway and Channel...")
+	// 7. 启动 Gateway 和 Channel
+	logger.L().Debug().Msg("启动 Gateway 和 Channel...")
 	if err := gw.Start(ctx); err != nil {
 		return err
 	}
@@ -172,76 +178,110 @@ func runAgent(cmd *cobra.Command, args []string) error {
 		sessMgr = session.NewPersistentSessionManager(workDir)
 	}
 
-	// Wait for Gateway to be ready
+	// 等待 Gateway 准备好
 	time.Sleep(100 * time.Millisecond)
 
-	// Set up signal handling
+	// 设置信号处理
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-
-	// ========== Interactive execution ==========
-
-	// 创建 EventBus 并注册 observers
-	tvCfg := cfg.Hooks.ThinkingVisibility
-	var eventBus *events.EventBus
-	if tvCfg.Enabled {
-		eventBus = events.NewEventBus(tvCfg.MaxEvents)
-		hook.RegisterObservers(eventBus, tvCfg)
-	}
 
 	// 设置初始 session
 	currentChatID := util.GenerateRandomChatID()
 
-	model := tui.NewAppModel(msgBus, currentChatID, sessMgr, agentName)
-	p := tea.NewProgram(model, tea.WithAltScreen())
-
-	// 获取 CLIChannel 并设置回调
-	var responseChan chan string = make(chan string, 1)
-	cliChan, err := channelManager.Get(ctx, "cli")
-	if err == nil {
-		if c, ok := cliChan.(*channel.CLIChannel); ok {
-			c.SetOnResponse(func(content string) {
-				responseChan <- content
-			})
+	// 交互式与非交互式执行
+	// 非交互式仅作调试使用，绕开 tui 前端
+	if agentMessage != "" {
+		// 非交互式执行
+		inboundMsg := &bus.InBoundMessage{
+			InChannel: "cli",
+			SenderID:  "cli",
+			ChatID:    currentChatID,
+			Content:   agentMessage,
+			TimeStamp: time.Now(),
 		}
-	}
 
-	// 响应通道 -> TUI
-	go func() {
-		for content := range responseChan {
-			p.Send(tui.AgentResponseMsg{Content: content})
+		// 订阅接收返回的消息
+		sub := msgBus.Subscribe()
+		defer msgBus.Unsubscribe(sub.ID)
+
+		if err := msgBus.PublishInBoundMessage(ctx, inboundMsg); err != nil {
+			return fmt.Errorf("发送消息失败: %w", err)
 		}
-	}()
 
-	// EventBus -> TUI
-	if eventBus != nil {
+		select {
+		case outMsg := <-sub.Channel:
+			if outMsg.ReplyTo == inboundMsg.ID {
+				time.Sleep(100 * time.Millisecond)
+			}
+		case <-time.After(30 * time.Second):
+			return fmt.Errorf("执行超时")
+		case <-ctx.Done():
+		case <-sigChan:
+			fmt.Println("\n收到退出信号...")
+		}
+	} else {
+		// ========== Interactive execution ==========
+
+		// 创建 EventBus 并注册 observers
+		tvCfg := cfg.Hooks.ThinkingVisibility
+		var eventBus *events.EventBus
+		if tvCfg.Enabled {
+			eventBus = events.NewEventBus(tvCfg.MaxEvents)
+			hook.RegisterObservers(eventBus, tvCfg)
+		}
+
+		model := tui.NewAppModel(msgBus, currentChatID, sessMgr, agentName)
+		p := tea.NewProgram(model, tea.WithAltScreen())
+
+		// 获取 CLIChannel 并设置回调
+		var responseChan chan responsePayload = make(chan responsePayload, 1)
+		cliChan, err := channelManager.Get(ctx, "cli")
+		if err == nil {
+			if c, ok := cliChan.(*channel.CLIChannel); ok {
+				c.SetOnResponse(func(content, msgType string) {
+					responseChan <- responsePayload{Content: content, MsgType: msgType}
+				})
+			}
+		}
+
+		// 响应通道 -> TUI
 		go func() {
-			for evt := range eventBus.Subscribe() {
-				p.Send(tui.ThinkingEventMsg{Event: evt})
+			for payload := range responseChan {
+				p.Send(tui.AgentResponseMsg{Content: payload.Content, MsgType: payload.MsgType})
 			}
 		}()
-		defer eventBus.Close()
-	}
 
-	if _, err := p.Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "TUI error: %v\n", err)
-	}
+		// EventBus -> TUI
+		if eventBus != nil {
+			go func() {
+				for evt := range eventBus.Subscribe() {
+					p.Send(tui.ThinkingEventMsg{Event: evt})
+				}
+			}()
+			defer eventBus.Close()
+		}
 
-	close(responseChan)
+		if _, err := p.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "TUI error: %v\n", err)
+		}
 
-	// Stop
-	fmt.Println("Shutting down... Hope to see you next time!😊")
-	stopCtx, stopCancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer stopCancel()
-	if err := gw.Stop(stopCtx); err != nil {
-		logger.L().Error().Err(err).Msg("Failed to stop Gateway")
+		close(responseChan)
+
+		// Stop
+		fmt.Println("Shutting down... Hope to see you next time!😊")
+		stopCtx, stopCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer stopCancel()
+		if err := gw.Stop(stopCtx); err != nil {
+			logger.L().Error().Err(err).Msg("Failed to stop Gateway")
+		}
+		if err := channelManager.StopAll(ctx); err != nil {
+			logger.L().Error().Err(err).Msg("Failed to stop ChannelManager")
+		}
+		if err := agentManager.StopAll(ctx); err != nil {
+			logger.L().Error().Err(err).Msg("Failed to stop AgentManager")
+		}
+		os.Exit(0)
+		return nil
 	}
-	if err := channelManager.StopAll(ctx); err != nil {
-		logger.L().Error().Err(err).Msg("Failed to stop ChannelManager")
-	}
-	if err := agentManager.StopAll(ctx); err != nil {
-		logger.L().Error().Err(err).Msg("Failed to stop AgentManager")
-	}
-	os.Exit(0)
 	return nil
 }

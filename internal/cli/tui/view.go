@@ -26,7 +26,7 @@ func (m appModel) View() string {
 		mainWidth = m.width - sidebarWidth
 	}
 
-	// 渲染左侧面板 (Chat + Thinking)
+	// chat box
 	chatStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		Width(mainWidth-2).
@@ -38,13 +38,15 @@ func (m appModel) View() string {
 	} else {
 		chatStyle = chatStyle.BorderForeground(inactiveColor)
 	}
-	chatBox := chatStyle.Render(m.renderMessages())
 
-	// 思考区样式
+	m.viewport.SetContent(m.renderMessages())
+	chatBox := chatStyle.Render(m.viewport.View())
+	// 	chatBox := chatStyle.Render(m.renderMessages())
+
+	// 思考区样式 - 注意：不在这里设置 Height，让 viewport 管理内容高度
 	eventStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		Width(mainWidth-2).
-		Height(m.eventViewport.Height).
 		Padding(0, 1)
 
 	if m.focus == focusEvent {
@@ -53,15 +55,19 @@ func (m appModel) View() string {
 		eventStyle = eventStyle.BorderForeground(inactiveColor)
 	}
 
-	// 思考区标题处理
+	// 思考区标题处理 - 设置到 viewport 内容中
 	eventTitleStyle := lipgloss.NewStyle().Foreground(thinkingBlue)
 	if m.focus == focusEvent {
 		eventTitleStyle = eventTitleStyle.Bold(true)
 	}
 	eventTitle := eventTitleStyle.Render(" 🧠 [Thinking Events]")
 
-	eventContent := lipgloss.JoinVertical(lipgloss.Left, eventTitle, m.renderEvents())
-	eventBox := eventStyle.Render(eventContent)
+	// 确保 viewport 有最新内容（包括标题）
+	fullEventContent := lipgloss.JoinVertical(lipgloss.Left, eventTitle, m.renderEvents())
+	m.eventViewport.SetContent(fullEventContent)
+
+	// 使用 viewport.View() 来渲染，这样滚动才能工作
+	eventBox := eventStyle.Height(m.eventViewport.Height + 2).Render(m.eventViewport.View())
 
 	// 左侧纵向拼接
 	leftPanel := lipgloss.JoinVertical(lipgloss.Left, chatBox, eventBox)
@@ -120,10 +126,12 @@ func (m appModel) renderMessages() string {
 		var line string
 		if msg.IsUser {
 			line = userStyle.Render("You: "+msg.Content) + "\n"
+		} else if msg.IsError {
+			line = errorStyle.Render("! "+msg.Content) + "\n"
 		} else {
 			line = agentStyle.Render("🐱: "+msg.Content) + "\n"
 		}
-		messagesView += line + "\n\n"
+		messagesView += line + "\n"
 	}
 
 	if m.waiting {
