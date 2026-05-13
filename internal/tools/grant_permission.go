@@ -21,7 +21,7 @@ func NewGrantPermissionTool(sandbox *sandbox.Sandbox) *GrantPermissionTool {
 	return &GrantPermissionTool{
 		sandbox: sandbox,
 		name:    "grant_permission",
-		desc:    "授予临时权限（仅当前会话有效）。可授权写入工作目录外的路径，或执行不在白名单中的命令。只有在用户明确同意后才能调用此工具。",
+		desc:    "Grant temporary permissions (valid only for current session). Can grant write access to paths outside the working directory, or execute commands not in the whitelist. Only call this tool after explicit user consent.",
 	}
 }
 
@@ -42,11 +42,11 @@ func (t *GrantPermissionTool) Parameters() map[string]interface{} {
 		"properties": map[string]interface{}{
 			"path": map[string]interface{}{
 				"type":        "string",
-				"description": "要授权写入的路径（必须是 write 工具返回的需要确认的路径）",
+				"description": "Path to grant write access (must be a path returned by write tool that requires confirmation)",
 			},
 			"command": map[string]interface{}{
 				"type":        "string",
-				"description": "要授权执行的命令名称（必须是 shell 工具返回的需要确认的命令）",
+				"description": "Command name to grant execution access (must be a command returned by shell tool that requires confirmation)",
 			},
 		},
 		"required": []string{},
@@ -59,19 +59,19 @@ func (t *GrantPermissionTool) Execute(ctx context.Context, argStr string) (inter
 
 	var args map[string]interface{}
 	if err := json.Unmarshal([]byte(argStr), &args); err != nil {
-		return nil, fmt.Errorf("解析参数失败: %w", err)
+		return nil, fmt.Errorf("Failed to parse parameters: %w", err)
 	}
 
 	sessionKey := sandbox.SessionKeyFromContext(ctx)
 	if sessionKey == "" {
-		return nil, fmt.Errorf("无法获取会话信息，授权失败")
+		return nil, fmt.Errorf("Failed to get session info, authorization failed")
 	}
 
 	path, hasPath := args["path"].(string)
 	command, hasCommand := args["command"].(string)
 
 	if !hasPath && !hasCommand {
-		return nil, fmt.Errorf("必须提供 path 或 command 参数")
+		return nil, fmt.Errorf("Must provide path or command parameter")
 	}
 
 	var results []map[string]interface{}
@@ -80,18 +80,18 @@ func (t *GrantPermissionTool) Execute(ctx context.Context, argStr string) (inter
 	if hasPath && path != "" {
 		absPath, err := filepath.Abs(path)
 		if err != nil {
-			return nil, fmt.Errorf("解析路径失败: %w", err)
+			return nil, fmt.Errorf("Failed to parse path: %w", err)
 		}
 
 		t.sandbox.Permissions().Grant(sessionKey, absPath)
 		t.sandbox.LogAuditEvent(sandbox.AuditEventPermissionGrant, absPath, true,
-			fmt.Sprintf("会话 %s 已授权写入 %s", sessionKey, absPath))
+			fmt.Sprintf("Session %s granted write access to %s", sessionKey, absPath))
 
 		results = append(results, map[string]interface{}{
 			"type":    "path",
 			"status":  "granted",
 			"path":    absPath,
-			"message": fmt.Sprintf("已授权写入 %s，可以重试写入操作", absPath),
+			"message": fmt.Sprintf("Write access granted to %s, you can retry the write operation", absPath),
 		})
 	}
 
@@ -99,13 +99,13 @@ func (t *GrantPermissionTool) Execute(ctx context.Context, argStr string) (inter
 	if hasCommand && command != "" {
 		t.sandbox.Permissions().GrantCommand(sessionKey, command)
 		t.sandbox.LogAuditEvent(sandbox.AuditEventCommandPermissionGrant, command, true,
-			fmt.Sprintf("会话 %s 已授权执行命令 %s", sessionKey, command))
+			fmt.Sprintf("Session %s granted permission to execute command %s", sessionKey, command))
 
 		results = append(results, map[string]interface{}{
 			"type":    "command",
 			"status":  "granted",
 			"command": command,
-			"message": fmt.Sprintf("已授权执行命令 '%s'，可以重试执行", command),
+			"message": fmt.Sprintf("Permission granted to execute command '%s', you can retry execution", command),
 		})
 	}
 

@@ -114,9 +114,7 @@ func (a *AgentManager) Initialize(ctx context.Context, cfg any) error {
 		if err := a.toolRegistry.Register(ctx, "shell", shellTool); err != nil {
 			return fmt.Errorf("注册 shell 工具失败: %w", err)
 		}
-		if err := a.toolRegistry.Register(ctx, "filesystem", filesystemTool); err != nil {
-			return fmt.Errorf("failed to register filesystem tool: %w", err)
-		}
+
 		if err := a.toolRegistry.Register(ctx, "url_parse", urlparsetool); err != nil {
 			return fmt.Errorf("注册 url_parse 工具失败: %w", err)
 		}
@@ -143,13 +141,13 @@ func (a *AgentManager) Initialize(ctx context.Context, cfg any) error {
 		for _, toolName := range agentCfg.Tools {
 			tool, err := a.toolRegistry.Get(ctx, toolName)
 			if err != nil {
-				logger.L().Error().Err(err).Str("tool", toolName).Msg("不合理的 Agent Tool 配置项")
+				logger.L().Error().Err(err).Str("tool", toolName).Msg("Invalid Agent Tool configuration")
 				continue
 			}
 			if err := agentToolRegistry.Register(ctx, toolName, tool); err != nil {
 				return fmt.Errorf("注册 Agent Tool %s 失败: %w", toolName, err)
 			}
-			logger.L().Debug().Str("tool", toolName).Msg("Agent Tool 注册成功")
+			logger.L().Debug().Str("tool", toolName).Msg("Agent Tool registered successfully")
 		}
 
 		// Orchestrator
@@ -161,7 +159,7 @@ func (a *AgentManager) Initialize(ctx context.Context, cfg any) error {
 		// Build command registry
 		cmdRegistry := command.NewCommandRegistry()
 		if err := cmdRegistry.Register(ctx, "clear", &command.ClearCommand{}); err != nil {
-			logger.L().Error().Err(err).Msg("注册 clear 命令失败")
+			logger.L().Error().Err(err).Msg("Failed to register clear command")
 		}
 
 		// Set skill manager on agent
@@ -191,7 +189,7 @@ func (a *AgentManager) Initialize(ctx context.Context, cfg any) error {
 		if a.toolFactory != nil {
 			for _, tool := range a.toolFactory(agent) {
 				if err := agentToolRegistry.Register(ctx, tool.Name(), tool); err != nil {
-					logger.L().Error().Err(err).Str("tool", tool.Name()).Msg("注册工厂工具失败")
+					logger.L().Error().Err(err).Str("tool", tool.Name()).Msg("Failed to register factory tool")
 				}
 			}
 		}
@@ -200,13 +198,13 @@ func (a *AgentManager) Initialize(ctx context.Context, cfg any) error {
 		if a.commandFactory != nil {
 			for _, cmd := range a.commandFactory(agent) {
 				if err := cmdRegistry.Register(ctx, cmd.Name(), cmd); err != nil {
-					logger.L().Error().Err(err).Str("command", cmd.Name()).Msg("注册工厂命令失败")
+					logger.L().Error().Err(err).Str("command", cmd.Name()).Msg("Failed to register factory command")
 				}
 			}
 		}
 
 		if err := a.agentRegistry.Register(ctx, agentCfg.Name, agent); err != nil {
-			logger.L().Error().Err(err).Str("agent", agentCfg.Name).Msg("注册 Agent 失败")
+			logger.L().Error().Err(err).Str("agent", agentCfg.Name).Msg("Failed to register Agent")
 			continue
 		}
 	}

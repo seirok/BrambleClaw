@@ -78,7 +78,7 @@ func init() {
 }
 
 func runAgent(cmd *cobra.Command, args []string) error {
-	logger.L().Debug().Msg("加载系统配置...")
+	logger.L().Debug().Msg("Loading system configuration...")
 
 	cfg := config.Get()
 	if cfg == nil {
@@ -86,17 +86,17 @@ func runAgent(cmd *cobra.Command, args []string) error {
 	}
 
 	logger.Setup(cfg.Log.Level, cfg.Log.ConsoleEnabled)
-	logger.L().Debug().Msg("日志配置已加载")
+	logger.L().Debug().Msg("Log configuration loaded")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	// 1. 初始化消息总线
-	logger.L().Debug().Msg("初始化消息总线...")
+	logger.L().Debug().Msg("Initializing message bus...")
 	msgBus := bus.NewMessageBus(cfg.BusBufSize)
 
 	// 2. 初始化通道管理器
-	logger.L().Debug().Msg("初始化 ChannelManager...")
+	logger.L().Debug().Msg("Initializing ChannelManager...")
 	channelManager := channel.NewChannelManager(msgBus)
 	logger.L().Debug().Msg("Initializing channel manager with config...")
 	if err := channelManager.Initialize(ctx, cfg); err != nil {
@@ -104,10 +104,10 @@ func runAgent(cmd *cobra.Command, args []string) error {
 	}
 
 	// 5. 初始化 SkillManager 和 AgentManager
-	logger.L().Debug().Msg("初始化 SkillManager...")
+	logger.L().Debug().Msg("Initializing SkillManager...")
 	skillManager := skill.NewSkillManager(&cfg.Skill)
 
-	logger.L().Debug().Msg("初始化 AgentManager...")
+	logger.L().Debug().Msg("Initializing AgentManager...")
 	agentManager := agent.NewAgentManager(msgBus, runtime.NewAgentRuntime())
 	agentManager.SetSkillManager(skillManager)
 
@@ -137,7 +137,7 @@ func runAgent(cmd *cobra.Command, args []string) error {
 	})
 
 	// 6. 初始化 Gateway
-	logger.L().Debug().Msg("初始化 Gateway...")
+	logger.L().Debug().Msg("Initializing Gateway...")
 	gwCfg := config.Get().Gateway
 	gw := gateway.NewGateway(
 		gateway.WithRouter(gateway.NewRouter(gwCfg.Routes, agentManager)),
@@ -147,7 +147,7 @@ func runAgent(cmd *cobra.Command, args []string) error {
 	)
 
 	// 7. 启动 Gateway 和 Channel
-	logger.L().Debug().Msg("启动 Gateway 和 Channel...")
+	logger.L().Debug().Msg("Starting Gateway and Channel...")
 	if err := gw.Start(ctx); err != nil {
 		return err
 	}

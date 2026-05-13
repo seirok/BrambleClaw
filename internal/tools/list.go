@@ -21,7 +21,7 @@ func NewListTool(sandbox *sandbox.Sandbox) *ListTool {
 	return &ListTool{
 		sandbox: sandbox,
 		name:    "list",
-		desc:    "列出目录内容，受沙箱安全机制保护",
+		desc:    "List directory contents, protected by sandbox security mechanism",
 	}
 }
 
@@ -42,7 +42,7 @@ func (t *ListTool) Parameters() map[string]interface{} {
 		"properties": map[string]interface{}{
 			"path": map[string]interface{}{
 				"type":        "string",
-				"description": "目录路径（相对于工作目录或绝对路径，可选，默认为当前目录）",
+				"description": "Directory path (relative to workspace or absolute path, optional, defaults to current directory)",
 			},
 		},
 		"required": []string{},
@@ -55,7 +55,7 @@ func (t *ListTool) Execute(ctx context.Context, argStr string) (interface{}, err
 	// 解析参数
 	var args map[string]interface{}
 	if err := json.Unmarshal([]byte(argStr), &args); err != nil {
-		return nil, fmt.Errorf("解析参数失败: %w", err)
+		return nil, fmt.Errorf("Failed to parse parameters: %w", err)
 	}
 
 	// 获取路径
@@ -102,14 +102,14 @@ func (t *ListTool) listFiles(ctx context.Context, path string) (interface{}, err
 	// 列出目录
 	files, err := sandbox.ReadDirWithContext(ctx, path)
 	if err != nil {
-		return nil, fmt.Errorf("读取目录失败(%s): %w", path, err)
+		return nil, fmt.Errorf("Failed to read directory(%s): %w", path, err)
 	}
 
 	fileList := make([]map[string]interface{}, 0, len(files))
 	for _, file := range files {
 		info, err := file.Info()
 		if err != nil {
-			logger.L().Error().Err(err).Str("File", file.Name()).Msg("获取文件信息失败")
+			logger.L().Error().Err(err).Str("File", file.Name()).Msg("Failed to get file info")
 			continue
 		}
 		fileList = append(fileList, map[string]interface{}{
