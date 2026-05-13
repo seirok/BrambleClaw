@@ -161,6 +161,18 @@ func (a *AgentManager) Initialize(ctx context.Context, cfg any) error {
 		if err := cmdRegistry.Register(ctx, "clear", &command.ClearCommand{}); err != nil {
 			logger.L().Error().Err(err).Msg("Failed to register clear command")
 		}
+		if err := cmdRegistry.Register(ctx, "help", &command.HelpCommand{}); err != nil {
+			logger.L().Error().Err(err).Msg("Failed to register help command")
+		}
+		if err := cmdRegistry.Register(ctx, "reset", &command.ResetCommand{}); err != nil {
+			logger.L().Error().Err(err).Msg("Failed to register reset command")
+		}
+		if err := cmdRegistry.Register(ctx, "compact", &command.CompactCommand{}); err != nil {
+			logger.L().Error().Err(err).Msg("Failed to register compact command")
+		}
+		if err := cmdRegistry.Register(ctx, "undo", &command.UndoCommand{}); err != nil {
+			logger.L().Error().Err(err).Msg("Failed to register undo command")
+		}
 
 		// Set skill manager on agent
 		agent := NewAgent(agentCfg.Name,

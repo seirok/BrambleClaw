@@ -100,6 +100,13 @@ func NewSummaryCompressor(cfg config.CompactConfig, llmClient *LLMClient) *Summa
 	}
 }
 
+// Reset clears all nodes and archives, resetting to initial state
+func (sc *SummaryCompressor) Reset() {
+	sc.rootNodes = make([]*SummaryNode, 0)
+	sc.nodeIndex = make(map[string]*SummaryNode)
+	sc.archives = make([]*SummaryArchive, 0)
+}
+
 // generateNodeID generates a unique ID for a node
 func generateNodeID() string {
 	bytes := make([]byte, 8)

@@ -17,6 +17,12 @@ import (
 	"strings"
 )
 
+// SkillInfo 是 /help 命令展示的技能信息（避免暴露 skill 包类型）
+type SkillInfo struct {
+	Name        string
+	Description string
+}
+
 type Agent struct {
 	name           string
 	description    string
@@ -151,6 +157,96 @@ func (a *Agent) Workspace() string { return a.workspace }
 func (a *Agent) Name() string { return a.name }
 
 func (a *Agent) Runtime() messages.RuntimeProvider { return a.runtime }
+
+// ListUserInvocableSkills 返回用户可调用的技能列表，给 /help 命令用
+func (a *Agent) ListUserInvocableSkills() interface{} {
+	if a.skillManager == nil {
+		return nil
+	}
+	sm, ok := a.skillManager.(*skill.SkillManager)
+	if !ok {
+		return nil
+	}
+	metas := sm.ListMeta(context.Background())
+	result := make([]struct{ Name, Description string }, 0, len(metas))
+	for _, m := range metas {
+		if m.UserInvocable {
+			result = append(result, struct{ Name, Description string }{
+				Name:        m.Name,
+				Description: m.Description,
+			})
+		}
+	}
+	return result
+}
+
+// ResetSession 重置当前会话，清空消息但不创建新会话
+func (a *Agent) ResetSession(sessionKey string) error {
+	if _, err := a.SessionMgr().ClearSessionWithMeta(sessionKey); err != nil {
+		return err
+	}
+	if a.builder != nil {
+		a.builder.ResetCompressor()
+	}
+	return a.OnReset(context.Background())
+}
+
+// UndoLastRound 撤销上一轮对话（移除最后一条 user + 最后一条 assistant 消息）
+func (a *Agent) UndoLastRound(sessionKey string) (int, error) {
+	sess, err := a.SessionMgr().Get(context.Background(), sessionKey)
+	if err != nil {
+		return 0, err
+	}
+	if len(sess.Messages) <= 1 {
+		return 0, nil
+	}
+	removed := 0
+	// 从末尾移除 assistant
+	for i := len(sess.Messages) - 1; i >= 0; i-- {
+		if am, ok := sess.Messages[i].(*AgentMessage); ok && am.Role == RoleAssistant {
+			sess.Messages = append(sess.Messages[:i], sess.Messages[i+1:]...)
+			removed++
+			break
+		}
+	}
+	// 从末尾移除 user
+	for i := len(sess.Messages) - 1; i >= 0; i-- {
+		if am, ok := sess.Messages[i].(*AgentMessage); ok && am.Role == RoleUser {
+			sess.Messages = append(sess.Messages[:i], sess.Messages[i+1:]...)
+			removed++
+			break
+		}
+	}
+	// 调整 Summarized 指针
+	if sess.Summarized > len(sess.Messages) {
+		sess.Summarized = len(sess.Messages)
+		if sess.Summarized < 1 {
+			sess.Summarized = 1
+		}
+	}
+	if removed > 0 {
+		sess.Modified = true
+	}
+	return removed, nil
+}
+
+// ForceCompactSession 手动触发上下文压缩，忽略阈值
+func (a *Agent) ForceCompactSession(ctx context.Context, sessionKey string) (int, error) {
+	sess, err := a.SessionMgr().Get(ctx, sessionKey)
+	if err != nil {
+		return 0, err
+	}
+	if a.builder == nil {
+		return 0, nil
+	}
+	// 构建 DynamicInfo
+	_, channel, chatID, _ := util.ParseSessionKey(sessionKey)
+	info := &DynamicInfo{
+		channel: channel,
+		chatID:  chatID,
+	}
+	return a.builder.ForceCompact(ctx, sess, info)
+}
 
 // Description 返回 Agent 描述（ChatAgent 接口）
 func (a *Agent) Description() string { return a.description }

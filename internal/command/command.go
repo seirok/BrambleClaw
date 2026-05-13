@@ -43,11 +43,15 @@ func (c *ClearCommand) Execute(ctx context.Context, agent interface{}, msg inter
 
 	var reply string
 	if err != nil {
-		reply = fmt.Sprintf("❌ Failed to create new session: %v", err)
+		reply = fmt.Sprintf("Failed to create new session: %v", err)
 	} else {
-		reply = fmt.Sprintf("✅ Created new session, old session has %d messages kept.", count)
+		reply = fmt.Sprintf("Created new session, old session has %d messages kept.", count)
 	}
 	logger.L().Info().Str("command", "clear").Msg(reply)
-	// fmt.Println(reply)
+
+	if m != nil {
+		_ = publishReply(ctx, agent, m, reply)
+	}
+
 	return err
 }

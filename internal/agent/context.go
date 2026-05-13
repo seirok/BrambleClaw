@@ -237,6 +237,76 @@ func (cb *ContextBuilder) GetLongTerm() string {
 	return string(data)
 }
 
+// ResetCompressor resets the summary compressor to empty state
+func (cb *ContextBuilder) ResetCompressor() {
+	if cb.summaryCompressor != nil {
+		cb.summaryCompressor.Reset()
+	}
+}
+
+// ForceCompact manually triggers compression, ignoring thresholds
+func (cb *ContextBuilder) ForceCompact(ctx context.Context, sess *session.Session, info *DynamicInfo) (int, error) {
+	// Check if there are enough messages to compact
+	msgs := sess.Messages
+	if sess.Summarized >= len(msgs) || (len(msgs)-sess.Summarized) <= 1 {
+		return 0, nil
+	}
+	// Compact all uncompressed messages (except keep the last 1)
+	needToCompact := msgs[sess.Summarized : len(msgs)-1]
+	if len(needToCompact) == 0 {
+		return 0, nil
+	}
+	summarizeMsg := NewAgentMessage(cb.Agent().Name(), RoleUser, "Provide a concise summary of this conversation by far, preserving core context and key points.\n")
+	needToCompact = append(needToCompact, summarizeMsg)
+
+	resp, err := cb.Agent().orche.Run(ctx, needToCompact)
+	if err != nil {
+		return 0, fmt.Errorf("force-compact: generate summary failed: %w", err)
+	}
+
+	// Extract summary content
+	summaryContent := ""
+	if len(resp.Choices) > 0 {
+		summaryContent = resp.Choices[0].Message.Content
+	}
+
+	// Ensure SummaryCompressor is initialized
+	if cb.summaryCompressor == nil {
+		return 0, fmt.Errorf("force-compact: summaryCompressor not initialized")
+	}
+
+	// Add summary to hierarchical compressor
+	_, err = cb.summaryCompressor.AddSummary(summaryContent, time.Now())
+	if err != nil {
+		logger.L().Error().Err(err).Str("sessionKey", sess.Key).
+			Msg("force-compact: failed to add summary to compressor, but continuing")
+	}
+
+	// Update session summary
+	compressedCount := len(msgs) - sess.Summarized - 1 // -1 for the one we kept
+	if summaryContent != "" {
+		if err := cb.Agent().sessionManager.UpdateSessionSummary(sess.Key, summaryContent); err != nil {
+			logger.L().Error().Err(err).Str("sessionKey", sess.Key).
+				Msg("force-compact: failed to update session summary, but continuing")
+		}
+		// Rebuild system prompt and replace first message
+		newSystemPrompt, err := cb.Build(info)
+		if err == nil && len(sess.Messages) > 0 {
+			sess.Messages[0] = NewAgentMessage(cb.Agent().Name(), RoleSystem, newSystemPrompt)
+			sess.Modified = true
+		}
+	}
+
+	// Update boundary pointer: keep the last message uncompressed
+	sess.Summarized = len(msgs) - 1
+
+	// Update token usage
+	currentTokenUsed := resp.Usage.CompletionTokens + resp.Usage.PromptTokens
+	cb.Agent().sessionManager.Update(sess, currentTokenUsed)
+
+	return compressedCount, nil
+}
+
 func (cb *ContextBuilder) Compact(ctx context.Context, sess *session.Session, info *DynamicInfo) error {
 	// Check if we need to compress
 	msgs := sess.Messages
