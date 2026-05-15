@@ -47,5 +47,7 @@ func createDefaultConfig() *Config {
 
 	cfg.Skill = structs.DefaultSkillConfig()
 
+	cfg.Tools = structs.DefaultToolsConfig()
+
 	return cfg
 }

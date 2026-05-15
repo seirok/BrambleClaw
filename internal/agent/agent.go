@@ -29,12 +29,6 @@ func init() {
 	})
 }
 
-//// SkillInfo 是 /help 命令展示的技能信息（避免暴露 skill 包类型）
-//type SkillInfo struct {
-//	Name        string
-//	Description string
-//}
-
 type Agent struct {
 	name         string
 	description  string
@@ -586,7 +580,13 @@ func (a *Agent) Start(ctx context.Context) error {
 		return err
 	}
 
-	// TODO: MCP 启动
+	// 启动 MCP Manager
+	if a.mcp != nil && a.tools != nil {
+		if err := a.mcp.Start(ctx, a.tools); err != nil {
+			logger.L().Error().Err(err).Msg("Failed to start MCP manager")
+			// MCP 失败不应该阻止 Agent 启动，继续执行
+		}
+	}
 
 	// 触发 Agent 启动后钩子
 	if _, err := hook.Emit(ctx, "hook.point.agent.start", a); err != nil {

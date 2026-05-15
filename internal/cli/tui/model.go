@@ -266,11 +266,11 @@ func (m appModel) updateNormal(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.eventFocused = (m.focus == focusEvent)
 			// 只有在输入区时，textInput 才获取焦点
 			if m.focus == focusInput {
-				m.textInput.Focus()
+				return m, m.textInput.Focus()
 			} else {
 				m.textInput.Blur()
+				return m, nil
 			}
-			return m, nil
 
 		case tea.KeyEnter:
 			if m.mode == modeWaiting || m.eventFocused {

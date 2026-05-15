@@ -3,8 +3,8 @@ package mcp
 import (
 	"brambleclaw/internal/config"
 	"brambleclaw/internal/hook"
+	"brambleclaw/internal/interfaces"
 	"brambleclaw/internal/logger"
-	"brambleclaw/internal/tools"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -29,13 +29,18 @@ func NewManager(cfg config.MCPConfig) *Manager {
 }
 
 // Start 启动并初始化所有配置的 MCP 服务器
-func (m *Manager) Start(ctx context.Context, registry *tools.ToolRegistry) error {
+func (m *Manager) Start(ctx context.Context, registry interfaces.Registry[interfaces.Tool]) error {
+	logger.L().Debug().Bool("enabled", m.config.Enabled).Int("servers_count", len(m.config.Servers)).Msg("MCP Manager starting")
+
 	if !m.config.Enabled {
+		logger.L().Debug().Msg("MCP is disabled in config")
 		return nil
 	}
 
 	for name, srvCfg := range m.config.Servers {
-		if !srvCfg.Enabled {
+		logger.L().Debug().Str("server", name).Bool("disabled", srvCfg.Disabled).Msg("Processing MCP server")
+		if srvCfg.Disabled {
+			logger.L().Debug().Str("server", name).Msg("Server is disabled, skipping")
 			continue
 		}
 
@@ -62,16 +67,20 @@ func (m *Manager) Start(ctx context.Context, registry *tools.ToolRegistry) error
 			continue
 		}
 
+		logger.L().Debug().Str("server", name).Int("tool_count", len(mcpTools)).Msg("Got tools from MCP server")
+
 		for _, t := range mcpTools {
 			toolName := fmt.Sprintf("%s_%s", name, t.Name)
 			wrapper := NewMCPToolWrapper(toolName, t, client)
 			if err := registry.Register(ctx, toolName, wrapper); err != nil {
 				logger.L().Error().Err(err).Str("tool", toolName).Msg("Failed to register MCP tool")
+			} else {
+				logger.L().Debug().Str("tool", toolName).Msg("Registered MCP tool")
 			}
-			logger.L().Debug().Str("tool", toolName).Msg("Registering MCP tool")
 		}
 	}
 
+	logger.L().Info().Int("active_clients", len(m.clients)).Msg("MCP Manager start complete")
 	return nil
 }
 
@@ -79,6 +88,7 @@ func (m *Manager) Start(ctx context.Context, registry *tools.ToolRegistry) error
 func (m *Manager) createClient(name string, cfg config.MCPServerConfig) (*Client, error) {
 	var transport Transport
 
+	m.applyDefaults(&cfg)
 	switch strings.ToLower(cfg.Type) {
 	case "stdio":
 		if cfg.Command == "" {
@@ -232,4 +242,10 @@ func (w *MCPToolWrapper) Execute(ctx context.Context, args string) (interface{},
 	}
 
 	return strings.TrimSpace(result.String()), nil
+}
+
+func (m *Manager) applyDefaults(cfg *config.MCPServerConfig) {
+	if strings.TrimSpace(cfg.Type) == "" {
+		cfg.Type = "stdio"
+	}
 }

@@ -86,11 +86,32 @@ func (t *StdioTransport) Start(ctx context.Context) error {
 func (t *StdioTransport) readLoop() {
 	for {
 		line, err := t.reader.ReadBytes('\n')
+
+		// 1. 处理读取到的数据
 		if len(line) > 0 {
-			t.msgChan <- line
+			trimmed := strings.TrimSpace(string(line))
+			// 健壮性检查：只有看起来像 JSON 对象的行才送入通道
+			if strings.HasPrefix(trimmed, "{") && strings.HasSuffix(trimmed, "}") {
+				// 发送副本，避免底层数组竞争
+				msg := make([]byte, len(line))
+				copy(msg, line)
+				t.msgChan <- msg
+			} else if trimmed != "" {
+				// 将非协议输出打印到日志，方便调试（例如那行 "Running on stdio"）
+				// 这里可以使用你的 logger 记录
+				fmt.Printf("[MCP Server Debug] %s\n", trimmed)
+			}
 		}
+
+		// 2. 处理错误/退出
 		if err != nil {
-			t.errChan <- err
+			t.mu.Lock()
+			isClosed := t.closed
+			t.mu.Unlock()
+
+			if !isClosed {
+				t.errChan <- err
+			}
 			return
 		}
 	}

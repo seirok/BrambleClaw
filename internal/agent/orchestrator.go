@@ -24,7 +24,6 @@ type LLMProcessor interface {
 type Orchestrator struct {
 	llm         LLMProcessor
 	tools       interfaces.Registry[interfaces.Tool]
-	toolDefs    []map[string]interface{}
 	ctx         context.Context
 	auditLogger *audit.AuditLogger
 }
@@ -36,13 +35,11 @@ func (o *Orchestrator) AuditLogger() *audit.AuditLogger {
 
 // NewOrchestrator 创建编排器
 func NewOrchestrator(llm LLMProcessor, tools interfaces.Registry[interfaces.Tool], auditLogger *audit.AuditLogger) *Orchestrator {
-	orch := &Orchestrator{
+	return &Orchestrator{
 		llm:         llm,
 		tools:       tools,
 		auditLogger: auditLogger,
 	}
-	orch.toolDefs = orch.prepareToolDefinitions()
-	return orch
 }
 
 // LLM 返回 LLM 处理器
@@ -110,7 +107,7 @@ func (o *Orchestrator) Run(ctx context.Context, messages []messages.BaseMessage)
 	chatReq := ChatCompletionRequest{
 		Model:    o.llm.Model(),
 		Messages: chatMsgs,
-		Tools:    o.toolDefs,
+		Tools:    o.prepareToolDefinitions(),
 	}
 
 	// 触发 LLM 请求前钩子
@@ -173,7 +170,7 @@ func (o *Orchestrator) Run(ctx context.Context, messages []messages.BaseMessage)
 		chatReq = ChatCompletionRequest{
 			Model:    o.llm.Model(),
 			Messages: chatMsgs,
-			Tools:    o.toolDefs,
+			Tools:    o.prepareToolDefinitions(),
 		}
 		response, err = o.llm.Chat(chatReq)
 		if err != nil {

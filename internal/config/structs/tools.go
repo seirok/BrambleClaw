@@ -8,13 +8,13 @@ type MCPConfig struct {
 
 // MCPServerConfig MCP 服务器配置
 type MCPServerConfig struct {
-	Enabled bool              `json:"enabled" mapstructure:"enabled"`
-	Type    string            `json:"type" mapstructure:"type"` // "stdio" or "sse"
-	Command string            `json:"command,omitempty" mapstructure:"command,omitempty"`
-	Args    []string          `json:"args,omitempty" mapstructure:"args,omitempty"`
-	EnvFile string            `json:"env_file,omitempty" mapstructure:"env_file,omitempty"`
-	URL     string            `json:"url,omitempty" mapstructure:"url,omitempty"`
-	Headers map[string]string `json:"headers,omitempty" mapstructure:"headers,omitempty"`
+	Disabled bool              `json:"disabled" mapstructure:"disabled"`
+	Type     string            `json:"type" mapstructure:"type"` // "stdio" or "sse"
+	Command  string            `json:"command,omitempty" mapstructure:"command,omitempty"`
+	Args     []string          `json:"args,omitempty" mapstructure:"args,omitempty"`
+	EnvFile  string            `json:"env_file,omitempty" mapstructure:"env_file,omitempty"`
+	URL      string            `json:"url,omitempty" mapstructure:"url,omitempty"`
+	Headers  map[string]string `json:"headers,omitempty" mapstructure:"headers,omitempty"`
 }
 
 // WebSearchConfig 网络搜索工具配置
@@ -63,7 +63,7 @@ type ToolsConfig struct {
 func DefaultToolsConfig() ToolsConfig {
 	return ToolsConfig{
 		MCP: MCPConfig{
-			Enabled: false,
+			Enabled: true,
 			Servers: make(map[string]MCPServerConfig),
 		},
 		WebSearch: WebSearchConfig{
@@ -71,7 +71,7 @@ func DefaultToolsConfig() ToolsConfig {
 			APIKey:  "",
 		},
 		UrlParse: UrlParseConfig{
-			Enabled: false,
+			Enabled: true,
 		},
 		Glob: GlobConfig{
 			Enabled: true,
