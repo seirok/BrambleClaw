@@ -69,31 +69,32 @@ type sidebarStats struct {
 
 // appModel TUI 状态
 type appModel struct {
-	textInput       textinput.Model
-	viewport        viewport.Model
-	eventViewport   viewport.Model
-	sidebarViewport viewport.Model
-	spinner         spinner.Model
-	help            help.Model
-	keys            keyMap
-	messages        []chatMessage
-	eventLog        []events.ThinkingEvent
-	waiting         bool
-	showBanner      bool
-	width           int
-	height          int
-	msgBus          *bus.MessageBus
+	textInput         textinput.Model
+	viewport          viewport.Model
+	eventViewport     viewport.Model
+	sidebarViewport   viewport.Model
+	spinner           spinner.Model
+	help              help.Model
+	keys              keyMap
+	messages          []chatMessage
+	eventLog          []events.ThinkingEvent
+	waiting           bool
+	showBanner        bool
+	width             int
+	height            int
+	msgBus            *bus.MessageBus
 	//	currentChatID   string
-	quitting        bool
-	err             error
-	eventFocused    bool // true=event 面板有焦点
-	sidebarEnabled  bool
-	sidebarWidth    int
-	sidebarStats    sidebarStats
-	sidebarSections []structs.SidebarSection
-	focus           focusRegion
-	mode            appMode
-	resumeList      list.Model
+	quitting          bool
+	err               error
+	eventFocused      bool // true=event 面板有焦点
+	sidebarEnabled    bool
+	sidebarWidth      int
+	sidebarStats      sidebarStats
+	sidebarSections   []structs.SidebarSection
+	focus             focusRegion
+	mode              appMode
+	resumeList        list.Model
+	pendingDeleteItem *sessionItem
 	// 	session         *session.Session
 	// agentName       string
 	agent *agent.Agent
@@ -161,6 +162,8 @@ const (
 	modeInput appMode = iota
 	modeWaiting
 	modeResume
+	modeDelete
+	modeDeleteConfirm
 )
 
 // errMsg 用于错误传递
@@ -239,6 +242,10 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch m.mode {
 	case modeResume:
 		return m.updateResume(msg)
+	case modeDelete:
+		return m.updateDelete(msg)
+	case modeDeleteConfirm:
+		return m.updateDeleteConfirm(msg)
 	default: // modeInput and modeWaiting
 		return m.updateNormal(msg)
 	}
@@ -285,29 +292,33 @@ func (m appModel) updateNormal(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, tea.Quit
 			}
 			if input == "/resume" {
-				// 先持久化当前会话
-				if m.agent == nil {
-					logger.L().Fatal().Msg("main agent is nil")
-				}
-				sess := m.agent.GetSession()
-				if sess != nil {
-					if sess.IsValid() {
-						ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-						defer cancel()
-
-						err := sess.Save(ctx)
-						if err != nil {
-							logger.L().Error().Msg("Failed to save current session")
-						}
-					}
-				}
-
-				newModel, cmd, err := m.initResumeList()
+				m.saveCurrentSession()
+				newModel, cmd, err := m.initSessionList("Resume Session - Select a conversation")
 				if err != nil {
 					logger.L().Error().Err(err).Msg("Failed to init resume list")
 					return m, nil
 				}
 				newModel.mode = modeResume
+				return newModel, cmd
+			}
+
+			if input == "/delete" {
+				m.saveCurrentSession()
+				newModel, cmd, err := m.initSessionList("Delete Session - Select a conversation to delete")
+				if err != nil {
+					logger.L().Error().Err(err).Msg("Failed to init delete list")
+					return m, nil
+				}
+				// Filter out current session
+				currentChatID := m.agent.GetSession().GetMetadata().ChatID
+				var filteredItems []list.Item
+				for _, item := range newModel.resumeList.Items() {
+					if si, ok := item.(sessionItem); ok && si.chatID != currentChatID {
+						filteredItems = append(filteredItems, item)
+					}
+				}
+				newModel.resumeList.SetItems(filteredItems)
+				newModel.mode = modeDelete
 				return newModel, cmd
 			}
 
@@ -531,4 +542,23 @@ func (m appModel) updateNormal(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.sidebarViewport, _ = m.sidebarViewport.Update(msg)
 
 	return m, tea.Batch(tiCmd, vpCmd, evpCmd, spCmd)
+}
+
+// saveCurrentSession saves the current session to disk if it's valid
+func (m appModel) saveCurrentSession() {
+	if m.agent == nil {
+		logger.L().Fatal().Msg("main agent is nil")
+	}
+	sess := m.agent.GetSession()
+	if sess != nil {
+		if sess.IsValid() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			err := sess.Save(ctx)
+			if err != nil {
+				logger.L().Error().Msg("Failed to save current session")
+			}
+		}
+	}
 }

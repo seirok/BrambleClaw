@@ -11,9 +11,13 @@ func (m appModel) View() string {
 		return "Bye! 👋\n"
 	}
 
-	// Show resume list if in resume mode
-	if m.mode == modeResume {
+	switch m.mode {
+	case modeResume:
 		return m.viewResume()
+	case modeDelete:
+		return m.viewDelete()
+	case modeDeleteConfirm:
+		return m.viewDeleteConfirm()
 	}
 
 	// ---颜色与宽度分配---

@@ -50,7 +50,7 @@ func (i sessionItem) FilterValue() string {
 }
 
 // initResumeList initializes the resume list with session metadata
-func (m appModel) initResumeList() (appModel, tea.Cmd, error) {
+func (m appModel) initSessionList(title string) (appModel, tea.Cmd, error) {
 	// 加载所有session meta 信息
 	ctx := context.Background()
 	metaPath := filepath.Join(m.agent.Workspace(), "memory", "meta_data")
@@ -115,7 +115,7 @@ func (m appModel) initResumeList() (appModel, tea.Cmd, error) {
 
 	listDelegate := list.NewDefaultDelegate()
 	newList := list.New(items, &listDelegate, width, height) // 传递指针而不是值
-	newList.Title = "Resume Session - Select a conversation"
+	newList.Title = title
 	newList.SetShowStatusBar(true)
 	newList.SetFilteringEnabled(true)
 
