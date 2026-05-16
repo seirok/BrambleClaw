@@ -85,7 +85,7 @@ func (m *RoundRobinManager) Stop() {
 
 func (m *RoundRobinManager) handleTask(ctx context.Context, msg messages.ChatMessage) {
 	m.ctx.Runtime.Publish(ctx, m.ctx.OutputTopic, msg)
-	m.selectAndPublish(ctx, msg)
+	m.SelectAndPublish(ctx, msg)
 }
 
 func (m *RoundRobinManager) handleResponse(ctx context.Context, msg messages.ChatMessage) {
@@ -109,7 +109,7 @@ func (m *RoundRobinManager) handleResponse(ctx context.Context, msg messages.Cha
 				Str("agent", msg.GetSource()).
 				Str("error", messages.GetErrorDetail(msg)).
 				Msg("Agent error, skipping to next participant")
-			m.selectAndPublish(ctx, msg)
+			m.SelectAndPublish(ctx, msg)
 			return
 		default:
 			stopMsg := messages.NewStopMessage(
@@ -127,21 +127,22 @@ func (m *RoundRobinManager) handleResponse(ctx context.Context, msg messages.Cha
 			m.mu.Lock()
 			m.currentIndex = idx
 			m.mu.Unlock()
-			m.selectAndPublish(ctx, msg)
+			m.SelectAndPublish(ctx, msg)
 			return
 		}
 	}
 
-	m.selectAndPublish(ctx, msg)
+	m.SelectAndPublish(ctx, msg)
 }
 
-func (m *RoundRobinManager) selectAndPublish(ctx context.Context, msg messages.ChatMessage) {
+func (m *RoundRobinManager) SelectAndPublish(ctx context.Context, msg messages.ChatMessage) error {
 	m.mu.Lock()
 	idx := m.currentIndex
 	m.currentIndex = (m.currentIndex + 1) % len(m.ctx.Participants)
 	m.mu.Unlock()
 
 	m.ctx.Runtime.Publish(ctx, m.ctx.ParticipantTopics[idx], msg)
+	return nil
 }
 
 func (m *RoundRobinManager) findParticipant(name string) int {

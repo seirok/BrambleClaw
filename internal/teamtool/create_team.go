@@ -65,13 +65,14 @@ func (t *CreateTeamTool) Parameters() map[string]interface{} {
 			},
 			"team_type": map[string]interface{}{
 				"type":        "string",
-				"enum":        []string{"round_robin"},
+				"enum":        []string{"round_robin", "selector"},
 				"description": "Team coordination type (default: round_robin)",
 			},
 			"max_turns": map[string]interface{}{
 				"type":        "integer",
 				"description": "Maximum number of message turns before termination (default: 10)",
 			},
+
 			"error_policy": map[string]interface{}{
 				"type":        "string",
 				"enum":        []string{"terminate", "skip"},
@@ -142,7 +143,16 @@ func (t *CreateTeamTool) Execute(ctx context.Context, args string) (interface{},
 		participants = append(participants, sub)
 	}
 
-	groupChat, err := team.NewRoundRobinGroupChat("team", participants, req.MaxTurns, errorPolicy)
+	var groupChat team.Team
+	var err error
+	switch req.TeamType {
+	case "round_robin":
+		groupChat, err = team.NewRoundRobinGroupChat("team", participants, req.MaxTurns, errorPolicy)
+	case "selector":
+		groupChat, err = team.NewSelectorGroupChat("team", participants, req.MaxTurns, errorPolicy, llmClient, team.DefaultMaxHistory)
+	default:
+		return nil, fmt.Errorf("create_team: invalid team_type %q, must be 'round_robin' or 'selector'", req.TeamType)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("create_team: failed to create team: %w", err)
 	}

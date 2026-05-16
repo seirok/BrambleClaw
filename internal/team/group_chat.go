@@ -25,6 +25,7 @@ type GroupChatManagerContext struct {
 	OutputTopic       string   // 向外部报告群聊进展和结果
 	Participants      []agent.ChatAgent
 	ErrorPolicy       ErrorPolicy
+	LLM               agent.LLMProcessor
 }
 
 // GroupChatManager 群聊管理器接口，控制消息流转和参与者选择
@@ -34,6 +35,7 @@ type GroupChatManager interface {
 	Pause(ctx context.Context) error
 	Resume(ctx context.Context) error
 	Reset(ctx context.Context) error
+	SelectAndPublish(ctx context.Context, msg messages.ChatMessage) error
 }
 
 // BaseGroupChatConfig 创建 BaseGroupChat 的配置
@@ -45,6 +47,7 @@ type BaseGroupChatConfig struct {
 	Termination  TerminationCondition
 	ErrorPolicy  ErrorPolicy
 	Runtime      *runtime.AgentRuntime
+	LLM          agent.LLMProcessor
 }
 
 // BaseGroupChat 基础群组聊天实现
@@ -55,6 +58,7 @@ type BaseGroupChat struct {
 	termination  TerminationCondition
 	errorPolicy  ErrorPolicy
 	rt           *runtime.AgentRuntime
+	llm          agent.LLMProcessor
 
 	mu      sync.Mutex
 	running atomic.Bool
@@ -119,6 +123,7 @@ func NewBaseGroupChat(cfg BaseGroupChatConfig) (*BaseGroupChat, error) {
 		termination:       termination,
 		errorPolicy:       errorPolicy,
 		rt:                rt,
+		llm:               cfg.LLM,
 		teamID:            teamID,
 		groupTopic:        fmt.Sprintf("group_topic_%s", teamID),
 		managerTopic:      fmt.Sprintf("manager_topic_%s", teamID),
@@ -334,6 +339,7 @@ func (c *BaseGroupChat) initialize(ctx context.Context) error {
 		OutputTopic:       c.outputTopic,
 		Participants:      c.participants,
 		ErrorPolicy:       c.errorPolicy,
+		LLM:               c.llm,
 	}
 	if err := c.manager.Initialize(ctx, mgrCtx); err != nil {
 		return err
