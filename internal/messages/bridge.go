@@ -23,6 +23,7 @@ type InBoundData struct {
 	ChatID    string
 	InChannel string
 	Content   string
+	Metadata  map[string]string
 }
 
 // FromInBoundData 将入站消息数据转换为 TextMessage
@@ -30,6 +31,11 @@ func FromInBoundData(in InBoundData) *TextMessage {
 	msg := NewTextMessage(in.SenderID, in.Content)
 	msg.Metadata["channel"] = in.InChannel
 	msg.Metadata["chat_id"] = in.ChatID
+	if in.Metadata != nil {
+		for k, v := range in.Metadata {
+			msg.Metadata[k] = v
+		}
+	}
 	return msg
 }
 

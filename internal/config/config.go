@@ -35,6 +35,7 @@ type ExternalConfig = structs.ExternalConfig
 type HookType = structs.HookType
 type SidebarConfig = structs.SidebarConfig
 type SkillConfig = structs.SkillConfig
+type CronConfig = structs.CronConfig
 
 type Config struct {
 	Log        structs.LogConfig     `json:"log" mapstructure:"log"`
