@@ -95,6 +95,9 @@ type appModel struct {
 	mode              appMode
 	resumeList        list.Model
 	pendingDeleteItem *sessionItem
+	inputHistory      []string // ring buffer of submitted inputs, max 20
+	historyIdx        int      // current navigation index (-1 = not browsing)
+	historyDraft      string   // saves current draft when user starts browsing history
 	// 	session         *session.Session
 	// agentName       string
 	agent *agent.Agent
@@ -217,8 +220,11 @@ func NewAppModel(msgBus *bus.MessageBus, agent *agent.Agent) appModel {
 			HookErrors: make(map[string]int64),
 			HookAvgMs:  make(map[string]float64),
 		},
-		mode:  modeInput,
-		agent: agent,
+		inputHistory: []string{},
+		historyIdx:   -1,
+		historyDraft: "",
+		mode:         modeInput,
+		agent:        agent,
 	}
 }
 
@@ -350,6 +356,14 @@ func (m appModel) updateNormal(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.showBanner = false
 			m.textInput.SetValue("")
 
+			// Save input to history
+			m.inputHistory = append(m.inputHistory, input)
+			if len(m.inputHistory) > 20 {
+				m.inputHistory = m.inputHistory[len(m.inputHistory)-20:]
+			}
+			m.historyIdx = -1
+			m.historyDraft = ""
+
 			// 发布到总线
 			go func() {
 				inboundMsg := &bus.InBoundMessage{
@@ -375,6 +389,22 @@ func (m appModel) updateNormal(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.viewport.ScrollUp(1)
 			case focusEvent:
 				m.eventViewport.ScrollUp(1)
+			case focusInput:
+				// Navigate to older history entry
+				if len(m.inputHistory) > 0 {
+					if m.historyIdx == -1 {
+						// Start browsing history
+						m.historyDraft = m.textInput.Value()
+						m.historyIdx = len(m.inputHistory) - 1
+					} else if m.historyIdx > 0 {
+						// Move to older entry
+						m.historyIdx--
+					}
+					// Update input with history entry
+					m.textInput.SetValue(m.inputHistory[m.historyIdx])
+					// Move cursor to end
+					m.textInput, _ = m.textInput.Update(tea.KeyMsg{Type: tea.KeyEnd})
+				}
 			}
 
 		case tea.KeyDown:
@@ -383,6 +413,21 @@ func (m appModel) updateNormal(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.viewport.ScrollDown(1)
 			case focusEvent:
 				m.eventViewport.ScrollDown(1)
+			case focusInput:
+				// Navigate to newer history entry or back to draft
+				if m.historyIdx >= 0 {
+					m.historyIdx++
+					if m.historyIdx >= len(m.inputHistory) {
+						// Past newest entry, restore draft
+						m.textInput.SetValue(m.historyDraft)
+						m.historyIdx = -1
+					} else {
+						// Update input with newer history entry
+						m.textInput.SetValue(m.inputHistory[m.historyIdx])
+					}
+					// Move cursor to end
+					m.textInput, _ = m.textInput.Update(tea.KeyMsg{Type: tea.KeyEnd})
+				}
 			}
 		}
 		switch msg.String() {
