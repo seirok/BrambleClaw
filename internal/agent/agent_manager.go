@@ -324,6 +324,10 @@ func (a *AgentManager) StopAll(ctx context.Context) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
+	if a.status == interfaces.StatusStopped {
+		return nil
+	}
+
 	var errs []error
 	agents := a.agentRegistry.List(ctx)
 	for _, agent := range agents {
