@@ -404,6 +404,7 @@ func (m appModel) updateNormal(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.textInput.SetValue(m.inputHistory[m.historyIdx])
 					// Move cursor to end
 					m.textInput, _ = m.textInput.Update(tea.KeyMsg{Type: tea.KeyEnd})
+					return m, nil
 				}
 			}
 
@@ -427,6 +428,7 @@ func (m appModel) updateNormal(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 					// Move cursor to end
 					m.textInput, _ = m.textInput.Update(tea.KeyMsg{Type: tea.KeyEnd})
+					return m, nil
 				}
 			}
 		}
@@ -579,10 +581,6 @@ func (m appModel) updateNormal(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case focusEvent:
 		// 只有焦点在思考区时，思考区才响应 Update
 		m.eventViewport, evpCmd = m.eventViewport.Update(msg)
-	default:
-		// 当焦点在输入框时，如果你希望此时按上下键也能滚动对话区，可以保留下面这行
-		// 如果不希望滚动，则留空
-		m.viewport, vpCmd = m.viewport.Update(msg)
 	}
 	m.sidebarViewport, _ = m.sidebarViewport.Update(msg)
 
