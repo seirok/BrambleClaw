@@ -508,6 +508,7 @@ func (a *Agent) HandleMessage(ctx context.Context, msg *bus.InBoundMessage) {
 		ChatID:    msg.ChatID,
 		InChannel: msg.InChannel,
 		Content:   msg.Content,
+		Metadata:  msg.Metadata,
 	}
 	chatMsg := messages.FromInBoundData(inBoundData)
 
@@ -540,6 +541,16 @@ func (a *Agent) HandleMessage(ctx context.Context, msg *bus.InBoundMessage) {
 		MsgType:    outData.MsgType,
 		ReplyTo:    outData.ReplyTo,
 		TimeStamp:  outData.TimeStamp,
+	}
+
+	// 如果 InBoundMessage 携带了 reply_channel / reply_chat，覆盖目标
+	if msg.Metadata != nil {
+		if rc, ok := msg.Metadata["reply_channel"]; ok && rc != "" {
+			outbound.OutChannel = rc
+		}
+		if rchat, ok := msg.Metadata["reply_chat"]; ok && rchat != "" {
+			outbound.ChatID = rchat
+		}
 	}
 
 	// 触发响应前钩子

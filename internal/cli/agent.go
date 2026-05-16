@@ -7,6 +7,7 @@ import (
 	"brambleclaw/internal/channel"
 	"brambleclaw/internal/cli/tui"
 	"brambleclaw/internal/config"
+	"brambleclaw/internal/cron"
 	"brambleclaw/internal/events"
 	"brambleclaw/internal/gateway"
 	"brambleclaw/internal/hook"
@@ -76,6 +77,15 @@ func runAgent(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to initialize channel manager: %w", err)
 	}
 
+	// 3. 初始化 Cron
+	logger.L().Debug().Msg("Initializing CronService...")
+	cronDataDir := cfg.Tools.Cron.DataDir
+	var cronService *cron.CronService
+	var cronTool *cron.CronTool
+	if cfg.Tools.Cron.Enabled {
+		cronService, cronTool = cron.NewCronServiceAndTool(msgBus, cronDataDir)
+	}
+
 	// 5. 初始化 SkillManager 和 AgentManager
 	logger.L().Debug().Msg("Initializing SkillManager...")
 	skillManager := skill.NewSkillManager(&cfg.Skill)
@@ -86,6 +96,9 @@ func runAgent(cmd *cobra.Command, args []string) error {
 
 	agentManager.SetToolFactory(func(a *agent.Agent) []interfaces.Tool {
 		baseTools := []interfaces.Tool{teamtool.NewCreateTeamTool(a)}
+		if cfg.Tools.Cron.Enabled && cronTool != nil {
+			baseTools = append(baseTools, cronTool)
+		}
 		// Add activate_skill tool
 		skTool := skill.NewActivateSkillTool(skillManager)
 		baseTools = append(baseTools, skTool)
@@ -121,6 +134,14 @@ func runAgent(cmd *cobra.Command, args []string) error {
 
 	if err := channelManager.StartAll(ctx); err != nil {
 		return err
+	}
+
+	// 8. 启动 CronService
+	if cfg.Tools.Cron.Enabled && cronService != nil {
+		logger.L().Debug().Msg("Starting CronService...")
+		if err := cronService.Start(ctx); err != nil {
+			logger.L().Error().Err(err).Msg("Failed to start CronService")
+		}
 	}
 
 	// Get the default agent
@@ -224,6 +245,11 @@ func runAgent(cmd *cobra.Command, args []string) error {
 		defer stopCancel()
 		if err := gw.Stop(stopCtx); err != nil {
 			logger.L().Error().Err(err).Msg("Failed to stop Gateway")
+		}
+		if cfg.Tools.Cron.Enabled && cronService != nil {
+			if err := cronService.Stop(stopCtx); err != nil {
+				logger.L().Error().Err(err).Msg("Failed to stop CronService")
+			}
 		}
 		if err := channelManager.StopAll(ctx); err != nil {
 			logger.L().Error().Err(err).Msg("Failed to stop ChannelManager")

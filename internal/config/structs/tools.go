@@ -1,5 +1,15 @@
 package structs
 
+import "path/filepath"
+
+import util "brambleclaw/internal"
+
+// CronConfig cron工具配置
+type CronConfig struct {
+	Enabled bool   `json:"enabled" mapstructure:"enabled"`
+	DataDir string `json:"dataDir,omitempty" mapstructure:"dataDir"`
+}
+
 // MCPConfig MCP 工具配置
 type MCPConfig struct {
 	Enabled bool                       `json:"enabled" mapstructure:"enabled"`
@@ -57,6 +67,7 @@ type ToolsConfig struct {
 	Grep      GrepConfig      `json:"grep" mapstructure:"grep"`
 	Read      ReadConfig      `json:"read" mapstructure:"read"`
 	Write     WriteConfig     `json:"write" mapstructure:"write"`
+	Cron      CronConfig      `json:"cron" mapstructure:"cron"`
 }
 
 // DefaultToolsConfig 返回默认工具配置
@@ -84,6 +95,10 @@ func DefaultToolsConfig() ToolsConfig {
 		},
 		Write: WriteConfig{
 			Enabled: true,
+		},
+		Cron: CronConfig{
+			Enabled: true,
+			DataDir: "",
 		},
 	}
 }
@@ -122,6 +137,10 @@ func (c *ToolsConfig) Validate() (hasError bool) {
 
 	if !c.Write.Enabled {
 		c.Write.Enabled = defaults.Write.Enabled
+	}
+
+	if c.Cron.DataDir == "" {
+		c.Cron.DataDir = filepath.Join(util.GetSystemPath(), "cron")
 	}
 
 	return false

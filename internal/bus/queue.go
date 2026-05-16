@@ -16,6 +16,7 @@ type InBoundMessage struct {
 	InChannel string // 消息来源Channel
 	Content   string
 	TimeStamp time.Time
+	Metadata  map[string]string `json:"metadata,omitempty"` // 元数据，用于传递额外信息
 }
 
 type OutBoundMessage struct {
