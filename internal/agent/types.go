@@ -164,6 +164,7 @@ func (m *AgentMessage) GetSource() string              { return m.Source }
 func (m *AgentMessage) GetType() messages.MessageType  { return m.Type }
 func (m *AgentMessage) GetCreatedAt() time.Time        { return m.CreatedAt }
 func (m *AgentMessage) GetMetadata() map[string]string { return m.Metadata }
+func (m *AgentMessage) GetRole() string                  { return string(m.Role) }
 func (m *AgentMessage) ToText() string {
 	var sb strings.Builder
 	for _, ct := range m.Content {
