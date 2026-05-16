@@ -198,6 +198,9 @@ func (a *AgentManager) Initialize(ctx context.Context, cfg any) error {
 		if err := cmdRegistry.Register(ctx, "skills", &command.SkillsCommand{}); err != nil {
 			logger.L().Error().Err(err).Msg("Failed to register skills command")
 		}
+		if err := cmdRegistry.Register(ctx, "context", &command.ContextCommand{}); err != nil {
+			logger.L().Error().Err(err).Msg("Failed to register context command")
+		}
 
 		// Session
 		sessionStore := store.NewFileStorage[session.Session](filepath.Join(agentWorkspace, "memory"))
@@ -320,6 +323,10 @@ func (a *AgentManager) StartAll(ctx context.Context) error {
 func (a *AgentManager) StopAll(ctx context.Context) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
+
+	if a.status == interfaces.StatusStopped {
+		return nil
+	}
 
 	var errs []error
 	agents := a.agentRegistry.List(ctx)

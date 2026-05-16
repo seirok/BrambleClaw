@@ -93,6 +93,7 @@ type AuditLogger struct {
 	eventChan chan *AuditEvent
 	stopChan  chan struct{}
 	wg        sync.WaitGroup
+	closeOnce sync.Once
 }
 
 // NewAuditLogger 创建审计日志记录器
@@ -230,18 +231,22 @@ func (al *AuditLogger) LogToolCall(tc *ToolCallAuditEvent) {
 
 // Close 关闭审计日志记录器
 func (al *AuditLogger) Close() error {
-	if !al.config.Enabled {
-		return nil
-	}
+	var err error
 
-	close(al.stopChan)
-	al.wg.Wait()
+	al.closeOnce.Do(func() {
+		if !al.config.Enabled {
+			return
+		}
 
-	if al.logger != nil {
-		return al.logger.Close()
-	}
+		close(al.stopChan)
+		al.wg.Wait()
 
-	return nil
+		if al.logger != nil {
+			err = al.logger.Close()
+		}
+	})
+
+	return err
 }
 
 // truncateForAudit 截断审计日志字符串
