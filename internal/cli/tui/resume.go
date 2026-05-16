@@ -20,6 +20,19 @@ import (
 
 const maxReserveLen = 40
 
+func humanizeBytes(size int64) string {
+	const (
+		KB = 1024
+		MB = 1024 * KB
+	)
+	if size < KB {
+		return fmt.Sprintf("%d B", size)
+	} else if size < MB {
+		return fmt.Sprintf("%.1f KB", float64(size)/KB)
+	}
+	return fmt.Sprintf("%.1f MB", float64(size)/MB)
+}
+
 func truncateWithEllipsis(s string, maxLen int) string {
 	if len(s) <= maxLen {
 		return s
@@ -32,6 +45,7 @@ type sessionItem struct {
 	chatID         string
 	firstUserMsg   string
 	lastActiveTime time.Time
+	fileSize       int64 // total bytes of session files on disk
 }
 
 func (i sessionItem) Title() string {
@@ -42,7 +56,7 @@ func (i sessionItem) Title() string {
 }
 
 func (i sessionItem) Description() string {
-	return i.lastActiveTime.Format("2006-01-02 15:04")
+	return fmt.Sprintf("%s  %s", i.lastActiveTime.Format("2006-01-02 15:04"), humanizeBytes(i.fileSize))
 }
 
 func (i sessionItem) FilterValue() string {
@@ -93,10 +107,29 @@ func (m appModel) initSessionList(title string) (appModel, tea.Cmd, error) {
 		}
 
 		title = truncateWithEllipsis(title, maxReserveLen)
+
+		// Calculate total size of session files on disk
+		var fileSize int64
+		sessionKey := util.BuildSessionKey(meta.AgentName, meta.ChannelName, meta.ChatID)
+		fileKey := util.SessionKeyToFile(sessionKey)
+
+		// Stat session .jsonl file
+		sessionPath := filepath.Join(m.agent.Workspace(), "memory", util.GetSessionFile(fileKey))
+		if info, err := os.Stat(sessionPath); err == nil {
+			fileSize += info.Size()
+		}
+
+		// Stat meta .json file
+		metaPath := filepath.Join(m.agent.Workspace(), "memory", "meta_data", util.GetSessionMetaFile(fileKey))
+		if info, err := os.Stat(metaPath); err == nil {
+			fileSize += info.Size()
+		}
+
 		items = append(items, sessionItem{
 			chatID:         meta.ChatID,
 			firstUserMsg:   title,
 			lastActiveTime: meta.UpdatedAt,
+			fileSize:       fileSize,
 		})
 	}
 
