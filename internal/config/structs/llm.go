@@ -1,10 +1,6 @@
 package structs
 
-import (
-	"os"
-
-	"neoclaw/internal/logger"
-)
+import "os"
 
 // LLMConfig LLM 配置
 type LLMConfig struct {
@@ -27,19 +23,14 @@ func DefaultLLMConfig() LLMConfig {
 func (c *LLMConfig) Validate() (hasError bool) {
 	defaults := DefaultLLMConfig()
 
+	// Check APIKey with error log
 	if c.APIKey == "" {
-		logger.L().Error().Msg("LLM APIKey is required")
 		hasError = true
-		c.APIKey = defaults.APIKey
 	}
+	ValidateNonEmptyString(&c.APIKey, defaults.APIKey, "LLM APIKey", true)
 
-	if c.BaseURL == "" {
-		c.BaseURL = defaults.BaseURL
-	}
-
-	if c.Model == "" {
-		c.Model = defaults.Model
-	}
+	ValidateNonEmptyString(&c.BaseURL, defaults.BaseURL, "LLM BaseURL", false)
+	ValidateNonEmptyString(&c.Model, defaults.Model, "LLM Model", false)
 
 	return hasError
 }

@@ -1,14 +1,13 @@
 package agent
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"neoclaw/internal/interfaces"
 	"neoclaw/internal/messages"
+	"neoclaw/internal/registry"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -159,12 +158,12 @@ func NewAgentMessage(source string, role Role, content string) *AgentMessage {
 }
 
 // BaseMessage 接口实现
-func (m *AgentMessage) GetID() string                  { return m.ID }
-func (m *AgentMessage) GetSource() string              { return m.Source }
-func (m *AgentMessage) GetType() messages.MessageType  { return m.Type }
-func (m *AgentMessage) GetCreatedAt() time.Time        { return m.CreatedAt }
+func (m *AgentMessage) GetID() string               { return m.ID }
+func (m *AgentMessage) GetSource() string           { return m.Source }
+func (m *AgentMessage) GetType() messages.MessageType { return m.Type }
+func (m *AgentMessage) GetCreatedAt() time.Time     { return m.CreatedAt }
 func (m *AgentMessage) GetMetadata() map[string]string { return m.Metadata }
-func (m *AgentMessage) GetRole() string                { return string(m.Role) }
+func (m *AgentMessage) GetRole() string             { return string(m.Role) }
 func (m *AgentMessage) ToText() string {
 	var sb strings.Builder
 	for _, ct := range m.Content {
@@ -174,9 +173,6 @@ func (m *AgentMessage) ToText() string {
 	}
 	return sb.String()
 }
-
-// 编译时检查
-var _ messages.BaseMessage = (*AgentMessage)(nil)
 
 // UnmarshalJSON 自定义JSON反序列化
 func (m *AgentMessage) UnmarshalJSON(data []byte) error {
@@ -222,87 +218,24 @@ var (
 var _ interfaces.Registry[*Agent] = (*AgentRegistry)(nil)
 
 type AgentRegistry struct {
-	agents map[string]*Agent
-	mu     sync.RWMutex
+	*registry.GenericRegistry[*Agent]
 }
 
 // NewAgentRegistry 创建具象注册表
 func NewAgentRegistry() *AgentRegistry {
 	return &AgentRegistry{
-		agents: make(map[string]*Agent),
+		GenericRegistry: registry.NewGenericRegistry[*Agent](
+			func(name string) error { return fmt.Errorf("%w: %s", ErrAlreadyExists, name) },
+			func(name string) error { return fmt.Errorf("%w: %s", ErrNotFound, name) },
+			func(name string, ag *Agent) error {
+				if name == "" {
+					return errors.New("agent name cannot be empty")
+				}
+				if ag == nil {
+					return errors.New("agent instance cannot be nil")
+				}
+				return nil
+			},
+		),
 	}
-}
-
-// Register 注册 Agent
-func (r *AgentRegistry) Register(ctx context.Context, name string, ag *Agent) error {
-	if name == "" {
-		return errors.New("agent name cannot be empty")
-	}
-	if ag == nil {
-		return errors.New("agent instance cannot be nil")
-	}
-
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	if _, exists := r.agents[name]; exists {
-		return fmt.Errorf("%w: %s", ErrAlreadyExists, name)
-	}
-
-	r.agents[name] = ag
-	return nil
-}
-
-// Get 获取 Agent
-func (r *AgentRegistry) Get(ctx context.Context, name string) (*Agent, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	ag, ok := r.agents[name]
-	if !ok {
-		return nil, fmt.Errorf("%w: %s", ErrNotFound, name)
-	}
-	return ag, nil
-}
-
-// Unregister 注销 Agent
-func (r *AgentRegistry) Unregister(ctx context.Context, name string) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	if _, exists := r.agents[name]; !exists {
-		return fmt.Errorf("%w: %s", ErrNotFound, name)
-	}
-
-	delete(r.agents, name)
-	return nil
-}
-
-// Update 更新 Agent
-func (r *AgentRegistry) Update(ctx context.Context, name string, ag *Agent) error {
-	if ag == nil {
-		return errors.New("agent instance cannot be nil")
-	}
-
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	if _, exists := r.agents[name]; !exists {
-		return fmt.Errorf("%w: %s", ErrNotFound, name)
-	}
-
-	r.agents[name] = ag
-	return nil
-}
-
-// List 返回所有 Agent
-func (r *AgentRegistry) List(ctx context.Context) []*Agent {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	list := make([]*Agent, 0, len(r.agents))
-	for _, ag := range r.agents {
-		list = append(list, ag)
-	}
-	return list
 }

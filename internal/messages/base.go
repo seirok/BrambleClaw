@@ -2,7 +2,10 @@ package messages
 
 import (
 	"context"
+	"encoding/json"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // MessageType 消息类型
@@ -17,6 +20,38 @@ const (
 	MessageTypeStructured  MessageType = "structured"
 	MessageTypeError       MessageType = "error"
 )
+
+// MessageBase 提供公共字段和基础方法实现
+type MessageBase struct {
+	ID        string               `json:"id"`
+	Source    string               `json:"source"`
+	Type      MessageType          `json:"type"`
+	Metadata  map[string]string    `json:"metadata,omitempty"`
+	CreatedAt time.Time            `json:"created_at"`
+}
+
+// NewMessageBase 创建新的 MessageBase（设置 ID、CreatedAt、初始化 Metadata）
+func NewMessageBase(source string, msgType MessageType) MessageBase {
+	return MessageBase{
+		ID:        uuid.New().String(),
+		Source:    source,
+		Type:      msgType,
+		Metadata:  make(map[string]string),
+		CreatedAt: time.Now().UTC(),
+	}
+}
+
+func (m *MessageBase) GetID() string               { return m.ID }
+func (m *MessageBase) GetSource() string           { return m.Source }
+func (m *MessageBase) GetType() MessageType        { return m.Type }
+func (m *MessageBase) GetCreatedAt() time.Time     { return m.CreatedAt }
+func (m *MessageBase) GetMetadata() map[string]string { return m.Metadata }
+
+// MarshalJSON is provided for embedding structs that need it
+func (m *MessageBase) MarshalJSON() ([]byte, error) {
+	type Alias MessageBase
+	return json.Marshal((*Alias)(m))
+}
 
 // BaseMessage 所有消息的基础接口
 type BaseMessage interface {

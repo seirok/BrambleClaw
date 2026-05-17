@@ -6,80 +6,64 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"neoclaw/internal/logger"
 	"net/http"
 	"strings"
 	"time"
 )
 
-const (
-	// SandboxAddr 沙箱服务的内部地址
-	SandboxAddr = "http://127.0.0.1:8080"
-)
+const SandboxAddr = "http://127.0.0.1:8080"
 
 // CodeSandboxTool 代码执行沙箱工具
 type CodeSandboxTool struct {
+	*BaseTool
 	client *http.Client
 }
 
 // NewCodeSandboxTool 创建沙箱工具实例
 func NewCodeSandboxTool() *CodeSandboxTool {
 	return &CodeSandboxTool{
-		client: &http.Client{
-			Timeout: 30 * time.Second,
-		},
-	}
-}
-
-func (t *CodeSandboxTool) Name() string {
-	return "code_sandbox"
-}
-
-func (t *CodeSandboxTool) Description() string {
-	return "在安全的隔离环境中执行编程代码。支持多种语言（如 Python, C++, Go, Node.js）。当你需要进行数学计算、数据处理、算法验证或测试代码片段时，请使用此工具。"
-}
-
-func (t *CodeSandboxTool) Parameters() map[string]interface{} {
-	return map[string]interface{}{
-		"type": "object",
-		"properties": map[string]interface{}{
-			"language": map[string]interface{}{
-				"type":        "string",
-				"enum":        []string{"python", "cpp", "go", "nodejs"},
-				"description": "编程语言类型",
+		BaseTool: NewBaseTool(
+			"code_sandbox",
+			"在安全的隔离环境中执行编程代码。支持多种语言（如 Python, C++, Go, Node.js）。",
+			nil,
+			map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"language": map[string]any{
+						"type":        "string",
+						"enum":        []string{"python", "cpp", "go", "nodejs"},
+						"description": "编程语言类型",
+					},
+					"code": map[string]any{
+						"type":        "string",
+						"description": "要执行的完整源代码",
+					},
+				},
+				"required": []string{"language", "code"},
 			},
-			"code": map[string]interface{}{
-				"type":        "string",
-				"description": "要执行的完整源代码",
-			},
-		},
-		"required": []string{"language", "code"},
+		),
+		client: &http.Client{Timeout: 30 * time.Second},
 	}
 }
 
 // Execute 执行代码沙箱
-func (t *CodeSandboxTool) Execute(ctx context.Context, args string) (interface{}, error) {
-	logger.L().Debug().Str("tool", t.Name()).Msg("Starting CodeSandbox tool execution")
-
-	// 1. 解析参数
+func (t *CodeSandboxTool) Execute(ctx context.Context, args string) (any, error) {
+	t.LogStart()
 	var req struct {
 		Language string `json:"language"`
 		Code     string `json:"code"`
 	}
 	if err := json.Unmarshal([]byte(args), &req); err != nil {
-		logger.L().Error().Err(err).Msg("Failed to parse CodeSandbox parameters")
 		return nil, fmt.Errorf("解析参数失败: %w", err)
 	}
 
-	// 2. 准备发送给容器的请求体
-	sandboxReq := map[string]interface{}{
+	sandboxReq := map[string]any{
 		"language": req.Language,
 		"code":     req.Code,
-		"timeout":  10, // 内部执行超时
+		"timeout":  10,
 	}
 	jsonData, _ := json.Marshal(sandboxReq)
 
-	// 3. 调用沙箱 API
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", SandboxAddr+"/run_code", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return nil, fmt.Errorf("创建请求失败: %w", err)
@@ -88,12 +72,10 @@ func (t *CodeSandboxTool) Execute(ctx context.Context, args string) (interface{}
 
 	resp, err := t.client.Do(httpReq)
 	if err != nil {
-		logger.L().Error().Err(err).Msg("Failed to connect to sandbox service")
 		return nil, fmt.Errorf("沙箱服务暂不可用: %w", err)
 	}
 	defer resp.Body.Close()
 
-	// 4. 读取并解析返回结果
 	body, _ := io.ReadAll(resp.Body)
 	var res struct {
 		Status    string `json:"status"`
@@ -110,27 +92,22 @@ func (t *CodeSandboxTool) Execute(ctx context.Context, args string) (interface{}
 		return nil, fmt.Errorf("解析沙箱返回数据失败: %w", err)
 	}
 
-	// 5. 格式化输出给 LLM
 	var output strings.Builder
-	output.WriteString(fmt.Sprintf("状态: %s\n", res.Status))
-
+	fmt.Fprintf(&output, "状态: %s\n", res.Status)
 	if res.Status != "Success" {
-		output.WriteString(fmt.Sprintf("错误信息: %s\n", res.Message))
+		fmt.Fprintf(&output, "错误信息: %s\n", res.Message)
 	}
-
 	if res.RunResult.Stdout != "" {
-		output.WriteString("--- 标准输出 (Stdout) ---\n")
+		output.WriteString("--- 标准输出 ---\n")
 		output.WriteString(res.RunResult.Stdout)
 		output.WriteString("\n")
 	}
-
 	if res.RunResult.Stderr != "" {
-		output.WriteString("--- 标准错误 (Stderr) ---\n")
+		output.WriteString("--- 标准错误 ---\n")
 		output.WriteString(res.RunResult.Stderr)
 		output.WriteString("\n")
 	}
-
-	output.WriteString(fmt.Sprintf("退出码: %d | 执行耗时: %.4fs", res.RunResult.ReturnCode, res.RunResult.Time))
+	fmt.Fprintf(&output, "退出码: %d | 耗时: %.4fs", res.RunResult.ReturnCode, res.RunResult.Time)
 
 	return output.String(), nil
 }

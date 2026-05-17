@@ -1,7 +1,5 @@
 package structs
 
-import "neoclaw/internal/logger"
-
 // CompactConfig 压缩配置
 type CompactConfig struct {
 	CompactThreshold    int  `json:"compact_threshold" mapstructure:"compact_threshold"`         // Token threshold to trigger compaction
@@ -31,25 +29,10 @@ func DefaultCompactConfig() CompactConfig {
 func (c *CompactConfig) Validate() (hasError bool) {
 	defaults := DefaultCompactConfig()
 
-	if c.CompactThreshold <= 0 {
-		logger.L().Warn().Int("invalid_compact_threshold", c.CompactThreshold).Msg("Invalid compact_threshold, using default")
-		c.CompactThreshold = defaults.CompactThreshold
-	}
-
-	if c.CompactRounds <= 0 {
-		logger.L().Warn().Int("invalid_compact_rounds", c.CompactRounds).Msg("Invalid compact_rounds, using default")
-		c.CompactRounds = defaults.CompactRounds
-	}
-
-	if c.MaxSummaryLength <= 0 {
-		logger.L().Warn().Int("invalid_max_summary_length", c.MaxSummaryLength).Msg("Invalid max_summary_length, using default")
-		c.MaxSummaryLength = defaults.MaxSummaryLength
-	}
-
-	if c.HierarchicalDepth < 1 || c.HierarchicalDepth > 5 {
-		logger.L().Warn().Int("invalid_hierarchical_depth", c.HierarchicalDepth).Msg("Invalid hierarchical_depth, using default")
-		c.HierarchicalDepth = defaults.HierarchicalDepth
-	}
+	ValidatePositiveInt(&c.CompactThreshold, defaults.CompactThreshold, "compact_threshold")
+	ValidatePositiveInt(&c.CompactRounds, defaults.CompactRounds, "compact_rounds")
+	ValidatePositiveInt(&c.MaxSummaryLength, defaults.MaxSummaryLength, "max_summary_length")
+	ValidateIntRange(&c.HierarchicalDepth, 1, 5, defaults.HierarchicalDepth, "hierarchical_depth")
 
 	return false
 }

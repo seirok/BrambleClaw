@@ -7,7 +7,7 @@ import (
 	"neoclaw/internal/bus"
 	"neoclaw/internal/interfaces"
 	"neoclaw/internal/logger"
-	"sync"
+	"neoclaw/internal/registry"
 )
 
 var (
@@ -18,63 +18,33 @@ var (
 var _ interfaces.Registry[BaseChannel] = (*ChannelRegistry)(nil)
 
 type ChannelRegistry struct {
-	channels map[string]BaseChannel
-	mu       sync.RWMutex
+	*registry.GenericRegistry[BaseChannel]
 }
 
 func NewChannelRegistry() *ChannelRegistry {
 	return &ChannelRegistry{
-		channels: make(map[string]BaseChannel),
-		mu:       sync.RWMutex{},
+		GenericRegistry: registry.NewGenericRegistry[BaseChannel](
+			func(name string) error { return fmt.Errorf("%w: %s", ErrChannelExists, name) },
+			func(name string) error { return fmt.Errorf("%w: %s", ErrChannelNotFound, name) },
+			nil,
+		),
 	}
 }
 
 func (r *ChannelRegistry) Register(ctx context.Context, name string, value BaseChannel) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	if _, exists := r.channels[name]; exists {
-		return fmt.Errorf("%w: %s", ErrChannelExists, name)
+	if err := r.GenericRegistry.Register(ctx, name, value); err != nil {
+		return err
 	}
-
-	r.channels[name] = value
 	logger.L().Debug().Str("channel", name).Msg("channel registered")
 	return nil
 }
 
 func (r *ChannelRegistry) Unregister(ctx context.Context, name string) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	if _, exists := r.channels[name]; !exists {
-		return fmt.Errorf("%w: %s", ErrChannelNotFound, name)
+	if err := r.GenericRegistry.Unregister(ctx, name); err != nil {
+		return err
 	}
-
-	delete(r.channels, name)
 	logger.L().Debug().Str("channel", name).Msg("channel unregistered")
 	return nil
-}
-
-func (r *ChannelRegistry) Get(ctx context.Context, name string) (BaseChannel, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	ch, ok := r.channels[name]
-	if !ok {
-		return nil, fmt.Errorf("%w: %s", ErrChannelNotFound, name)
-	}
-	return ch, nil
-}
-
-func (r *ChannelRegistry) List(ctx context.Context) []BaseChannel {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	list := make([]BaseChannel, 0, len(r.channels))
-	for _, ch := range r.channels {
-		list = append(list, ch)
-	}
-	return list
 }
 
 type BaseChannel interface {

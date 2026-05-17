@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"neoclaw/internal/config"
 	"neoclaw/internal/logger"
+	"neoclaw/internal/messages"
 	"neoclaw/internal/session"
 	"neoclaw/internal/skill"
 	"os"
@@ -249,6 +250,74 @@ func (cb *ContextBuilder) ResetCompressor() {
 	}
 }
 
+// compactResult holds the result of compactMessages
+type compactResult struct {
+	summaryContent string
+	tokenUsed      int
+}
+
+// compactMessages is the shared implementation for ForceCompact and Compact
+func (cb *ContextBuilder) compactMessages(ctx context.Context, sess *session.Session, info *DynamicInfo, needToCompact []messages.BaseMessage, logPrefix string) (*compactResult, error) {
+	summarizeMsg := NewAgentMessage(cb.Agent().Name(), RoleUser, "Provide a concise summary of this conversation by far, preserving core context and key points.\n")
+	needToCompact = append(needToCompact, summarizeMsg)
+
+	resp, err := cb.Agent().orche.Run(ctx, needToCompact)
+	if err != nil {
+		return nil, fmt.Errorf("%s: generate summary failed: %w", logPrefix, err)
+	}
+
+	// Extract summary content
+	summaryContent := ""
+	if len(resp.Choices) > 0 {
+		summaryContent = resp.Choices[0].Message.Content
+	}
+
+	// Ensure SummaryCompressor is initialized
+	if cb.summaryCompressor == nil {
+		return nil, fmt.Errorf("%s: summaryCompressor not initialized", logPrefix)
+	}
+
+	// Add summary to hierarchical compressor
+	_, err = cb.summaryCompressor.AddSummary(summaryContent, time.Now())
+	if err != nil {
+		logger.L().Error().Err(err).Str("sessionKey", sess.Key).
+			Msgf("%s: failed to add summary to compressor, but continuing", logPrefix)
+	}
+
+	// Update session summary and rebuild system prompt if summary exists
+	if summaryContent != "" {
+		if err := cb.Agent().GetSession().UpdateSessionSummary(cb.GetSessionSummary()); err != nil {
+			logger.L().Error().Err(err).Str("sessionKey", sess.Key).
+				Msgf("%s: failed to update session summary, but continuing", logPrefix)
+		} else {
+			logger.L().Debug().Str("sessionKey", sess.Key).
+				Str("summary", summaryContent[:min(100, len(summaryContent))]).
+				Msgf("%s: session summary updated successfully", logPrefix)
+		}
+
+		// Rebuild system prompt and replace first message
+		newSystemPrompt, err := cb.Build(info)
+		if err != nil {
+			logger.L().Error().Err(err).Str("sessionKey", sess.Key).
+				Msgf("%s: failed to rebuild system prompt, but continuing", logPrefix)
+		} else {
+			if len(sess.Messages) > 0 {
+				sess.Messages[0] = NewAgentMessage(cb.Agent().Name(), RoleSystem, newSystemPrompt)
+				sess.Modified = true
+				logger.L().Debug().Str("sessionKey", sess.Key).
+					Msgf("%s: system prompt updated with new summary", logPrefix)
+			}
+		}
+	}
+
+	tokenUsed := resp.Usage.CompletionTokens + resp.Usage.PromptTokens
+
+	return &compactResult{
+		summaryContent: summaryContent,
+		tokenUsed:      tokenUsed,
+	}, nil
+}
+
 // ForceCompact manually triggers compression, ignoring thresholds
 func (cb *ContextBuilder) ForceCompact(ctx context.Context, sess *session.Session, info *DynamicInfo) (int, error) {
 	// Check if there are enough messages to compact
@@ -261,53 +330,18 @@ func (cb *ContextBuilder) ForceCompact(ctx context.Context, sess *session.Sessio
 	if len(needToCompact) == 0 {
 		return 0, nil
 	}
-	summarizeMsg := NewAgentMessage(cb.Agent().Name(), RoleUser, "Provide a concise summary of this conversation by far, preserving core context and key points.\n")
-	needToCompact = append(needToCompact, summarizeMsg)
 
-	resp, err := cb.Agent().orche.Run(ctx, needToCompact)
+	result, err := cb.compactMessages(ctx, sess, info, needToCompact, "force-compact")
 	if err != nil {
-		return 0, fmt.Errorf("force-compact: generate summary failed: %w", err)
-	}
-
-	// Extract summary content
-	summaryContent := ""
-	if len(resp.Choices) > 0 {
-		summaryContent = resp.Choices[0].Message.Content
-	}
-
-	// Ensure SummaryCompressor is initialized
-	if cb.summaryCompressor == nil {
-		return 0, fmt.Errorf("force-compact: summaryCompressor not initialized")
-	}
-
-	// Add summary to hierarchical compressor
-	_, err = cb.summaryCompressor.AddSummary(summaryContent, time.Now())
-	if err != nil {
-		logger.L().Error().Err(err).Str("sessionKey", sess.Key).
-			Msg("force-compact: failed to add summary to compressor, but continuing")
-	}
-
-	// Update session summary
-	compressedCount := len(msgs) - sess.Summarized - 1 // -1 for the one we kept
-	if summaryContent != "" {
-		if err := cb.Agent().GetSession().UpdateSessionSummary(cb.GetSessionSummary()); err != nil {
-			logger.L().Error().Err(err).Str("sessionKey", sess.Key).
-				Msg("force-compact: failed to update session summary, but continuing")
-		}
-		// Rebuild system prompt and replace first message
-		newSystemPrompt, err := cb.Build(info)
-		if err == nil && len(sess.Messages) > 0 {
-			sess.Messages[0] = NewAgentMessage(cb.Agent().Name(), RoleSystem, newSystemPrompt)
-			sess.Modified = true
-		}
+		return 0, err
 	}
 
 	// Update boundary pointer: keep the last message uncompressed
+	compressedCount := len(msgs) - sess.Summarized - 1 // -1 for the one we kept
 	sess.Summarized = len(msgs) - 1
 
 	// Update token usage
-	currentTokenUsed := resp.Usage.CompletionTokens + resp.Usage.PromptTokens
-	session.WithTokenCount(currentTokenUsed)(cb.Agent().GetSession().GetMetadata())
+	session.WithTokenCount(result.tokenUsed)(cb.Agent().GetSession().GetMetadata())
 
 	return compressedCount, nil
 }
@@ -319,72 +353,26 @@ func (cb *ContextBuilder) Compact(ctx context.Context, sess *session.Session, in
 		return nil
 	}
 	// Boundary check
-	if sess.Summarized+(cb.compact.CompactRounds/4) > len(msgs) {
+	compactBatchSize := cb.compact.CompactRounds / 4
+	if sess.Summarized+compactBatchSize > len(msgs) {
 		logger.L().Debug().Int("summarized", sess.Summarized).
 			Int("rounds", cb.compact.CompactRounds).
 			Int("msgsLen", len(msgs)).
 			Msg("compact boundary check failed, skipping")
 		return nil
 	}
-	needToCompact := msgs[sess.Summarized:(sess.Summarized + (cb.compact.CompactRounds / 4))]
-	summarizeMsg := NewAgentMessage(cb.Agent().Name(), RoleUser, "Provide a concise summary of this conversation by far, preserving core context and key points.\n")
-	needToCompact = append(needToCompact, summarizeMsg)
+	needToCompact := msgs[sess.Summarized : sess.Summarized+compactBatchSize]
 
-	resp, err := cb.Agent().orche.Run(ctx, needToCompact)
+	result, err := cb.compactMessages(ctx, sess, info, needToCompact, "compact")
 	if err != nil {
-		return fmt.Errorf("compact: generate summary failed: %w", err)
-	}
-
-	// Extract summary content
-	summaryContent := ""
-	if len(resp.Choices) > 0 {
-		summaryContent = resp.Choices[0].Message.Content
-	}
-
-	// Ensure SummaryCompressor is initialized
-	if cb.summaryCompressor == nil {
-		return fmt.Errorf("compact: summaryCompressor not initialized")
-	}
-
-	// Add summary to hierarchical compressor
-	_, err = cb.summaryCompressor.AddSummary(summaryContent, time.Now())
-	if err != nil {
-		logger.L().Error().Err(err).Str("sessionKey", sess.Key).
-			Msg("compact: failed to add summary to compressor, but continuing")
-	}
-
-	// Update session summary
-	if summaryContent != "" {
-		if err := cb.Agent().GetSession().UpdateSessionSummary(cb.GetSessionSummary()); err != nil {
-			logger.L().Error().Err(err).Str("sessionKey", sess.Key).
-				Msg("compact: failed to update session summary, but continuing")
-		} else {
-			logger.L().Debug().Str("sessionKey", sess.Key).
-				Str("summary", summaryContent[:min(100, len(summaryContent))]).
-				Msg("compact: session summary updated successfully")
-		}
-
-		// Rebuild system prompt and replace first message
-		newSystemPrompt, err := cb.Build(info)
-		if err != nil {
-			logger.L().Error().Err(err).Str("sessionKey", sess.Key).
-				Msg("compact: failed to rebuild system prompt, but continuing")
-		} else {
-			if len(sess.Messages) > 0 {
-				sess.Messages[0] = NewAgentMessage(cb.Agent().Name(), RoleSystem, newSystemPrompt)
-				sess.Modified = true
-				logger.L().Debug().Str("sessionKey", sess.Key).
-					Msg("compact: system prompt updated with new summary")
-			}
-		}
+		return err
 	}
 
 	// Update boundary pointer
-	sess.Summarized += cb.compact.CompactRounds / 4
+	sess.Summarized += compactBatchSize
 
 	// Update token usage
-	currentTokenUsed := resp.Usage.CompletionTokens + resp.Usage.PromptTokens
-	session.WithTokenCount(currentTokenUsed)(cb.Agent().GetSession().GetMetadata())
+	session.WithTokenCount(result.tokenUsed)(cb.Agent().GetSession().GetMetadata())
 
 	cb.Agent().GetSession().Update()
 
@@ -432,10 +420,10 @@ func (cb *ContextBuilder) getIdentity() string {
 			"## Important Rules\n\n"+
 			"1. **ALWAYS use tools** - When you need to perform an action (schedule reminders, send messages, execute commands, etc.), you MUST call the appropriate tool. Do NOT just say you'll do it or pretend to do it.\n\n"+
 			"2. **Be helpful and accurate** - When using tools, briefly explain what you're doing.\n\n"+
-			"3. **Memory** - When interacting with me if something seems memorable, update %s \\memory\\MEMORY.md\n\n"+
+			"3. **Memory** - When interacting with me if something seems memorable, update %s\\memory\\MEMORY.md\n\n"+
 			"4. **Context summaries** - Conversation summaries provided as context are approximate references only. They may be incomplete or outdated. Always defer to explicit user instructions over summary content.\n\n"+
 			"%s",
-		workspacePath, workspacePath, workspacePath, workspacePath, workspacePath, toolDiscovery)
+		workspacePath, workspacePath, workspacePath, workspacePath, workspacePath, workspacePath, toolDiscovery)
 }
 
 func (cb *ContextBuilder) Build(info *DynamicInfo) (string, error) {

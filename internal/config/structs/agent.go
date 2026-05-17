@@ -1,7 +1,5 @@
 package structs
 
-import "neoclaw/internal/logger"
-
 // AgentConfig 定义单个 Agent 的配置
 type AgentConfig struct {
 	Name        string    `json:"name" mapstructure:"name"`               // Agent 名称
@@ -15,21 +13,25 @@ type AgentConfig struct {
 // Validate validates AgentConfig and fills defaults.
 // Returns whether there was a critical error.
 func (c *AgentConfig) Validate() (hasError bool) {
+	// Validate name
 	if c.Name == "" {
-		logger.L().Error().Msg("Agent name is required")
 		hasError = true
 	}
+	ValidateNonEmptyString(&c.Name, "", "Agent name", true)
 
+	// Validate max history
 	if c.MaxHistory <= 0 {
-		logger.L().Warn().Int("invalid_max_history", c.MaxHistory).Msg("Invalid max_history, using 50")
 		c.MaxHistory = 50
 	}
+	ValidatePositiveInt(&c.MaxHistory, 50, "max_history")
 
 	// Validate LLM config
 	if c.LLM.Validate() {
 		// LLM has critical error, but we continue
 	}
 
+	// Ensure tools slice is not nil
+	EnsureSlice(&c.Tools)
 	if len(c.Tools) == 0 {
 		c.Tools = []string{"web_search", "shell", "read", "write", "list", "glob", "grep", "url_parse", "grant_permission"}
 	}
