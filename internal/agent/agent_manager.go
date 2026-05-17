@@ -8,6 +8,7 @@ import (
 	"neoclaw/internal/bus"
 	"neoclaw/internal/command"
 	"neoclaw/internal/config"
+	"neoclaw/internal/cron"
 	"neoclaw/internal/interfaces"
 	"neoclaw/internal/logger"
 	"neoclaw/internal/messages"
@@ -31,6 +32,7 @@ type AgentManager struct {
 	mu            sync.RWMutex
 	status        interfaces.ManagerStatus
 	auditLoggers  []*audit.AuditLogger
+	cronService   *cron.CronService
 
 	// toolFactory 注入额外的工具到每个 Agent
 	toolFactory func(*Agent) []interfaces.Tool
@@ -303,6 +305,13 @@ func (a *AgentManager) StartAll(ctx context.Context) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
+	// 启动 CronService
+	if a.cronService != nil {
+		if err := a.cronService.Start(ctx); err != nil {
+			logger.L().Error().Err(err).Msg("Failed to start CronService")
+		}
+	}
+
 	var errs []error
 	agents := a.agentRegistry.List(ctx)
 	for _, agent := range agents {
@@ -326,6 +335,13 @@ func (a *AgentManager) StopAll(ctx context.Context) error {
 
 	if a.status == interfaces.StatusStopped {
 		return nil
+	}
+
+	// 停止 CronService
+	if a.cronService != nil {
+		if err := a.cronService.Stop(ctx); err != nil {
+			logger.L().Error().Err(err).Msg("Failed to stop CronService")
+		}
 	}
 
 	var errs []error

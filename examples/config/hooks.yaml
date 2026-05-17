@@ -1,0 +1,51 @@
+# Hook 配置示例
+# 展示了如何配置外部 Hook
+version: "1.0"
+
+defaults:
+  timeout_ms: 5000
+  max_output_size: 1048576
+  working_dir: "./examples/scripts"
+  shell: "/bin/bash"
+  env:
+    - "HOOK_ENV=development"
+    - "LOG_LEVEL=info"
+
+definitions:
+  # Python Hello Hook
+  - point: "example.hello"
+    type: "external"
+    enabled: true
+    priority: 50
+    config:
+      command: "python3"
+      script_path: "./hello_hook.py"
+
+  # Python 订单审计 Hook
+  - point: "example.order_audit"
+    type: "external"
+    enabled: true
+    priority: 100
+    config:
+      command: "python3"
+      script_path: "./audit_order_hook.py"
+      timeout_ms: 3000
+
+  # Bash Hook
+  - point: "example.bash"
+    type: "external"
+    enabled: true
+    config:
+      command: "bash"
+      script_path: "./bash_hook.sh"
+
+thinking_visibility:
+  enabled: true
+  max_events: 200
+  points:
+    - point: "hook.point.llm.request"
+      enabled: true
+      verbosity: "summary"
+    - point: "hook.point.llm.response"
+      enabled: true
+      verbosity: "summary"

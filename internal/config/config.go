@@ -42,14 +42,14 @@ type Config struct {
 	BusBufSize int                   `json:"bus-buf-size" mapstructure:"bus-buf-size"`
 	SubBufSize int                   `json:"sub-buf-size" mapstructure:"sub-buf-size"`
 	Channels   structs.ChannelConfig `json:"channels" mapstructure:"channels"`
-	LLMConfig  structs.LLMConfig
+	LLMConfig  structs.LLMConfig     `json:"llm" mapstructure:"llm"`
 	Tools      structs.ToolsConfig   `json:"tools" mapstructure:"tools"`
 	Gateway    structs.GatewayConfig `json:"gateway" mapstructure:"gateway"`
 	Agents     []structs.AgentConfig `json:"agents" mapstructure:"agents"`
 	Session    structs.SessionConfig `json:"session" mapstructure:"session"`
 	Compact    structs.CompactConfig `json:"compact" mapstructure:"compact"`
 	Sandbox    structs.SandboxConfig `json:"sandbox" mapstructure:"sandbox"`
-	Hooks      structs.HookConfig    `json:"hooks"`
+	Hooks      structs.HookConfig    `json:"hooks" mapstructure:"hooks"`
 	Sidebar    structs.SidebarConfig `json:"sidebar" mapstructure:"sidebar"`
 	Skill      structs.SkillConfig   `json:"skill" mapstructure:"skill"`
 }
@@ -89,6 +89,7 @@ func initInternal() {
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		logger.L().Warn().Str("path", configPath).Msg("Config file missing, creating default")
 		globalConfig = createDefaultConfig()
+		ValidateGlobalConfig()
 		// 持久化默认配置文件
 		savePath := util.GetGlobalConfigPath()
 		err := util.SaveStructToJSON(savePath, globalConfig)

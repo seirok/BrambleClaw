@@ -7,6 +7,6 @@ logs/
 **/config.json
 .idea/
 **/*.pdf
-docs
 **/*.md
 !README.md
+!docs/*.md
