@@ -45,6 +45,8 @@ func (m *ChannelManager) Initialize(ctx context.Context, cfg any) error {
 		Bool("dingtalk_enabled", cfgObj.Channels.DingTalk.Enabled).
 		Bool("feishu_enabled", cfgObj.Channels.Feishu.Enabled).
 		Bool("telegram_enabled", cfgObj.Channels.Telegram.Enabled).
+		Bool("wework_enabled", cfgObj.Channels.WeWork.Enabled).
+		Bool("wework_wsbot_enabled", cfgObj.Channels.WeWorkWsBot.Enabled).
 		Msg("Channel configuration")
 
 	// 初始化 CLI 通道
@@ -103,6 +105,36 @@ func (m *ChannelManager) Initialize(ctx context.Context, cfg any) error {
 		}
 	} else {
 		logger.L().Debug().Msg("Telegram channel is not enabled")
+	}
+
+	// 初始化 WeWork 通道
+	weworkCfg := cfgObj.Channels.WeWork
+	if weworkCfg.Enabled == true {
+		weworkChannel, err := NewWeWorkChannel(weworkCfg, m.msgBus)
+		if err != nil {
+			logger.L().Error().Err(err).Msg("Failed to create WeWork channel")
+		} else {
+			if err = m.channelRegistry.Register(ctx, "wework", weworkChannel); err != nil {
+				logger.L().Error().Err(err).Msg("Failed to register WeWork channel")
+			}
+		}
+	} else {
+		logger.L().Debug().Msg("WeWork channel is not enabled")
+	}
+
+	// 初始化 WeWork WsBot 通道
+	wsBotCfg := cfgObj.Channels.WeWorkWsBot
+	if wsBotCfg.Enabled == true {
+		wsBotChannel, err := NewWeWorkWsBotChannel(wsBotCfg, m.msgBus)
+		if err != nil {
+			logger.L().Error().Err(err).Msg("Failed to create WeWork WsBot channel")
+		} else {
+			if err = m.channelRegistry.Register(ctx, "wework_wsbot", wsBotChannel); err != nil {
+				logger.L().Error().Err(err).Msg("Failed to register WeWork WsBot channel")
+			}
+		}
+	} else {
+		logger.L().Debug().Msg("WeWork WsBot channel is not enabled")
 	}
 
 	m.status = interfaces.StatusRunning
