@@ -12,6 +12,17 @@ type ChannelConfig struct {
 	DingTalk DingTalkConfig   `json:"dingtalk" mapstructure:"dingtalk"`
 	Feishu   FeishuConfig     `json:"feishu" mapstructure:"feishu"`
 	QQ       QQConfig         `json:"qq" mapstructure:"qq"`
+	Telegram TelegramConfig   `json:"telegram" mapstructure:"telegram"`
+}
+
+type TelegramConfig struct {
+	Enabled             bool               `json:"enabled"                    env:"PICOCLAW_CHANNELS_TELEGRAM_ENABLED"`
+	Token               string             `json:"token,omitzero"             env:"PICOCLAW_CHANNELS_TELEGRAM_TOKEN"`
+	AllowFrom           []string           `json:"allow_from"                 env:"PICOCLAW_CHANNELS_TELEGRAM_ALLOW_FROM"`
+	GroupTrigger        GroupTriggerConfig `json:"group_trigger,omitempty"`
+	Proxy               string             `json:"proxy,omitzero"             env:"PICOCLAW_CHANNELS_TELEGRAM_PROXY"`
+	BaseURL             string             `json:"base_url,omitzero"          env:"PICOCLAW_CHANNELS_TELEGRAM_BASE_URL"`
+	ReasoningChannelID  string             `json:"reasoning_channel_id"       env:"PICOCLAW_CHANNELS_TELEGRAM_REASONING_CHANNEL_ID"`
 }
 
 type DingTalkConfig struct {
