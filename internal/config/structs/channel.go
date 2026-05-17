@@ -7,11 +7,20 @@ type CLIChannelConfig struct {
 }
 
 // ChannelConfig 通道配置结构体
+type DiscordConfig struct {
+	Enabled            bool               `json:"enabled" mapstructure:"enabled"`
+	BotToken           string             `json:"bot_token,omitzero" mapstructure:"bot_token" env:"PICOCLAW_CHANNELS_DISCORD_BOT_TOKEN"`
+	AllowFrom          []string           `json:"allow_from" mapstructure:"allow_from"`
+	GroupTrigger       GroupTriggerConfig `json:"group_trigger,omitempty" mapstructure:"group_trigger"`
+	ReasoningChannelID string             `json:"reasoning_channel_id,omitzero" mapstructure:"reasoning_channel_id"`
+}
+
 type ChannelConfig struct {
 	CLI      CLIChannelConfig `json:"cli" mapstructure:"cli"`
 	DingTalk DingTalkConfig   `json:"dingtalk" mapstructure:"dingtalk"`
 	Feishu   FeishuConfig     `json:"feishu" mapstructure:"feishu"`
 	QQ       QQConfig         `json:"qq" mapstructure:"qq"`
+	Discord  DiscordConfig    `json:"discord" mapstructure:"discord"`
 	Telegram TelegramConfig   `json:"telegram" mapstructure:"telegram"`
 	WeWork      WeWorkConfig      `json:"wework" mapstructure:"wework"`
 	WeWorkWsBot WeWorkWsBotConfig `json:"wework_wsbot" mapstructure:"wework_wsbot"`
@@ -71,6 +80,7 @@ type QQConfig struct {
 // Returns whether there was a critical error (never for ChannelConfig).
 func (c *ChannelConfig) Validate() (hasError bool) {
 	c.CLI.Validate()
+	c.Discord.Validate()
 	// Note: DingTalk, Feishu, QQ validation omitted for brevity,
 	// but should follow the same pattern if needed
 	return false
@@ -114,4 +124,13 @@ type WeWorkWsBotConfig struct {
 	ReconnectDelay int      `json:"reconnect_delay" mapstructure:"reconnect_delay" env:"PICOCLAW_CHANNELS_WEWORK_WSBOT_RECONNECT_DELAY"`
 	Heartbeat      int      `json:"heartbeat" mapstructure:"heartbeat" env:"PICOCLAW_CHANNELS_WEWORK_WSBOT_HEARTBEAT"`
 	AllowFrom      []string `json:"allow_from" mapstructure:"allow_from" env:"PICOCLAW_CHANNELS_WEWORK_WSBOT_ALLOW_FROM"`
+}
+
+// Validate validates DiscordConfig and fills defaults.
+func (c *DiscordConfig) Validate() (hasError bool) {
+	if c.AllowFrom == nil {
+		c.AllowFrom = []string{}
+	}
+	c.GroupTrigger.Validate()
+	return false
 }

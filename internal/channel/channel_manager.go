@@ -48,6 +48,7 @@ func (m *ChannelManager) Initialize(ctx context.Context, cfg any) error {
 		Bool("wework_enabled", cfgObj.Channels.WeWork.Enabled).
 		Bool("wework_wsbot_enabled", cfgObj.Channels.WeWorkWsBot.Enabled).
 		Bool("qq_enabled", cfgObj.Channels.QQ.Enabled).
+		Bool("discord_enabled", cfgObj.Channels.Discord.Enabled).
 		Msg("Channel configuration")
 
 	// 初始化 CLI 通道
@@ -151,6 +152,21 @@ func (m *ChannelManager) Initialize(ctx context.Context, cfg any) error {
 		}
 	} else {
 		logger.L().Debug().Msg("QQ channel is not enabled")
+	}
+
+	// 初始化 Discord 通道
+	discordCfg := cfgObj.Channels.Discord
+	if discordCfg.Enabled {
+		discordChannel, err := NewDiscordChannel(discordCfg, m.msgBus)
+		if err != nil {
+			logger.L().Error().Err(err).Msg("Failed to create Discord channel")
+		} else {
+			if err = m.channelRegistry.Register(ctx, "discord", discordChannel); err != nil {
+				logger.L().Error().Err(err).Msg("Failed to register Discord channel")
+			}
+		}
+	} else {
+		logger.L().Debug().Msg("Discord channel is not enabled")
 	}
 
 	m.status = interfaces.StatusRunning

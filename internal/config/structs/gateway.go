@@ -45,6 +45,12 @@ func DefaultGatewayConfig() GatewayConfig {
 				Conditions: map[string]string{},
 				Priority:   10,
 			},
+			{
+				Channel:    "discord",
+				Agent:      "main",
+				Conditions: map[string]string{},
+				Priority:   10,
+			},
 		},
 		Retry: GatewayRetryPolicy{
 			MaxRetries: 3,
