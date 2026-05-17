@@ -196,45 +196,22 @@ func (m *SelectorManager) handleResponse(ctx context.Context, msg messages.ChatM
 
 	m.ctx.Runtime.Publish(ctx, m.ctx.OutputTopic, msg)
 
-	if messages.IsStopMessage(msg) {
-		return
-	}
-
-	if messages.IsErrorMessage(msg) {
-		switch m.ctx.ErrorPolicy {
-		case ErrorPolicyTerminate:
-			stopMsg := messages.NewStopMessage(
-				"manager",
-				"team terminated due to error from "+msg.GetSource()+": "+messages.GetErrorDetail(msg),
-			)
-			m.ctx.Runtime.Publish(ctx, m.ctx.OutputTopic, stopMsg)
-			return
-		case ErrorPolicySkip:
-			logger.L().Warn().
-				Str("agent", msg.GetSource()).
-				Str("error", messages.GetErrorDetail(msg)).
-				Msg("Agent error, skipping to next participant")
-			m.SelectAndPublish(ctx, msg)
-			return
-		default:
-			stopMsg := messages.NewStopMessage(
-				"manager",
-				"team terminated due to error from "+msg.GetSource()+": "+messages.GetErrorDetail(msg),
-			)
-			m.ctx.Runtime.Publish(ctx, m.ctx.OutputTopic, stopMsg)
-			return
-		}
-	}
-
-	if messages.IsHandoffMessage(msg) {
-		target := messages.GetHandoffTarget(msg)
-		if idx := m.findParticipant(target); idx >= 0 {
+	if HandleCommonResponse(
+		ctx,
+		msg,
+		m.ctx,
+		m.findParticipant,
+		func(idx int) {
 			m.mu.Lock()
 			m.currentIndex = idx + 1
 			m.mu.Unlock()
 			m.ctx.Runtime.Publish(ctx, m.ctx.ParticipantTopics[idx], msg)
-			return
-		}
+		},
+		func() {
+			m.SelectAndPublish(ctx, msg)
+		},
+	) {
+		return
 	}
 
 	m.SelectAndPublish(ctx, msg)
