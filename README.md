@@ -44,20 +44,23 @@ go build -o neoclaw ./cmd/neoclaw
 
 - **Windows**: `%USERPROFILE%\.neoclaw\settings.json`
 - **macOS / Linux**: `~/.neoclaw/settings.json`
+- 启动前，请先设置好环境变量
 
 #### Windows 环境变量
 
-# PowerShell
-
+```powershell
 $env:NEO_KEY="your-api-key"
 $env:NEO_URL="https://api.example.com"
 $env:NEO_MODEL="your model"
+```
 
 #### macOS / Linux 环境变量
 
+```bash
 export NEO_KEY="your-api-key"
-export NEOE_URL="https://api.example.com"
+export NEO_URL="https://api.example.com"
 export NEO_MODEL="your model"
+```
 
 ### 运行
 
@@ -80,6 +83,21 @@ export NEO_MODEL="your model"
 # Debug 模式
 ./neoclaw debug --lines 100
 ```
+
+### 对话内命令
+
+| 命令 | 说明 |
+|------|------|
+| `/help` | 列出所有可用命令和技能 |
+| `/context` | 查看当前上下文使用情况（含可视化进度条） |
+| `/compact` | 手动触发上下文压缩 |
+| `/model [名称]` | 查看当前模型，或切换到指定模型 |
+| `/skills` | 列出所有可用技能及详情 |
+| `/undo` | 撤销上一轮对话 |
+| `/clear` | 创建新会话（保留旧会话记录） |
+| `/reset` | 重置当前会话（清空消息，保留会话标识） |
+| `/resume` | 恢复历史会话 |
+| `/delete` | 删除历史会话 |
 
 ## 🏗️ 架构设计
 
