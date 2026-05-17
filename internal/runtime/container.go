@@ -4,9 +4,9 @@ import (
 	"context"
 	"sync"
 
-	"brambleclaw/internal/agent"
-	"brambleclaw/internal/logger"
-	"brambleclaw/internal/messages"
+	"neoclaw/internal/agent"
+	"neoclaw/internal/logger"
+	"neoclaw/internal/messages"
 )
 
 type ChatAgentContainer struct {

@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"strings"
 
-	"brambleclaw/internal/events"
 	"github.com/charmbracelet/lipgloss"
+	"neoclaw/internal/events"
 )
 
 // getEventStyle 获取事件样式

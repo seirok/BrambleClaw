@@ -1,9 +1,9 @@
 package hook
 
 import (
-	"brambleclaw/internal/config/structs"
-	"brambleclaw/internal/events"
 	"context"
+	"neoclaw/internal/config/structs"
+	"neoclaw/internal/events"
 	"time"
 )
 

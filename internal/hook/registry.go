@@ -1,10 +1,10 @@
 package hook
 
 import (
-	"brambleclaw/internal/interfaces"
 	"context"
 	"errors"
 	"fmt"
+	"neoclaw/internal/interfaces"
 	"sync"
 )
 

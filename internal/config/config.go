@@ -1,9 +1,9 @@
 package config
 
 import (
-	util "brambleclaw/internal"
-	"brambleclaw/internal/config/structs"
-	"brambleclaw/internal/logger"
+	util "neoclaw/internal"
+	"neoclaw/internal/config/structs"
+	"neoclaw/internal/logger"
 	"os"
 	"sync"
 )

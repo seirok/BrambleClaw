@@ -1,12 +1,12 @@
 package channel
 
 import (
-	"brambleclaw/internal/bus"
-	"brambleclaw/internal/interfaces"
-	"brambleclaw/internal/logger"
 	"context"
 	"errors"
 	"fmt"
+	"neoclaw/internal/bus"
+	"neoclaw/internal/interfaces"
+	"neoclaw/internal/logger"
 	"sync"
 )
 

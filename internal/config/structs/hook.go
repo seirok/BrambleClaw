@@ -1,6 +1,6 @@
 package structs
 
-import "brambleclaw/internal/logger"
+import "neoclaw/internal/logger"
 
 // HookType Hook 类型枚举
 type HookType string

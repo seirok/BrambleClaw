@@ -1,6 +1,6 @@
 package sandbox
 
-import auditpkg "brambleclaw/internal/audit"
+import auditpkg "neoclaw/internal/audit"
 
 // AuditEventType 审计事件类型
 type AuditEventType = auditpkg.AuditEventType

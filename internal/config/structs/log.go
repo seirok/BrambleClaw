@@ -1,7 +1,7 @@
 package structs
 
 import (
-	"brambleclaw/internal/logger"
+	"neoclaw/internal/logger"
 )
 
 var validLogLevels = map[string]bool{

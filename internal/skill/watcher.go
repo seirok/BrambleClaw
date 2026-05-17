@@ -1,9 +1,9 @@
 package skill
 
 import (
-	"brambleclaw/internal/config/structs"
-	"brambleclaw/internal/logger"
 	"context"
+	"neoclaw/internal/config/structs"
+	"neoclaw/internal/logger"
 	"os"
 	"path/filepath"
 	"sync"
@@ -72,7 +72,7 @@ func (sw *SkillWatcher) addInitialDirs(ctx context.Context) error {
 	sw.mu.Lock()
 	defer sw.mu.Unlock()
 
-	// Add personal skill dir (~/.brambleclaw/skills/)
+	// Add personal skill dir (~/.neoclaw/skills/)
 	personalDir := sw.cfg.PersonalSkillDir
 	if personalDir == "" {
 		personalDir = filepath.Join(getGlobalConfigPath(), "skills")
@@ -214,7 +214,7 @@ func (sw *SkillWatcher) processEvent(ctx context.Context, event fsnotify.Event) 
 func (sw *SkillWatcher) detectScope(dir string) Scope {
 	parentDir := filepath.Dir(dir)
 
-	// Check if it's personal scope (~/.brambleclaw/skills/)
+	// Check if it's personal scope (~/.neoclaw/skills/)
 	personalDir := sw.cfg.PersonalSkillDir
 	if personalDir == "" {
 		personalDir = filepath.Join(getGlobalConfigPath(), "skills")
@@ -274,5 +274,5 @@ func getGlobalConfigPath() string {
 		// Fall back to current directory
 		return "."
 	}
-	return filepath.Join(homeDir, ".brambleclaw")
+	return filepath.Join(homeDir, ".neoclaw")
 }

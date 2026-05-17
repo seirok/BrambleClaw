@@ -1,10 +1,10 @@
 package audit
 
 import (
-	"brambleclaw/internal/config"
-	"brambleclaw/internal/logger"
 	"encoding/json"
 	"fmt"
+	"neoclaw/internal/config"
+	"neoclaw/internal/logger"
 	"os"
 	"path/filepath"
 	"strings"

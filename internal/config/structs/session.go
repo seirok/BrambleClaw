@@ -1,6 +1,6 @@
 package structs
 
-import "brambleclaw/internal/logger"
+import "neoclaw/internal/logger"
 
 // SessionConfig session 配置
 type SessionConfig struct {

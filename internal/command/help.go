@@ -1,10 +1,10 @@
 package command
 
 import (
-	"brambleclaw/internal/bus"
-	"brambleclaw/internal/interfaces"
 	"context"
 	"fmt"
+	"neoclaw/internal/bus"
+	"neoclaw/internal/interfaces"
 	"strings"
 )
 

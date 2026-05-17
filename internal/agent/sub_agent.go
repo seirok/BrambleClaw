@@ -1,12 +1,12 @@
 package agent
 
 import (
-	"brambleclaw/internal/audit"
-	"brambleclaw/internal/interfaces"
-	"brambleclaw/internal/messages"
-	"brambleclaw/internal/tools"
 	"context"
 	"fmt"
+	"neoclaw/internal/audit"
+	"neoclaw/internal/interfaces"
+	"neoclaw/internal/messages"
+	"neoclaw/internal/tools"
 )
 
 // SubAgent 二级 Agent，拥有独立 LLM 能力但无会话持久化

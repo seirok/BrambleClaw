@@ -1,11 +1,11 @@
 package structs
 
 import (
-	util "brambleclaw/internal"
+	util "neoclaw/internal"
 	"path/filepath"
 	"time"
 
-	"brambleclaw/internal/logger"
+	"neoclaw/internal/logger"
 )
 
 // FileSystemConfig 文件系统配置

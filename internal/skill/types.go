@@ -9,7 +9,7 @@ type Scope int
 
 const (
 	ScopePlugin     Scope = iota // 0: plugin-provided skills (lowest priority)
-	ScopePersonal                // 1: ~/.brambleclaw/skills/ (global)
+	ScopePersonal                // 1: ~/.neoclaw/skills/ (global)
 	ScopeProject                 // 2: {workspace}/skills/ (workspace, overrides global)
 	ScopeEnterprise              // 3: enterprise-managed (future, highest priority)
 )

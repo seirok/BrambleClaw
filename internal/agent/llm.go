@@ -1,12 +1,12 @@
 package agent
 
 import (
-	"brambleclaw/internal/config"
-	"brambleclaw/internal/logger"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
+	"neoclaw/internal/config"
+	"neoclaw/internal/logger"
 	"net/http"
 )
 

@@ -1,16 +1,16 @@
 package agent
 
 import (
-	"brambleclaw/internal/audit"
-	"brambleclaw/internal/hook"
-	"brambleclaw/internal/interfaces"
-	"brambleclaw/internal/logger"
-	"brambleclaw/internal/messages"
-	"brambleclaw/internal/sandbox"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"neoclaw/internal/audit"
+	"neoclaw/internal/hook"
+	"neoclaw/internal/interfaces"
+	"neoclaw/internal/logger"
+	"neoclaw/internal/messages"
+	"neoclaw/internal/sandbox"
 	"time"
 )
 

@@ -1,8 +1,8 @@
 package skill
 
 import (
-	"brambleclaw/internal/logger"
 	"context"
+	"neoclaw/internal/logger"
 )
 
 // SkillCommand adapts a skill to interfaces.Command

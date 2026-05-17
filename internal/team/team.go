@@ -4,8 +4,8 @@ import (
 	"context"
 	"sync/atomic"
 
-	"brambleclaw/internal/agent"
-	"brambleclaw/internal/messages"
+	"neoclaw/internal/agent"
+	"neoclaw/internal/messages"
 )
 
 // ErrorPolicy 错误处理策略

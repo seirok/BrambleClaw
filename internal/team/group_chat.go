@@ -8,10 +8,10 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"brambleclaw/internal/agent"
-	"brambleclaw/internal/logger"
-	"brambleclaw/internal/messages"
-	"brambleclaw/internal/runtime"
+	"neoclaw/internal/agent"
+	"neoclaw/internal/logger"
+	"neoclaw/internal/messages"
+	"neoclaw/internal/runtime"
 
 	"github.com/google/uuid"
 )

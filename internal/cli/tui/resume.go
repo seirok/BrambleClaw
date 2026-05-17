@@ -1,18 +1,18 @@
 package tui
 
 import (
-	util "brambleclaw/internal"
-	"brambleclaw/internal/agent"
-	"brambleclaw/internal/interfaces"
-	"brambleclaw/internal/logger"
-	"brambleclaw/internal/store"
 	"context"
 	"fmt"
+	util "neoclaw/internal"
+	"neoclaw/internal/agent"
+	"neoclaw/internal/interfaces"
+	"neoclaw/internal/logger"
+	"neoclaw/internal/store"
 	"os"
 	"path/filepath"
 	"time"
 
-	"brambleclaw/internal/session"
+	"neoclaw/internal/session"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"

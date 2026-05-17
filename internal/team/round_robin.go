@@ -4,9 +4,9 @@ import (
 	"context"
 	"sync"
 
-	"brambleclaw/internal/agent"
-	"brambleclaw/internal/logger"
-	"brambleclaw/internal/messages"
+	"neoclaw/internal/agent"
+	"neoclaw/internal/logger"
+	"neoclaw/internal/messages"
 )
 
 // RoundRobinManager 轮询管理器，按顺序选择下一个参与者

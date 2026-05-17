@@ -1,6 +1,6 @@
 package structs
 
-import "brambleclaw/internal/logger"
+import "neoclaw/internal/logger"
 
 // AgentConfig 定义单个 Agent 的配置
 type AgentConfig struct {

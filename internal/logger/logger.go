@@ -1,7 +1,7 @@
 package logger
 
 import (
-	util "brambleclaw/internal"
+	util "neoclaw/internal"
 	"os"
 	"sync"
 

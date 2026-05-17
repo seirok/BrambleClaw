@@ -1,11 +1,11 @@
 package agent
 
 import (
-	"brambleclaw/internal/config"
-	"brambleclaw/internal/logger"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"neoclaw/internal/config"
+	"neoclaw/internal/logger"
 	"regexp"
 	"strings"
 	"time"

@@ -1,10 +1,10 @@
 package command
 
 import (
-	util "brambleclaw/internal"
-	"brambleclaw/internal/bus"
 	"context"
 	"fmt"
+	util "neoclaw/internal"
+	"neoclaw/internal/bus"
 )
 
 // CompactCommand manually triggers context compression

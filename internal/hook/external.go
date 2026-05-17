@@ -1,16 +1,16 @@
 package hook
 
 import (
-	"brambleclaw/internal/logger"
 	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"neoclaw/internal/logger"
 	"os"
 	"os/exec"
 	"time"
 
-	"brambleclaw/internal/config/structs"
+	"neoclaw/internal/config/structs"
 )
 
 // ExternalHookExecutor 外部 Hook 执行器

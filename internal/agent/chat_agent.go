@@ -1,8 +1,8 @@
 package agent
 
 import (
-	"brambleclaw/internal/messages"
 	"context"
+	"neoclaw/internal/messages"
 	"sync/atomic"
 )
 

@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"brambleclaw/internal/messages"
+	"neoclaw/internal/messages"
 )
 
 type AgentRuntime struct {

@@ -1,11 +1,11 @@
 package channel
 
 import (
-	"brambleclaw/internal/bus"
-	"brambleclaw/internal/config/structs" // 修改导入路径
-	"brambleclaw/internal/logger"
 	"context"
 	"fmt"
+	"neoclaw/internal/bus"
+	"neoclaw/internal/config/structs" // 修改导入路径
+	"neoclaw/internal/logger"
 	"strings"
 	"sync"
 	"time"

@@ -1,10 +1,10 @@
 package channel
 
 import (
-	"brambleclaw/internal/bus"
-	"brambleclaw/internal/config/structs"
 	"context"
 	"fmt"
+	"neoclaw/internal/bus"
+	"neoclaw/internal/config/structs"
 	"strings"
 	"sync"
 	"sync/atomic"

@@ -1,6 +1,6 @@
 package structs
 
-import "brambleclaw/internal/logger"
+import "neoclaw/internal/logger"
 
 // GatewayRouteRule 路由规则配置
 type GatewayRouteRule struct {

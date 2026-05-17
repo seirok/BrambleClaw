@@ -1,11 +1,11 @@
 package tui
 
 import (
-	util "brambleclaw/internal"
-	"brambleclaw/internal/interfaces"
-	"brambleclaw/internal/logger"
-	"brambleclaw/internal/store"
 	"context"
+	util "neoclaw/internal"
+	"neoclaw/internal/interfaces"
+	"neoclaw/internal/logger"
+	"neoclaw/internal/store"
 	"path/filepath"
 	"time"
 

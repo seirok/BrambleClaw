@@ -1,13 +1,13 @@
 package session
 
 import (
-	util "brambleclaw/internal"
-	"brambleclaw/internal/logger"
-	"brambleclaw/internal/messages"
-	"brambleclaw/internal/store"
 	"context"
 	"encoding/json"
 	"fmt"
+	util "neoclaw/internal"
+	"neoclaw/internal/logger"
+	"neoclaw/internal/messages"
+	"neoclaw/internal/store"
 	"os"
 	"time"
 )

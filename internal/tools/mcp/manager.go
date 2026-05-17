@@ -1,13 +1,13 @@
 package mcp
 
 import (
-	"brambleclaw/internal/config"
-	"brambleclaw/internal/hook"
-	"brambleclaw/internal/interfaces"
-	"brambleclaw/internal/logger"
 	"context"
 	"encoding/json"
 	"fmt"
+	"neoclaw/internal/config"
+	"neoclaw/internal/hook"
+	"neoclaw/internal/interfaces"
+	"neoclaw/internal/logger"
 	"os"
 	"strings"
 	"sync"

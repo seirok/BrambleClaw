@@ -1,11 +1,11 @@
 package util
 
 import (
-	"brambleclaw/internal/interfaces"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"neoclaw/internal/interfaces"
 	"os"
 	"path/filepath"
 	"strings"
@@ -55,7 +55,7 @@ func GetSessionMetaFile(sessionKey string) string {
 }
 
 func CheckEnviromentVirable() bool {
-	envs := []string{"BRAMBLE_KEY", "BRAMBLE_URL", "BRAMBLE_MODEL"}
+	envs := []string{"NEO_KEY", "NEO_URL", "NEO_MODEL"}
 	missing := false
 	for _, env := range envs {
 		if os.Getenv(env) == "" {
@@ -81,7 +81,7 @@ func SaveStructToJSON(filePath string, data any) error {
 	}
 
 	// 2. 自动创建父级目录（如果不存在）
-	// 例如路径是 ~/.brambleclaw/settings.json，它会先创建 .brambleclaw 文件夹
+	// 例如路径是 ~/.neoclaw/settings.json，它会先创建 .neoclaw 文件夹
 	dir := filepath.Dir(filePath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
@@ -120,16 +120,16 @@ func MakeItHome(path string) string {
 }
 
 func GetGlobalConfigPath() string {
-	return MakeItHome(filepath.Join(".brambleclaw", "settings.json"))
+	return MakeItHome(filepath.Join(".neoclaw", "settings.json"))
 }
 
 func GetLogPath() string {
-	return MakeItHome(filepath.Join(".brambleclaw", "logs", "bramble.log"))
+	return MakeItHome(filepath.Join(".neoclaw", "logs", "neoclaw.log"))
 }
 
-// GetSystemPath brambleclaw 系统根目录：$HOME$/.brambleclaw
+// GetSystemPath neoclaw 系统根目录：$HOME$/.neoclaw
 func GetSystemPath() string {
-	return MakeItHome(".brambleclaw")
+	return MakeItHome(".neoclaw")
 }
 
 func StringValue(v *string) string {

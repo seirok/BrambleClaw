@@ -1,12 +1,12 @@
 package agent
 
 import (
-	"brambleclaw/internal/config"
-	"brambleclaw/internal/logger"
-	"brambleclaw/internal/session"
-	"brambleclaw/internal/skill"
 	"context"
 	"fmt"
+	"neoclaw/internal/config"
+	"neoclaw/internal/logger"
+	"neoclaw/internal/session"
+	"neoclaw/internal/skill"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -139,13 +139,13 @@ func (cb *ContextBuilder) createDefaultBootstrapFile(filename, filePath string) 
 	switch filename {
 	case "AGENT.md":
 		content = "---\n" +
-			"name: brambleclaw\n" +
+			"name: neoclaw\n" +
 			"description: >\n" +
 			"  The default general-purpose assistant for everyday conversation, problem\n" +
 			"  solving, and workspace help.\n" +
 			"---\n" +
 			"You are my default assistant for this workspace.\n" +
-			"Your name is brambleclaw 🦞.\n\n" +
+			"Your name is neoclaw.\n\n" +
 			"## Role\n\n" +
 			"You are an ultra-lightweight personal AI assistant written in Go, designed to\n" +
 			"be practical, accurate, and efficient.\n\n" +
@@ -175,7 +175,7 @@ func (cb *ContextBuilder) createDefaultBootstrapFile(filename, filePath string) 
 
 	case "SOUL.md":
 		content = "# Soul\n\n" +
-			"I am BrambleClaw: calm, helpful, and practical.\n\n" +
+			"I am Neo Claw: calm, helpful, and practical.\n\n" +
 			"## Personality\n\n" +
 			"- Helpful and friendly\n" +
 			"- Concise and to the point\n" +
@@ -422,8 +422,8 @@ func (cb *ContextBuilder) getIdentity() string {
 	toolDiscovery := cb.getDiscoveryRule()
 
 	return fmt.Sprintf(
-		"# brambleclaw 🦞 (%s)\n\n"+
-			"You are brambleclaw, a helpful AI assistant.\n\n"+
+		"# neoclaw (%s)\n\n"+
+			"You are neoclaw, a helpful AI assistant.\n\n"+
 			"## Workspace\n"+
 			"Your workspace is at: %s\n"+
 			"- Memory: %s\\memory\\MEMORY.md\n"+

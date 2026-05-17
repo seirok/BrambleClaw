@@ -1,11 +1,11 @@
 package skill
 
 import (
-	"brambleclaw/internal/config/structs"
-	"brambleclaw/internal/logger"
 	"bytes"
 	"context"
 	"fmt"
+	"neoclaw/internal/config/structs"
+	"neoclaw/internal/logger"
 	"os/exec"
 	"regexp"
 	"time"

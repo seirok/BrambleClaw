@@ -1,13 +1,13 @@
 package tui
 
 import (
-	"brambleclaw/internal/agent"
-	"brambleclaw/internal/bus"
-	"brambleclaw/internal/config"
-	"brambleclaw/internal/config/structs"
-	"brambleclaw/internal/events"
-	"brambleclaw/internal/logger"
 	"context"
+	"neoclaw/internal/agent"
+	"neoclaw/internal/bus"
+	"neoclaw/internal/config"
+	"neoclaw/internal/config/structs"
+	"neoclaw/internal/events"
+	"neoclaw/internal/logger"
 	"reflect"
 	"strings"
 	"time"
@@ -69,20 +69,19 @@ type sidebarStats struct {
 
 // appModel TUI 状态
 type appModel struct {
-	textInput         textinput.Model
-	viewport          viewport.Model
-	eventViewport     viewport.Model
-	sidebarViewport   viewport.Model
-	spinner           spinner.Model
-	help              help.Model
-	keys              keyMap
-	messages          []chatMessage
-	eventLog          []events.ThinkingEvent
-	waiting           bool
-	showBanner        bool
-	width             int
-	height            int
-	msgBus            *bus.MessageBus
+	textInput       textinput.Model
+	viewport        viewport.Model
+	eventViewport   viewport.Model
+	sidebarViewport viewport.Model
+	spinner         spinner.Model
+	help            help.Model
+	keys            keyMap
+	messages        []chatMessage
+	eventLog        []events.ThinkingEvent
+	showBanner      bool
+	width           int
+	height          int
+	msgBus          *bus.MessageBus
 	//	currentChatID   string
 	quitting          bool
 	err               error
@@ -208,7 +207,6 @@ func NewAppModel(msgBus *bus.MessageBus, agent *agent.Agent) appModel {
 		spinner:         s,
 		messages:        []chatMessage{},
 		eventLog:        []events.ThinkingEvent{},
-		waiting:         false,
 		showBanner:      true,
 		msgBus:          msgBus,
 		help:            help.New(),

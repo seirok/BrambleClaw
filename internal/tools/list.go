@@ -1,11 +1,11 @@
 package tools
 
 import (
-	"brambleclaw/internal/logger"
-	"brambleclaw/internal/sandbox"
 	"context"
 	"encoding/json"
 	"fmt"
+	"neoclaw/internal/logger"
+	"neoclaw/internal/sandbox"
 	"path/filepath"
 )
 

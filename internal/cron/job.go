@@ -1,9 +1,9 @@
 package cron
 
 import (
-	"brambleclaw/internal/bus"
-	"brambleclaw/internal/logger"
 	"context"
+	"neoclaw/internal/bus"
+	"neoclaw/internal/logger"
 	"time"
 
 	"github.com/google/uuid"

@@ -159,13 +159,15 @@ func (m appModel) renderMessages() string {
 		} else if msg.IsError {
 			line = errorStyle.Render("! "+msg.Content) + "\n"
 		} else {
-			line = agentStyle.Render("🐱: "+msg.Content) + "\n"
+			iconStr := agentStyle.Render("🕶 : ")
+			line = iconStr + agentStyle.Render(msg.Content) + "\n"
 		}
 		messagesView += line + "\n"
 	}
 
-	if m.waiting {
-		messagesView += m.spinner.View() + " 🐱 正在思考...\n"
+	if m.mode == modeWaiting {
+		iconStr := "🕶 "
+		messagesView += m.spinner.View() + iconStr + " 正在思考...\n"
 	}
 
 	return messagesView

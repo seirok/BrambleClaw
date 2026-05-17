@@ -1,11 +1,11 @@
 package hook
 
 import (
-	"brambleclaw/internal/config/structs"
-	"brambleclaw/internal/logger"
 	"context"
 	"encoding/json"
 	"fmt"
+	"neoclaw/internal/config/structs"
+	"neoclaw/internal/logger"
 	"reflect"
 	"sync"
 	"time"

@@ -1,14 +1,14 @@
 package gateway
 
 import (
-	util "brambleclaw/internal"
-	"brambleclaw/internal/agent"
-	"brambleclaw/internal/bus"
-	"brambleclaw/internal/config/structs"
-	"brambleclaw/internal/interfaces"
 	"context"
 	"errors"
 	"fmt"
+	util "neoclaw/internal"
+	"neoclaw/internal/agent"
+	"neoclaw/internal/bus"
+	"neoclaw/internal/config/structs"
+	"neoclaw/internal/interfaces"
 )
 
 type RouteResult struct {

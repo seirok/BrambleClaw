@@ -1,8 +1,8 @@
 package sandbox
 
 import (
-	"brambleclaw/internal/config"
 	"fmt"
+	"neoclaw/internal/config"
 	"os"
 	"time"
 

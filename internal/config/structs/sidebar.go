@@ -1,6 +1,6 @@
 package structs
 
-import "brambleclaw/internal/logger"
+import "neoclaw/internal/logger"
 
 // SidebarConfig TUI 右侧统计边栏配置
 type SidebarConfig struct {

@@ -1,14 +1,14 @@
 package teamtool
 
 import (
-	"brambleclaw/internal/agent"
-	"brambleclaw/internal/interfaces"
-	"brambleclaw/internal/logger"
-	"brambleclaw/internal/messages"
-	"brambleclaw/internal/team"
 	"context"
 	"encoding/json"
 	"fmt"
+	"neoclaw/internal/agent"
+	"neoclaw/internal/interfaces"
+	"neoclaw/internal/logger"
+	"neoclaw/internal/messages"
+	"neoclaw/internal/team"
 	"strings"
 )
 

@@ -3,7 +3,7 @@ package structs
 import (
 	"os"
 
-	"brambleclaw/internal/logger"
+	"neoclaw/internal/logger"
 )
 
 // LLMConfig LLM 配置
@@ -16,9 +16,9 @@ type LLMConfig struct {
 // DefaultLLMConfig 返回默认 LLM 配置
 func DefaultLLMConfig() LLMConfig {
 	return LLMConfig{
-		APIKey:  os.Getenv("BRAMBLE_KEY"),
-		BaseURL: os.Getenv("BRAMBLE_URL"),
-		Model:   os.Getenv("BRAMBLE_MODEL"),
+		APIKey:  os.Getenv("NEO_KEY"),
+		BaseURL: os.Getenv("NEO_URL"),
+		Model:   os.Getenv("NEO_MODEL"),
 	}
 }
 

@@ -1,12 +1,12 @@
 package sandbox
 
 import (
-	"brambleclaw/internal/config"
-	"brambleclaw/internal/hook"
-	"brambleclaw/internal/logger"
 	"context"
 	"errors"
 	"fmt"
+	"neoclaw/internal/config"
+	"neoclaw/internal/hook"
+	"neoclaw/internal/logger"
 	"os"
 	"os/exec"
 	"path/filepath"

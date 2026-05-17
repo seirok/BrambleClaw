@@ -1,9 +1,9 @@
 package messages
 
 import (
-	util "brambleclaw/internal"
 	"encoding/json"
 	"fmt"
+	util "neoclaw/internal"
 	"time"
 
 	"github.com/google/uuid"

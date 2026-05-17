@@ -1,11 +1,11 @@
 package command
 
 import (
-	util "brambleclaw/internal"
-	"brambleclaw/internal/bus"
-	"brambleclaw/internal/logger"
 	"context"
 	"fmt"
+	util "neoclaw/internal"
+	"neoclaw/internal/bus"
+	"neoclaw/internal/logger"
 )
 
 // ClearCommand clears the session by creating a new one

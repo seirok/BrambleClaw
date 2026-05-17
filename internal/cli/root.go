@@ -1,18 +1,18 @@
 package cli
 
 import (
-	util "brambleclaw/internal"
-	"brambleclaw/internal/config"
-	"brambleclaw/internal/logger"
 	"fmt"
+	util "neoclaw/internal"
+	"neoclaw/internal/config"
+	"neoclaw/internal/logger"
 
 	"github.com/spf13/cobra"
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "brambleclaw",
+	Use:   "neoclaw",
 	Short: "Go-based AI Agent framework",
-	Long:  `brambleclaw is a Go language implementation of an AI Agent framework.`,
+	Long:  `neoclaw is a Go language implementation of an AI Agent framework.`,
 }
 
 var versionCmd = &cobra.Command{
@@ -52,7 +52,7 @@ func Execute() error {
 }
 
 func runVersion(cmd *cobra.Command, args []string) {
-	fmt.Println("brambleclaw 1.0.0")
+	fmt.Println("neoclaw 1.0.0")
 	fmt.Println("License: MIT")
 }
 

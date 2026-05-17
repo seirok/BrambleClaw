@@ -1,10 +1,10 @@
 package command
 
 import (
-	util "brambleclaw/internal"
-	"brambleclaw/internal/bus"
 	"context"
 	"fmt"
+	util "neoclaw/internal"
+	"neoclaw/internal/bus"
 )
 
 // UndoCommand removes the last user-assistant message pair

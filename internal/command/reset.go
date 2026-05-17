@@ -1,10 +1,10 @@
 package command
 
 import (
-	util "brambleclaw/internal"
-	"brambleclaw/internal/bus"
 	"context"
 	"fmt"
+	util "neoclaw/internal"
+	"neoclaw/internal/bus"
 )
 
 // ResetCommand resets the current session, clearing messages but keeping the same session key
@@ -14,7 +14,9 @@ type ResetCommand struct{}
 func (c *ResetCommand) Name() string { return "reset" }
 
 // Description returns command description
-func (c *ResetCommand) Description() string { return "Reset current session (clear messages, keep session key)" }
+func (c *ResetCommand) Description() string {
+	return "Reset current session (clear messages, keep session key)"
+}
 
 // Usage returns usage info
 func (c *ResetCommand) Usage() string { return "/reset" }

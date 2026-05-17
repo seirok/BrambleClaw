@@ -6,9 +6,9 @@ import (
 	"strings"
 	"sync"
 
-	"brambleclaw/internal/agent"
-	"brambleclaw/internal/logger"
-	"brambleclaw/internal/messages"
+	"neoclaw/internal/agent"
+	"neoclaw/internal/logger"
+	"neoclaw/internal/messages"
 )
 
 const DefaultMaxHistory = 20

@@ -1,9 +1,9 @@
 package agent
 
 import (
-	"brambleclaw/internal/interfaces"
 	"context"
 	"fmt"
+	"neoclaw/internal/interfaces"
 	"strings"
 )
 

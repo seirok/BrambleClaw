@@ -1,9 +1,9 @@
 package skill
 
 import (
-	"brambleclaw/internal/interfaces"
 	"context"
 	"fmt"
+	"neoclaw/internal/interfaces"
 	"sync"
 )
 

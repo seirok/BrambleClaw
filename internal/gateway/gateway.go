@@ -1,16 +1,16 @@
 package gateway
 
 import (
-	"brambleclaw/internal/agent"
-	"brambleclaw/internal/bus"
-	"brambleclaw/internal/channel"
-	"brambleclaw/internal/config"
-	"brambleclaw/internal/hook"
-	"brambleclaw/internal/interfaces"
-	"brambleclaw/internal/logger"
-	"brambleclaw/internal/runtime"
 	"context"
 	"fmt"
+	"neoclaw/internal/agent"
+	"neoclaw/internal/bus"
+	"neoclaw/internal/channel"
+	"neoclaw/internal/config"
+	"neoclaw/internal/hook"
+	"neoclaw/internal/interfaces"
+	"neoclaw/internal/logger"
+	"neoclaw/internal/runtime"
 	"sync"
 	"time"
 )

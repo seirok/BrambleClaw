@@ -1,4 +1,4 @@
-module brambleclaw
+module neoclaw
 
 go 1.25.9
 

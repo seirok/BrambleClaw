@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"brambleclaw/internal/config/structs"
-	"brambleclaw/internal/interfaces"
+	"neoclaw/internal/config/structs"
+	"neoclaw/internal/interfaces"
 )
 
 // ExternalHook 外部脚本 Hook 实现

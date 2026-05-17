@@ -9,3 +9,4 @@ logs/
 **/*.pdf
 docs
 **/*.md
+!README.md

@@ -1,8 +1,8 @@
 package main
 
 import (
-	"brambleclaw/internal/cli"
-	"brambleclaw/internal/logger"
+	"neoclaw/internal/cli"
+	"neoclaw/internal/logger"
 )
 
 // TIP <p>To run your code, right-click the code and select <b>Run</b>.</p> <p>Alternatively, click

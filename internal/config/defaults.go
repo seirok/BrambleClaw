@@ -1,7 +1,7 @@
 package config
 
 import (
-	"brambleclaw/internal/config/structs"
+	"neoclaw/internal/config/structs"
 )
 
 func createDefaultConfig() *Config {

@@ -1,12 +1,12 @@
 package skill
 
 import (
-	util "brambleclaw/internal"
-	"brambleclaw/internal/config/structs"
-	"brambleclaw/internal/interfaces"
-	"brambleclaw/internal/logger"
 	"context"
 	"fmt"
+	util "neoclaw/internal"
+	"neoclaw/internal/config/structs"
+	"neoclaw/internal/interfaces"
+	"neoclaw/internal/logger"
 	"os"
 	"path/filepath"
 	"strings"
@@ -50,7 +50,7 @@ func (m *SkillManager) Initialize(ctx context.Context, cfg any) error {
 		}
 	}
 
-	// Scan personal scope (~/.brambleclaw/skills/)
+	// Scan personal scope (~/.neoclaw/skills/)
 	personalDir := skillCfg.PersonalSkillDir
 	if personalDir == "" {
 		personalDir = filepath.Join(util.GetSystemPath(), "skills")

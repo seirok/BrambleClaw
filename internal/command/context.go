@@ -1,11 +1,11 @@
 package command
 
 import (
-	"brambleclaw/internal/bus"
-	"brambleclaw/internal/session"
 	"context"
 	"fmt"
 	"math"
+	"neoclaw/internal/bus"
+	"neoclaw/internal/session"
 	"strings"
 	"unicode/utf8"
 
@@ -59,7 +59,7 @@ func (c *ContextCommand) Execute(ctx context.Context, agent any, msg any, args [
 
 	// Count characters for each section
 	var (
-		systemPromptChrs     int
+		systemPromptChrs      int
 		compressedHistoryChrs int
 		userHistoryChrs       int
 		assistantHistoryChrs  int
@@ -126,11 +126,11 @@ func buildContextBar(system, compressed, user, assistant, tool int) string {
 	}
 
 	sections := []section{
-		{"System prompt", system, lipgloss.Color("86")},    // cyan
+		{"System prompt", system, lipgloss.Color("86")},            // cyan
 		{"History: compressed", compressed, lipgloss.Color("214")}, // orange
-		{"History: user", user, lipgloss.Color("135")},    // purple
-		{"History: assistant", assistant, lipgloss.Color("78")}, // green
-		{"History: tool", tool, lipgloss.Color("220")},    // yellow
+		{"History: user", user, lipgloss.Color("135")},             // purple
+		{"History: assistant", assistant, lipgloss.Color("78")},    // green
+		{"History: tool", tool, lipgloss.Color("220")},             // yellow
 	}
 
 	total := 0

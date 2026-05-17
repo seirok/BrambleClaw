@@ -1,9 +1,9 @@
 package channel
 
 import (
-	"brambleclaw/internal/bus"
 	"context"
 	"fmt"
+	"neoclaw/internal/bus"
 )
 
 // CLIChannel CLI通道

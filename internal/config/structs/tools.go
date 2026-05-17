@@ -2,7 +2,7 @@ package structs
 
 import "path/filepath"
 
-import util "brambleclaw/internal"
+import util "neoclaw/internal"
 
 // CronConfig cron工具配置
 type CronConfig struct {

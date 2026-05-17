@@ -1,13 +1,13 @@
 package channel
 
 import (
-	util "brambleclaw/internal"
-	"brambleclaw/internal/bus"
-	"brambleclaw/internal/config/structs"
-	"brambleclaw/internal/logger"
 	"context"
 	"encoding/json"
 	"fmt"
+	util "neoclaw/internal"
+	"neoclaw/internal/bus"
+	"neoclaw/internal/config/structs"
+	"neoclaw/internal/logger"
 	"strings"
 	"sync"
 	"sync/atomic"
