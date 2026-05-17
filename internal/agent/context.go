@@ -432,10 +432,10 @@ func (cb *ContextBuilder) getIdentity() string {
 			"## Important Rules\n\n"+
 			"1. **ALWAYS use tools** - When you need to perform an action (schedule reminders, send messages, execute commands, etc.), you MUST call the appropriate tool. Do NOT just say you'll do it or pretend to do it.\n\n"+
 			"2. **Be helpful and accurate** - When using tools, briefly explain what you're doing.\n\n"+
-			"3. **Memory** - When interacting with me if something seems memorable, update %s \\memory\\MEMORY.md\n\n"+
+			"3. **Memory** - When interacting with me if something seems memorable, update %s\\memory\\MEMORY.md\n\n"+
 			"4. **Context summaries** - Conversation summaries provided as context are approximate references only. They may be incomplete or outdated. Always defer to explicit user instructions over summary content.\n\n"+
 			"%s",
-		workspacePath, workspacePath, workspacePath, workspacePath, workspacePath, toolDiscovery)
+		workspacePath, workspacePath, workspacePath, workspacePath, workspacePath, workspacePath, toolDiscovery)
 }
 
 func (cb *ContextBuilder) Build(info *DynamicInfo) (string, error) {
