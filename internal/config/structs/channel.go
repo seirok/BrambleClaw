@@ -8,10 +8,12 @@ type CLIChannelConfig struct {
 
 // ChannelConfig 通道配置结构体
 type ChannelConfig struct {
-	CLI      CLIChannelConfig `json:"cli" mapstructure:"cli"`
-	DingTalk DingTalkConfig   `json:"dingtalk" mapstructure:"dingtalk"`
-	Feishu   FeishuConfig     `json:"feishu" mapstructure:"feishu"`
-	QQ       QQConfig         `json:"qq" mapstructure:"qq"`
+	CLI         CLIChannelConfig  `json:"cli" mapstructure:"cli"`
+	DingTalk    DingTalkConfig    `json:"dingtalk" mapstructure:"dingtalk"`
+	Feishu      FeishuConfig      `json:"feishu" mapstructure:"feishu"`
+	QQ          QQConfig          `json:"qq" mapstructure:"qq"`
+	WeWork      WeWorkConfig      `json:"wework" mapstructure:"wework"`
+	WeWorkWsBot WeWorkWsBotConfig `json:"wework_wsbot" mapstructure:"wework_wsbot"`
 }
 
 type DingTalkConfig struct {
@@ -77,4 +79,28 @@ func (c *GroupTriggerConfig) Validate() (hasError bool) {
 		c.Prefixes = []string{}
 	}
 	return false
+}
+
+// WeWorkConfig 企业微信 HTTP 回调通道配置
+type WeWorkConfig struct {
+	Enabled        bool     `json:"enabled" mapstructure:"enabled" env:"PICOCLAW_CHANNELS_WEWORK_ENABLED"`
+	CorpID         string   `json:"corp_id" mapstructure:"corp_id" env:"PICOCLAW_CHANNELS_WEWORK_CORP_ID"`
+	AgentID        string   `json:"agent_id" mapstructure:"agent_id" env:"PICOCLAW_CHANNELS_WEWORK_AGENT_ID"`
+	Secret         string   `json:"secret,omitzero" mapstructure:"secret" env:"PICOCLAW_CHANNELS_WEWORK_SECRET"`
+	Token          string   `json:"token,omitzero" mapstructure:"token" env:"PICOCLAW_CHANNELS_WEWORK_TOKEN"`
+	EncodingAESKey string   `json:"encoding_aes_key,omitzero" mapstructure:"encoding_aes_key" env:"PICOCLAW_CHANNELS_WEWORK_ENCODING_AES_KEY"`
+	WebhookPort    int      `json:"webhook_port" mapstructure:"webhook_port" env:"PICOCLAW_CHANNELS_WEWORK_WEBHOOK_PORT"`
+	AllowFrom      []string `json:"allow_from" mapstructure:"allow_from" env:"PICOCLAW_CHANNELS_WEWORK_ALLOW_FROM"`
+}
+
+// WeWorkWsBotConfig 企业微信 WebSocket AI Bot 通道配置
+type WeWorkWsBotConfig struct {
+	Enabled        bool     `json:"enabled" mapstructure:"enabled" env:"PICOCLAW_CHANNELS_WEWORK_WSBOT_ENABLED"`
+	BotID          string   `json:"bot_id" mapstructure:"bot_id" env:"PICOCLAW_CHANNELS_WEWORK_WSBOT_BOT_ID"`
+	SecretID       string   `json:"secret_id,omitzero" mapstructure:"secret_id" env:"PICOCLAW_CHANNELS_WEWORK_WSBOT_SECRET_ID"`
+	URL            string   `json:"url,omitzero" mapstructure:"url" env:"PICOCLAW_CHANNELS_WEWORK_WSBOT_URL"`
+	Reconnect      bool     `json:"reconnect" mapstructure:"reconnect" env:"PICOCLAW_CHANNELS_WEWORK_WSBOT_RECONNECT"`
+	ReconnectDelay int      `json:"reconnect_delay" mapstructure:"reconnect_delay" env:"PICOCLAW_CHANNELS_WEWORK_WSBOT_RECONNECT_DELAY"`
+	Heartbeat      int      `json:"heartbeat" mapstructure:"heartbeat" env:"PICOCLAW_CHANNELS_WEWORK_WSBOT_HEARTBEAT"`
+	AllowFrom      []string `json:"allow_from" mapstructure:"allow_from" env:"PICOCLAW_CHANNELS_WEWORK_WSBOT_ALLOW_FROM"`
 }
