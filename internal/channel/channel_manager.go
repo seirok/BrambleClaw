@@ -44,6 +44,7 @@ func (m *ChannelManager) Initialize(ctx context.Context, cfg any) error {
 		Bool("cli_enabled", cfgObj.Channels.CLI.Enabled).
 		Bool("dingtalk_enabled", cfgObj.Channels.DingTalk.Enabled).
 		Bool("feishu_enabled", cfgObj.Channels.Feishu.Enabled).
+		Bool("qq_enabled", cfgObj.Channels.QQ.Enabled).
 		Msg("Channel configuration")
 
 	// 初始化 CLI 通道
@@ -87,6 +88,21 @@ func (m *ChannelManager) Initialize(ctx context.Context, cfg any) error {
 		}
 	} else {
 		logger.L().Debug().Msg("Feishu channel is not enabled")
+	}
+
+	// 初始化 QQ 通道
+	qqCfg := cfgObj.Channels.QQ
+	if qqCfg.Enabled == true {
+		qqChannel, err := NewQQChannel(qqCfg, m.msgBus)
+		if err != nil {
+			logger.L().Error().Err(err).Msg("Failed to create QQ channel")
+		} else {
+			if err = m.channelRegistry.Register(ctx, "qq", qqChannel); err != nil {
+				logger.L().Error().Err(err).Msg("Failed to register QQ channel")
+			}
+		}
+	} else {
+		logger.L().Debug().Msg("QQ channel is not enabled")
 	}
 
 	m.status = interfaces.StatusRunning
