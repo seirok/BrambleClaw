@@ -522,6 +522,7 @@ func (m appModel) updateNormal(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		m.textInput.Width = m.width - 4
 
+		// 只在窗口大小变化时才重新设置内容
 		m.viewport.SetContent(m.renderMessages())
 		m.eventViewport.SetContent(m.renderEvents())
 
@@ -530,6 +531,8 @@ func (m appModel) updateNormal(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case spinner.TickMsg:
 		if m.mode == modeWaiting {
 			m.spinner, spCmd = m.spinner.Update(msg)
+			// spinner 更新时，需要重新渲染聊天区来显示 spinner
+			m.viewport.SetContent(m.renderMessages())
 		}
 
 	case AgentResponseMsg:
@@ -542,6 +545,7 @@ func (m appModel) updateNormal(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.mode = modeInput
 		m = m.refreshSuggestions()
 		m.showBanner = false
+		// 收到完整响应时更新内容
 		m.viewport.SetContent(m.renderMessages())
 		m.viewport.GotoBottom()
 
@@ -550,6 +554,7 @@ func (m appModel) updateNormal(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if len(m.eventLog) > 200 {
 			m.eventLog = m.eventLog[len(m.eventLog)-200:]
 		}
+		// 思考事件到达时更新思考区内容
 		m.eventViewport.SetContent(m.renderEvents())
 
 		if m.sidebarEnabled {

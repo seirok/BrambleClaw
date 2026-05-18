@@ -343,6 +343,13 @@ func (cb *ContextBuilder) ForceCompact(ctx context.Context, sess *session.Sessio
 	// Update token usage
 	session.WithTokenCount(result.tokenUsed)(cb.Agent().GetSession().GetMetadata())
 
+	// Save modified session to disk
+	if err := sess.Save(ctx); err != nil {
+		logger.L().Error().Err(err).Str("sessionKey", sess.Key).
+			Msg("force-compact: failed to save session after compression")
+		// Don't return error - compression itself succeeded, save failure is non-critical
+	}
+
 	return compressedCount, nil
 }
 
@@ -375,6 +382,13 @@ func (cb *ContextBuilder) Compact(ctx context.Context, sess *session.Session, in
 	session.WithTokenCount(result.tokenUsed)(cb.Agent().GetSession().GetMetadata())
 
 	cb.Agent().GetSession().Update()
+
+	// Save modified session to disk
+	if err := sess.Save(ctx); err != nil {
+		logger.L().Error().Err(err).Str("sessionKey", sess.Key).
+			Msg("compact: failed to save session after auto-compression")
+		// Don't return error - compression itself succeeded
+	}
 
 	return nil
 }

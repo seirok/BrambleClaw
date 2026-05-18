@@ -30,7 +30,7 @@ func (m appModel) View() string {
 		mainWidth = m.width - sidebarWidth
 	}
 
-	// chat box
+	// chat box - 注意：不在这里 SetContent，只使用 viewport.View()
 	chatStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		Width(mainWidth-2).
@@ -43,11 +43,9 @@ func (m appModel) View() string {
 		chatStyle = chatStyle.BorderForeground(inactiveColor)
 	}
 
-	m.viewport.SetContent(m.renderMessages())
 	chatBox := chatStyle.Render(m.viewport.View())
-	// 	chatBox := chatStyle.Render(m.renderMessages())
 
-	// 思考区样式 - 注意：不在这里设置 Height，让 viewport 管理内容高度
+	// 思考区样式 - 标题在 viewport 外部，不随内容滚动
 	eventStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		Width(mainWidth-2).
@@ -59,24 +57,26 @@ func (m appModel) View() string {
 		eventStyle = eventStyle.BorderForeground(inactiveColor)
 	}
 
-	// 思考区标题处理 - 设置到 viewport 内容中
+	// 思考区标题处理 - 放在 viewport 外部，不随内容滚动
 	eventTitleStyle := lipgloss.NewStyle().Foreground(thinkingBlue)
 	if m.focus == focusEvent {
 		eventTitleStyle = eventTitleStyle.Bold(true)
 	}
 	eventTitle := eventTitleStyle.Render(" 🧠 [Thinking Events]")
 
-	// 确保 viewport 有最新内容（包括标题）
-	fullEventContent := lipgloss.JoinVertical(lipgloss.Left, eventTitle, m.renderEvents())
-	m.eventViewport.SetContent(fullEventContent)
-
-	// 使用 viewport.View() 来渲染，这样滚动才能工作
-	eventBox := eventStyle.Height(m.eventViewport.Height + 2).Render(m.eventViewport.View())
+	// 渲染思考区内容（标题 + viewport 内容）
+	eventContent := lipgloss.JoinVertical(
+		lipgloss.Left,
+		eventTitle,
+		m.eventViewport.View(),
+	)
+	// 注意：不给 eventStyle 设置固定 Height，让内容自然流动
+	eventBox := eventStyle.Render(eventContent)
 
 	// 左侧纵向拼接
 	leftPanel := lipgloss.JoinVertical(lipgloss.Left, chatBox, eventBox)
 
-	// --- 3. 侧边栏对齐渲染 ---
+	// --- 3. 侧边栏渲染 ---
 	var rightPanel string
 	if m.sidebarEnabled {
 		leftHeight := lipgloss.Height(leftPanel)
@@ -84,10 +84,9 @@ func (m appModel) View() string {
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(inactiveColor).
 			Padding(0, 1).
-			Width(sidebarWidth - 2).
-			Height(leftHeight - 2)
+			Width(sidebarWidth - 2)
 
-		rightPanel = sidebarStyle.Render(m.renderSidebar())
+		rightPanel = sidebarStyle.Height(leftHeight - 2).Render(m.renderSidebar())
 	}
 
 	// 底部输入区
@@ -108,37 +107,17 @@ func (m appModel) View() string {
 
 	helpView := m.help.View(keys)
 
-	// 组装最终布局
-	safeLeftPanel := lipgloss.Place(
-		mainWidth,                  // 目标宽度
-		lipgloss.Height(leftPanel), // 保持原有高度
-		lipgloss.Left,              // 水平靠左
-		lipgloss.Top,               // 垂直靠顶
-		leftPanel,
-	)
+	// 组装最终布局 - 不使用 lipgloss.Place()，避免额外的尺寸约束
 	var finalMainLayout string
-
 	if m.sidebarEnabled {
-		// 2. 约束右侧面板 (Sidebar)
-		safeRightPanel := lipgloss.Place(
-			sidebarWidth,
-			lipgloss.Height(leftPanel), // 强制侧边栏与左侧对齐高度
-			lipgloss.Left,
-			lipgloss.Top,
-			rightPanel,
-		)
-
-		// 3. 水平拼接两个经过“脱水处理”的安全面板
-		finalMainLayout = lipgloss.JoinHorizontal(lipgloss.Top, safeLeftPanel, safeRightPanel)
+		finalMainLayout = lipgloss.JoinHorizontal(lipgloss.Top, leftPanel, rightPanel)
 	} else {
-		finalMainLayout = safeLeftPanel
+		finalMainLayout = leftPanel
 	}
-
-	// mainLayout := lipgloss.JoinHorizontal(lipgloss.Top, leftPanel, rightPanel)
 
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
-		lipgloss.NewStyle().MaxWidth(m.width).Render(finalMainLayout),
+		finalMainLayout,
 		inputBox,
 		helpView,
 	)
@@ -151,7 +130,8 @@ func (m appModel) renderMessages() string {
 	if m.showBanner && len(m.messages) == 0 {
 		messagesView = renderClaudeBanner(m.viewport.Width) + "\n\n"
 	}
-
+	wrapWidth := 10
+	msgWrapStyle := lipgloss.NewStyle().Width(wrapWidth).
 	for _, msg := range m.messages {
 		var line string
 		if msg.IsUser {
@@ -208,7 +188,7 @@ func (m appModel) viewResume() string {
 
 	resumeBox := resumeStyle.Width(mainWidth - 2).Render(m.resumeList.View())
 
-	// --- 3. 侧边栏对齐渲染 ---
+	// --- 3. 侧边栏渲染 ---
 	var rightPanel string
 	if m.sidebarEnabled {
 		leftHeight := lipgloss.Height(resumeBox)
