@@ -9,6 +9,7 @@ import (
 	"neoclaw/internal/events"
 	"neoclaw/internal/logger"
 	"reflect"
+	"sort"
 	"strings"
 	"time"
 
@@ -99,7 +100,8 @@ type appModel struct {
 	historyDraft      string   // saves current draft when user starts browsing history
 	// 	session         *session.Session
 	// agentName       string
-	agent *agent.Agent
+	agent               *agent.Agent
+	skipTextInputUpdate bool
 }
 
 type keyMap struct {
@@ -186,6 +188,8 @@ func NewAppModel(msgBus *bus.MessageBus, agent *agent.Agent) appModel {
 	ti.TextStyle = inputTextStyle
 	ti.CharLimit = 1000
 	ti.Width = 50
+	ti.ShowSuggestions = true
+	ti.CompletionStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
 
 	s := spinner.New()
 	s.Spinner = spinner.Dot
@@ -199,7 +203,7 @@ func NewAppModel(msgBus *bus.MessageBus, agent *agent.Agent) appModel {
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("86"))
 
-	return appModel{
+	m := appModel{
 		textInput:       ti,
 		viewport:        vp,
 		eventViewport:   eventVp,
@@ -224,6 +228,11 @@ func NewAppModel(msgBus *bus.MessageBus, agent *agent.Agent) appModel {
 		mode:         modeInput,
 		agent:        agent,
 	}
+
+	// Initialize suggestions after agent is set
+	m.textInput.SetSuggestions(m.buildCommandSuggestions())
+
+	return m
 }
 
 func (m appModel) Init() tea.Cmd {
@@ -272,15 +281,23 @@ func (m appModel) updateNormal(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 
 		case tea.KeyTab:
-			// 循环切换：0 -> 1 -> 2 -> 0
-			m.focus = (m.focus + 1) % 3
-			m.eventFocused = (m.focus == focusEvent)
-			// 只有在输入区时，textInput 才获取焦点
-			if m.focus == focusInput {
-				return m, m.textInput.Focus()
+			if m.hasActiveSuggestions() {
+				// Let textInput handle AcceptSuggestion
+				m.skipTextInputUpdate = false
+				// Don't return early - let it pass through to textInput.Update()
 			} else {
-				m.textInput.Blur()
-				return m, nil
+				// 循环切换：0 -> 1 -> 2 -> 0
+				m.focus = (m.focus + 1) % 3
+				m.eventFocused = (m.focus == focusEvent)
+				// 只有在输入区时，textInput 才获取焦点
+				if m.focus == focusInput {
+					m.skipTextInputUpdate = true
+					return m, m.textInput.Focus()
+				} else {
+					m.textInput.Blur()
+					m.skipTextInputUpdate = true
+					return m, nil
+				}
 			}
 
 		case tea.KeyEnter:
@@ -401,21 +418,27 @@ func (m appModel) updateNormal(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case focusEvent:
 				m.eventViewport.ScrollUp(1)
 			case focusInput:
-				// Navigate to older history entry
-				if len(m.inputHistory) > 0 {
-					if m.historyIdx == -1 {
-						// Start browsing history
-						m.historyDraft = m.textInput.Value()
-						m.historyIdx = len(m.inputHistory) - 1
-					} else if m.historyIdx > 0 {
-						// Move to older entry
-						m.historyIdx--
+				if m.hasActiveSuggestions() {
+					// Let textInput handle PrevSuggestion
+					m.skipTextInputUpdate = false
+				} else {
+					// Navigate to older history entry
+					if len(m.inputHistory) > 0 {
+						if m.historyIdx == -1 {
+							// Start browsing history
+							m.historyDraft = m.textInput.Value()
+							m.historyIdx = len(m.inputHistory) - 1
+						} else if m.historyIdx > 0 {
+							// Move to older entry
+							m.historyIdx--
+						}
+						// Update input with history entry
+						m.textInput.SetValue(m.inputHistory[m.historyIdx])
+						// Move cursor to end
+						m.textInput, _ = m.textInput.Update(tea.KeyMsg{Type: tea.KeyEnd})
+						m.skipTextInputUpdate = true
+						return m, nil
 					}
-					// Update input with history entry
-					m.textInput.SetValue(m.inputHistory[m.historyIdx])
-					// Move cursor to end
-					m.textInput, _ = m.textInput.Update(tea.KeyMsg{Type: tea.KeyEnd})
-					return m, nil
 				}
 			}
 
@@ -426,20 +449,26 @@ func (m appModel) updateNormal(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case focusEvent:
 				m.eventViewport.ScrollDown(1)
 			case focusInput:
-				// Navigate to newer history entry or back to draft
-				if m.historyIdx >= 0 {
-					m.historyIdx++
-					if m.historyIdx >= len(m.inputHistory) {
-						// Past newest entry, restore draft
-						m.textInput.SetValue(m.historyDraft)
-						m.historyIdx = -1
-					} else {
-						// Update input with newer history entry
-						m.textInput.SetValue(m.inputHistory[m.historyIdx])
+				if m.hasActiveSuggestions() {
+					// Let textInput handle NextSuggestion
+					m.skipTextInputUpdate = false
+				} else {
+					// Navigate to newer history entry or back to draft
+					if m.historyIdx >= 0 {
+						m.historyIdx++
+						if m.historyIdx >= len(m.inputHistory) {
+							// Past newest entry, restore draft
+							m.textInput.SetValue(m.historyDraft)
+							m.historyIdx = -1
+						} else {
+							// Update input with newer history entry
+							m.textInput.SetValue(m.inputHistory[m.historyIdx])
+						}
+						// Move cursor to end
+						m.textInput, _ = m.textInput.Update(tea.KeyMsg{Type: tea.KeyEnd})
+						m.skipTextInputUpdate = true
+						return m, nil
 					}
-					// Move cursor to end
-					m.textInput, _ = m.textInput.Update(tea.KeyMsg{Type: tea.KeyEnd})
-					return m, nil
 				}
 			}
 		}
@@ -511,6 +540,7 @@ func (m appModel) updateNormal(msg tea.Msg) (tea.Model, tea.Cmd) {
 			Timestamp: time.Now(),
 		})
 		m.mode = modeInput
+		m = m.refreshSuggestions()
 		m.showBanner = false
 		m.viewport.SetContent(m.renderMessages())
 		m.viewport.GotoBottom()
@@ -581,9 +611,10 @@ func (m appModel) updateNormal(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	}
 
-	if m.focus == focusInput {
+	if m.focus == focusInput && !m.skipTextInputUpdate {
 		m.textInput, tiCmd = m.textInput.Update(msg)
 	}
+	m.skipTextInputUpdate = false
 
 	switch m.focus {
 	case focusChat:
@@ -615,4 +646,38 @@ func (m appModel) saveCurrentSession() {
 			}
 		}
 	}
+}
+
+// buildCommandSuggestions builds the list of command suggestions
+func (m appModel) buildCommandSuggestions() []string {
+	ctx := context.Background()
+	var suggestions []string
+
+	// Registry commands (includes skill commands registered via commandFactory)
+	if m.agent != nil && m.agent.Commands() != nil {
+		for _, cmd := range m.agent.Commands().List(ctx) {
+			suggestions = append(suggestions, "/"+cmd.Name())
+		}
+	}
+
+	// TUI-local commands (not in registry)
+	suggestions = append(suggestions, "/resume")
+	suggestions = append(suggestions, "/delete")
+
+	// Sort alphabetically for consistent ordering
+	sort.Strings(suggestions)
+	return suggestions
+}
+
+// hasActiveSuggestions returns whether there are active completion suggestions
+func (m appModel) hasActiveSuggestions() bool {
+	return m.focus == focusInput &&
+		strings.HasPrefix(m.textInput.Value(), "/") &&
+		len(m.textInput.MatchedSuggestions()) > 0
+}
+
+// refreshSuggestions refreshes the command suggestions from the agent
+func (m appModel) refreshSuggestions() appModel {
+	m.textInput.SetSuggestions(m.buildCommandSuggestions())
+	return m
 }

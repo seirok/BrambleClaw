@@ -32,6 +32,7 @@ func (m appModel) updateDelete(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case tea.KeyEsc:
 			m.mode = modeInput
+			m = m.refreshSuggestions()
 			return m, nil
 		}
 	case tea.WindowSizeMsg:
@@ -82,6 +83,7 @@ func (m appModel) updateDeleteConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.pendingDeleteItem = nil
 				}
 				m.mode = modeInput
+				m = m.refreshSuggestions()
 				m.viewport.SetContent(m.renderMessages())
 				m.viewport.GotoBottom()
 				return m, nil

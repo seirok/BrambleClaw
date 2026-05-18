@@ -188,6 +188,7 @@ func (m appModel) updateResume(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyEsc:
 			// Cancel and return
 			m.mode = modeInput
+			m = m.refreshSuggestions()
 			return m, nil
 		}
 	case tea.WindowSizeMsg:
@@ -263,6 +264,7 @@ func (m appModel) switchSession(chatID string) tea.Model {
 	// Update model
 	m.messages = chatMsgs
 	m.mode = modeInput
+	m = m.refreshSuggestions()
 	m.showBanner = false
 
 	// Update viewport - reset Y position first to avoid border issues
