@@ -18,7 +18,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-const maxReserveLen = 40
+const maxReserveLen = 80
 
 func humanizeBytes(size int64) string {
 	const (

@@ -342,6 +342,19 @@ func (m appModel) updateNormal(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.textInput.SetValue("")
 				m.viewport.SetContent(m.renderMessages())
 				m.showBanner = true
+
+				// 清空统计面板数据
+				m.sidebarStats = sidebarStats{
+					HookCounts: make(map[string]int64),
+					HookErrors: make(map[string]int64),
+					HookAvgMs:  make(map[string]float64),
+				}
+
+				// 刷新侧边栏显示
+				if m.sidebarEnabled {
+					m.sidebarViewport.SetContent(m.renderSidebar())
+				}
+
 				return m, nil
 			}
 
