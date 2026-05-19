@@ -159,6 +159,7 @@ func DefaultHookConfig() HookConfig {
 				{Point: "hook.point.tool.pre-execute", Enabled: true, Verbosity: "detail"},
 				{Point: "hook.point.tool.result", Enabled: true, Verbosity: "summary"},
 				{Point: "hook.point.tool.error", Enabled: true, Verbosity: "detail"},
+				{Point: "hook.point.tool.validation-error", Enabled: true, Verbosity: "detail"},
 				{Point: "hook.point.message.pre-process", Enabled: false, Verbosity: "summary"},
 				{Point: "hook.point.message.pre-response", Enabled: false, Verbosity: "summary"},
 			},

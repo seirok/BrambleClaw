@@ -11,6 +11,7 @@ import (
 	"neoclaw/internal/logger"
 	"neoclaw/internal/messages"
 	"neoclaw/internal/sandbox"
+	"neoclaw/internal/validation"
 	"time"
 )
 
@@ -26,6 +27,9 @@ type Orchestrator struct {
 	tools       interfaces.Registry[interfaces.Tool]
 	ctx         context.Context
 	auditLogger *audit.AuditLogger
+	validator   *validation.SchemaCache
+	maxRetries  int
+	enabled     bool
 }
 
 // AuditLogger 返回审计日志记录器
@@ -34,11 +38,14 @@ func (o *Orchestrator) AuditLogger() *audit.AuditLogger {
 }
 
 // NewOrchestrator 创建编排器
-func NewOrchestrator(llm LLMProcessor, tools interfaces.Registry[interfaces.Tool], auditLogger *audit.AuditLogger) *Orchestrator {
+func NewOrchestrator(llm LLMProcessor, tools interfaces.Registry[interfaces.Tool], auditLogger *audit.AuditLogger, enabled bool, maxRetries int) *Orchestrator {
 	return &Orchestrator{
 		llm:         llm,
 		tools:       tools,
 		auditLogger: auditLogger,
+		validator:   validation.NewSchemaCache(),
+		enabled:     enabled,
+		maxRetries:  maxRetries,
 	}
 }
 
@@ -145,20 +152,59 @@ func (o *Orchestrator) Run(ctx context.Context, messages []messages.BaseMessage)
 		return nil, errors.New("empty response choices: choices is nil or empty")
 	}
 	toolCalls := response.Choices[0].Message.ToolCalls
+	// 追踪每个工具的连续校验失败次数
+	validationRetries := make(map[string]int)
 	for len(toolCalls) > 0 {
 		for _, call := range toolCalls {
 			result, err := o.executeToolCall(ctx, call.Function, call.ID)
 			if err != nil {
-				// Type 1: feed error back to LLM as tool result
-				logger.L().Error().Err(err).Str("tool", call.Function.Name).Msg("Tool execution failed")
-				msgWithToolError := ChatMsg{
-					Role:       RoleTool,
-					Content:    fmt.Sprintf("Error: tool execution failed - %s", err.Error()),
-					ToolCallID: call.ID,
+				// 区分校验错误和执行错误
+				var valErr *validation.ValidationError
+				if errors.As(err, &valErr) {
+					// 校验错误
+					logger.L().Error().Err(err).Str("tool", call.Function.Name).Msg("Tool parameter validation failed")
+					validationRetries[call.Function.Name]++
+
+					var errorMsg string
+					if validationRetries[call.Function.Name] >= o.maxRetries {
+						// 达到最大重试次数
+						errorMsg = fmt.Sprintf(
+							"Tool %q parameter validation failed %d times. Last error: %s. The tool call will not be retried.",
+							valErr.ToolName,
+							validationRetries[call.Function.Name],
+							valErr.SchemaError,
+						)
+						// 重置计数器
+						validationRetries[call.Function.Name] = 0
+					} else {
+						// 使用 LLM 友好的错误消息
+						errorMsg = valErr.ToLLMMessage()
+					}
+
+					msgWithToolError := ChatMsg{
+						Role:       RoleTool,
+						Content:    errorMsg,
+						ToolCallID: call.ID,
+					}
+					chatMsgs = append(chatMsgs, msgWithToolError)
+				} else {
+					// 执行错误：原有格式
+					logger.L().Error().Err(err).Str("tool", call.Function.Name).Msg("Tool execution failed")
+					// 成功执行或其他错误，重置校验失败计数
+					validationRetries[call.Function.Name] = 0
+
+					msgWithToolError := ChatMsg{
+						Role:       RoleTool,
+						Content:    fmt.Sprintf("Error: tool execution failed - %s", err.Error()),
+						ToolCallID: call.ID,
+					}
+					chatMsgs = append(chatMsgs, msgWithToolError)
 				}
-				chatMsgs = append(chatMsgs, msgWithToolError)
 				continue
 			}
+			// 成功执行，重置校验失败计数
+			validationRetries[call.Function.Name] = 0
+
 			msgWithToolresult := ChatMsg{
 				Role:       RoleTool,
 				Content:    result.Content,
@@ -203,8 +249,30 @@ func (o *Orchestrator) executeToolCall(ctx context.Context, toolCall ToolFunctio
 		return ToolResult{}, fmt.Errorf("tool %s not found", toolName)
 	}
 
-	// Execute Tool
 	args := toolCall.Arguments
+
+	// 参数校验
+	if o.enabled {
+		if valErr := validation.Validate(toolName, tool.Parameters(), args, o.validator); valErr != nil {
+			// 触发校验错误钩子
+			hook.Emit(ctx, "hook.point.tool.validation-error", valErr)
+
+			// 审计记录
+			if o.auditLogger != nil {
+				o.auditLogger.LogToolCall(&audit.ToolCallAuditEvent{
+					ToolName:   toolName,
+					Arguments:  args,
+					Result:     "",
+					Success:    false,
+					Error:      valErr.Error(),
+					Duration:   0,
+					SessionKey: sandbox.SessionKeyFromContext(ctx),
+				})
+			}
+
+			return ToolResult{}, valErr
+		}
+	}
 
 	// 触发工具执行前钩子
 	if processedArgs, err := hook.Emit(ctx, "hook.point.tool.pre-execute", args); err != nil {
