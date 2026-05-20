@@ -1,0 +1,45 @@
+:root {
+  --color-bg: #0a0b10;
+  --color-bg-secondary: #101117;
+  --color-surface: #14161f;
+  --color-surface-hover: #1c1f2c;
+  --color-border: #232636;
+  --color-border-hover: #3a3e52;
+  --color-text-primary: #e8e9f0;
+  --color-text-secondary: #7a7e90;
+  --color-accent: #6c5ce7;
+  --color-accent-glow: rgba(108, 92, 231, 0.4);
+  --color-accent-hover: #8b7af0;
+  --color-accent-secondary: #00f0ff;
+  --color-accent-secondary-glow: rgba(0, 240, 255, 0.3);
+  --color-success: #00ff9d;
+  --color-success-glow: rgba(0, 255, 157, 0.3);
+  --color-error: #ff4768;
+  --color-error-glow: rgba(255, 71, 104, 0.3);
+  --color-warning: #ffb347;
+  --color-thinking: #b06cff;
+  --color-thinking-glow: rgba(176, 108, 255, 0.4);
+
+  --font-display: 'Orbitron', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-body: 'Noto Sans', sans-serif;
+
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.6);
+  --glow-accent: 0 0 20px var(--color-accent-glow), 0 0 40px rgba(108, 92, 231, 0.15);
+  --glow-accent-secondary: 0 0 20px var(--color-accent-secondary-glow), 0 0 40px rgba(0, 240, 255, 0.1);
+
+  --header-height: 64px;
+  --sidebar-width: 280px;
+  --input-height: 100px;
+
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}

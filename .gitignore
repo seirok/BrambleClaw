@@ -10,3 +10,8 @@ logs/
 **/*.md
 !README.md
 !docs/*.md
+web/dist/
+web/node_modules/
+**/*.ps1
+web/.vite
+

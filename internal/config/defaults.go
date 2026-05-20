@@ -57,5 +57,7 @@ func createDefaultConfig() *Config {
 
 	cfg.Tools = structs.DefaultToolsConfig()
 
+	cfg.Web = structs.DefaultWebConfig()
+
 	return cfg
 }

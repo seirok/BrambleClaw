@@ -13,6 +13,7 @@ import (
 	"neoclaw/internal/events"
 	"neoclaw/internal/gateway"
 	"neoclaw/internal/hook"
+	"neoclaw/internal/httpserver"
 	"neoclaw/internal/interfaces"
 	"neoclaw/internal/logger"
 	"neoclaw/internal/runtime"
@@ -136,6 +137,23 @@ func runAgent(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// 9. 启动 Web HTTP Server
+	var httpSrv *httpserver.Server
+	if cfg.Web.Enabled {
+		webChan := httpserver.RegisterWebChannel(msgBus)
+		if err := channelManager.Add(ctx, "web", webChan); err != nil {
+			logger.L().Error().Err(err).Msg("Failed to register WebChannel")
+		} else {
+			if err := webChan.Start(ctx); err != nil {
+				logger.L().Error().Err(err).Msg("Failed to start WebChannel")
+			}
+		}
+		httpSrv = httpserver.NewServer(msgBus, agentManager)
+		if err := httpSrv.Start(ctx); err != nil {
+			logger.L().Error().Err(err).Msg("Failed to start HTTP server")
+		}
+	}
+
 	// 8. 启动 CronService
 	if cfg.Tools.Cron.Enabled && cronService != nil {
 		logger.L().Debug().Msg("Starting CronService...")
@@ -243,6 +261,11 @@ func runAgent(cmd *cobra.Command, args []string) error {
 		fmt.Println("Shutting down... Hope to see you next time!😊")
 		stopCtx, stopCancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer stopCancel()
+		if httpSrv != nil {
+			if err := httpSrv.Stop(stopCtx); err != nil {
+				logger.L().Error().Err(err).Msg("Failed to stop HTTP server")
+			}
+		}
 		if err := gw.Stop(stopCtx); err != nil {
 			logger.L().Error().Err(err).Msg("Failed to stop Gateway")
 		}

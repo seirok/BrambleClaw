@@ -36,6 +36,7 @@ type HookType = structs.HookType
 type SidebarConfig = structs.SidebarConfig
 type SkillConfig = structs.SkillConfig
 type CronConfig = structs.CronConfig
+type WebConfig = structs.WebConfig
 
 type Config struct {
 	Log        structs.LogConfig     `json:"log" mapstructure:"log"`
@@ -52,6 +53,7 @@ type Config struct {
 	Hooks      structs.HookConfig    `json:"hooks" mapstructure:"hooks"`
 	Sidebar    structs.SidebarConfig `json:"sidebar" mapstructure:"sidebar"`
 	Skill      structs.SkillConfig   `json:"skill" mapstructure:"skill"`
+	Web        structs.WebConfig     `json:"web" mapstructure:"web"`
 }
 
 var (
@@ -196,6 +198,9 @@ func ValidateGlobalConfig() {
 
 	// Validate Skill config
 	globalConfig.Skill.Validate()
+
+	// Validate Web config
+	globalConfig.Web.Validate()
 
 	if hasError {
 		logger.L().Warn().Msg("Config validation completed with some errors, defaults applied where possible")
