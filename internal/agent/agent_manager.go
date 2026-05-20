@@ -175,7 +175,7 @@ func (a *AgentManager) Initialize(ctx context.Context, cfg any) error {
 		}
 
 		// Orchestrator
-		orche := NewOrchestrator(llmClient, agentToolRegistry, agentAuditLogger)
+		orche := NewOrchestrator(llmClient, agentToolRegistry, agentAuditLogger, fullCfg.Tools.Validation.Enabled, fullCfg.Tools.Validation.MaxRetries)
 
 		// Build command registry
 		cmdRegistry := command.NewCommandRegistry()
