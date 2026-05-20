@@ -15,6 +15,12 @@ import (
 	"time"
 )
 
+// ToolExecuteEvent 工具执行事件（传递给 hook）
+type ToolExecuteEvent struct {
+	ToolName string      // 工具名称
+	Data     interface{} // 数据（args 或 result 或 error）
+}
+
 type LLMProcessor interface {
 	Chat(req ChatCompletionRequest) (*LLMResponse, error)
 	Model() string
@@ -245,7 +251,7 @@ func (o *Orchestrator) executeToolCall(ctx context.Context, toolCall ToolFunctio
 	toolName := toolCall.Name
 	tool, ok := o.tools.Get(ctx, toolName)
 	if ok != nil {
-		hook.Emit(ctx, "hook.point.tool.error", fmt.Errorf("tool %s not found", toolName))
+		hook.Emit(ctx, "hook.point.tool.error", &ToolExecuteEvent{ToolName: toolName, Data: fmt.Errorf("tool %s not found", toolName)})
 		return ToolResult{}, fmt.Errorf("tool %s not found", toolName)
 	}
 
@@ -275,11 +281,14 @@ func (o *Orchestrator) executeToolCall(ctx context.Context, toolCall ToolFunctio
 	}
 
 	// 触发工具执行前钩子
-	if processedArgs, err := hook.Emit(ctx, "hook.point.tool.pre-execute", args); err != nil {
+	toolEvent := &ToolExecuteEvent{ToolName: toolName, Data: args}
+	if processedArgs, err := hook.Emit(ctx, "hook.point.tool.pre-execute", toolEvent); err != nil {
 		return ToolResult{}, err
 	} else if processedArgs != nil {
-		if argStr, ok := processedArgs.(string); ok {
-			args = argStr
+		if processedEvent, ok := processedArgs.(*ToolExecuteEvent); ok && processedEvent != nil {
+			if argStr, ok := processedEvent.Data.(string); ok {
+				args = argStr
+			}
 		}
 	}
 
@@ -309,15 +318,17 @@ func (o *Orchestrator) executeToolCall(ctx context.Context, toolCall ToolFunctio
 
 	if err != nil {
 		// 触发工具错误钩子
-		hook.Emit(ctx, "hook.point.tool.error", err)
+		hook.Emit(ctx, "hook.point.tool.error", &ToolExecuteEvent{ToolName: toolName, Data: err})
 		return ToolResult{}, err
 	}
 
 	// 触发工具执行后钩子
-	if processedResult, err := hook.Emit(ctx, "hook.point.tool.result", result); err != nil {
+	if processedResult, err := hook.Emit(ctx, "hook.point.tool.result", &ToolExecuteEvent{ToolName: toolName, Data: result}); err != nil {
 		return ToolResult{}, err
 	} else if processedResult != nil {
-		result = processedResult
+		if ev, ok := processedResult.(*ToolExecuteEvent); ok && ev != nil {
+			result = ev.Data
+		}
 	}
 
 	// 转换结果为字符串
