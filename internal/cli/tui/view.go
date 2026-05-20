@@ -130,8 +130,8 @@ func (m appModel) renderMessages() string {
 	if m.showBanner && len(m.messages) == 0 {
 		messagesView = renderClaudeBanner(m.viewport.Width) + "\n\n"
 	}
-	wrapWidth := 10
-	msgWrapStyle := lipgloss.NewStyle().Width(wrapWidth).
+	//	wrapWidth := 10
+	//	msgWrapStyle := lipgloss.NewStyle().Width(wrapWidth).
 	for _, msg := range m.messages {
 		var line string
 		if msg.IsUser {

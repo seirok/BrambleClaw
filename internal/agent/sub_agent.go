@@ -47,7 +47,8 @@ func NewSubAgent(
 			al = logger
 		}
 	}
-	orche := NewOrchestrator(llm, subTools, al)
+	// 默认启用校验，最大重试 3 次
+	orche := NewOrchestrator(llm, subTools, al, true, 3)
 
 	return &SubAgent{
 		BaseChatAgent: NewBaseChatAgent(name, description),

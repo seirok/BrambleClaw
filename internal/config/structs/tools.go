@@ -58,6 +58,12 @@ type WriteConfig struct {
 	Enabled bool `json:"enabled" mapstructure:"enabled"`
 }
 
+// ValidationConfig 参数校验配置
+type ValidationConfig struct {
+	Enabled    bool `json:"enabled" mapstructure:"enabled"`          // 是否启用参数校验，默认 true
+	MaxRetries int  `json:"max_retries" mapstructure:"max_retries"`  // 单工具最大连续校验失败次数，默认 3
+}
+
 // ToolsConfig 工具配置
 type ToolsConfig struct {
 	MCP       MCPConfig       `json:"mcp" mapstructure:"mcp"`
@@ -68,6 +74,7 @@ type ToolsConfig struct {
 	Read      ReadConfig      `json:"read" mapstructure:"read"`
 	Write     WriteConfig     `json:"write" mapstructure:"write"`
 	Cron      CronConfig      `json:"cron" mapstructure:"cron"`
+	Validation ValidationConfig `json:"validation" mapstructure:"validation"`
 }
 
 // DefaultToolsConfig 返回默认工具配置
@@ -99,6 +106,10 @@ func DefaultToolsConfig() ToolsConfig {
 		Cron: CronConfig{
 			Enabled: true,
 			DataDir: "",
+		},
+		Validation: ValidationConfig{
+			Enabled:    true,
+			MaxRetries: 3,
 		},
 	}
 }
@@ -141,6 +152,13 @@ func (c *ToolsConfig) Validate() (hasError bool) {
 
 	if c.Cron.DataDir == "" {
 		c.Cron.DataDir = filepath.Join(util.GetSystemPath(), "cron")
+	}
+
+	if !c.Validation.Enabled {
+		c.Validation.Enabled = defaults.Validation.Enabled
+	}
+	if c.Validation.MaxRetries <= 0 {
+		c.Validation.MaxRetries = defaults.Validation.MaxRetries
 	}
 
 	return false

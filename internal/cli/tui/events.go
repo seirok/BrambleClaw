@@ -86,21 +86,59 @@ func formatLLMSummary(evt events.ThinkingEvent) string {
 	return "LLM event"
 }
 
+// toolEventInfo 从 hook 数据中提取的工具事件信息
+type toolEventInfo struct {
+	Name string
+	Data any
+}
+
+// extractToolEvent 从 evt.Data 提取工具名和数据。
+// 支持 *ToolExecuteEvent 格式（新）和原始格式（旧，向后兼容）。
+func extractToolEvent(data any) toolEventInfo {
+	if data == nil {
+		return toolEventInfo{}
+	}
+
+	v := reflect.ValueOf(data)
+	// 处理指针
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+	if v.Kind() == reflect.Struct {
+		// 检查是否为 ToolExecuteEvent 结构
+		nameField := v.FieldByName("ToolName")
+		dataField := v.FieldByName("Data")
+		if nameField.IsValid() && dataField.IsValid() {
+			return toolEventInfo{
+				Name: nameField.String(),
+				Data: dataField.Interface(),
+			}
+		}
+	}
+
+	// 向后兼容：不是 ToolExecuteEvent 格式，返回原始数据
+	return toolEventInfo{
+		Name: "unknown",
+		Data: data,
+	}
+}
+
 func formatToolSummary(evt events.ThinkingEvent) string {
+	evtInfo := extractToolEvent(evt.Data)
 	switch evt.Point {
 	case "hook.point.tool.pre-execute":
-		if args, ok := evt.Data.(string); ok {
-			return fmt.Sprintf("TOOL ▶ %s", truncate(args, 100))
+		if args, ok := evtInfo.Data.(string); ok {
+			return fmt.Sprintf("[%s] ▶ %s", evtInfo.Name, truncate(args, 100))
 		}
-		return "TOOL ▶ executing"
+		return fmt.Sprintf("[%s] ▶ executing", evtInfo.Name)
 	case "hook.point.tool.result":
-		resultStr := fmt.Sprintf("%v", evt.Data)
-		return fmt.Sprintf("TOOL ◀ %s", truncate(resultStr, 100))
+		resultStr := fmt.Sprintf("%v", evtInfo.Data)
+		return fmt.Sprintf("[%s] ◀ %s", evtInfo.Name, truncate(resultStr, 100))
 	case "hook.point.tool.error":
-		if err, ok := evt.Data.(error); ok {
-			return fmt.Sprintf("TOOL ✗ %v", err)
+		if err, ok := evtInfo.Data.(error); ok {
+			return fmt.Sprintf("[%s] ✗ %v", evtInfo.Name, err)
 		}
-		return "TOOL ✗ error"
+		return fmt.Sprintf("[%s] ✗ error", evtInfo.Name)
 	}
 	return "TOOL event"
 }
