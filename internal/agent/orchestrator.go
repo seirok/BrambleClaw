@@ -80,6 +80,7 @@ func (o *Orchestrator) prepareToolDefinitions() []map[string]interface{} {
 	return defs
 }
 
+// UpdateHistory 将 llm 回复信息添加到历史消息中
 func (o *Orchestrator) UpdateHistory(llmResp *LLMResponse, historyMsg *[]ChatMsg) error {
 	// Validation Check
 	if llmResp == nil {

@@ -37,6 +37,7 @@ type Agent struct {
 	orche        *Orchestrator
 	tools        interfaces.Registry[interfaces.Tool]
 	session      *session.Session
+	sessionSave  *session.SessionSave
 	mcp          *mcp.Manager
 	builder      *ContextBuilder
 	commands     interfaces.Registry[interfaces.Command]
@@ -70,6 +71,13 @@ func NewAgent(name string, opts ...Option) *Agent {
 func WithSession(sess *session.Session) Option {
 	return func(a *Agent) {
 		a.session = sess
+	}
+}
+
+// WithSession 设置会话自动持久化Service
+func WithSessionSave(sessSave *session.SessionSave) Option {
+	return func(a *Agent) {
+		a.sessionSave = sessSave
 	}
 }
 
@@ -599,6 +607,12 @@ func (a *Agent) Start(ctx context.Context) error {
 		}
 	}
 
+	// 启动会话自动持久化
+	err := a.sessionSave.Start(ctx)
+	if err != nil {
+		return err
+	}
+
 	// 触发 Agent 启动后钩子
 	if _, err := hook.Emit(ctx, "hook.point.agent.start", a); err != nil {
 		logger.L().Warn().Err(err).Msg("Agent start hook failed")
@@ -616,6 +630,12 @@ func (a *Agent) Stop(ctx context.Context) error {
 
 	// 持久化当前 session
 	err := a.session.Save(ctx)
+	if err != nil {
+		return err
+	}
+
+	// 关闭 会话自动持久化服务
+	err = a.sessionSave.Stop(ctx)
 	if err != nil {
 		return err
 	}
@@ -652,4 +672,5 @@ func (a *Agent) LoadSession(ctx context.Context, key string) (*session.Session, 
 
 func (a *Agent) SetSession(sess *session.Session) {
 	a.session = sess
+	a.sessionSave.SetSession(sess)
 }

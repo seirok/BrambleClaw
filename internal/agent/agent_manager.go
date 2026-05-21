@@ -208,6 +208,7 @@ func (a *AgentManager) Initialize(ctx context.Context, cfg any) error {
 		sessionStore := store.NewFileStorage[session.Session](filepath.Join(agentWorkspace, "memory"))
 		metaStore := store.NewFileStorage[session.SessionMetadata](filepath.Join(agentWorkspace, "memory", "meta_data"))
 		sess := session.NewSession(session.WithStores(sessionStore, metaStore)) // session key 需要由对话确定
+		sessSave := session.NewSessionSave(sess)
 
 		// Set skill manager on agent
 		agent := NewAgent(agentCfg.Name,
@@ -222,6 +223,7 @@ func (a *AgentManager) Initialize(ctx context.Context, cfg any) error {
 			WithWorkspace(agentWorkspace),
 			WithSkillManager(a.skillManager),
 			WithSession(sess),
+			WithSessionSave(sessSave),
 		)
 
 		// agent 应该拥有写自己的 memory.md 的权限
