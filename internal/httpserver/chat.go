@@ -17,9 +17,11 @@ import (
 
 // WebConnection represents a single SSE connection
 type WebConnection struct {
-	ChatID  string
-	FlushCh chan []byte
-	DoneCh  chan struct{}
+	ChatID   string
+	FlushCh  chan []byte
+	DoneCh   chan struct{}
+	RespCh   chan struct{} // signals the main loop that a response arrived
+	RespDone chan struct{} // RespCh writer blocks until this is closed by main loop
 }
 
 // WebChannel implements channel.BaseChannel for web SSE
@@ -100,6 +102,8 @@ func (w *WebChannel) Send(ctx context.Context, msg *bus.OutBoundMessage) error {
 	switch msg.MsgType {
 	case "error":
 		eventType = "error"
+	case "done":
+		eventType = "done"
 	default:
 		eventType = "response"
 	}
@@ -132,6 +136,8 @@ func (w *WebChannel) routeMessage(msg *bus.OutBoundMessage) {
 	switch msg.MsgType {
 	case "error":
 		eventType = "error"
+	case "done":
+		eventType = "done"
 	default:
 		eventType = "response"
 	}
@@ -149,14 +155,29 @@ func (w *WebChannel) routeMessage(msg *bus.OutBoundMessage) {
 	case <-time.After(5 * time.Second):
 		// connection is too slow, skip
 	}
+
+	// After routing a response (not error/done), signal that the agent has finished.
+	// Unbuffered RespCh blocks here until the main loop reads it — this guarantees
+	// the main loop has already flushed the response to the client before we proceed.
+	if eventType == "response" {
+		select {
+		case conn.RespCh <- struct{}{}:
+			// Main loop has flushed — now we can close the connection
+			close(conn.DoneCh)
+		case <-time.After(5 * time.Second):
+			close(conn.DoneCh)
+		}
+	}
 }
 
 // RegisterConnection registers an SSE connection for a chatID
 func (w *WebChannel) RegisterConnection(chatID string) *WebConnection {
 	conn := &WebConnection{
-		ChatID:  chatID,
-		FlushCh: make(chan []byte, 100),
-		DoneCh:  make(chan struct{}),
+		ChatID:   chatID,
+		FlushCh:  make(chan []byte, 100),
+		DoneCh:   make(chan struct{}),
+		RespCh:   make(chan struct{}), // unbuffered — blocks until main loop reads
+		RespDone: make(chan struct{}), // closed by main loop after flushing response
 	}
 
 	w.mu.Lock()
@@ -240,6 +261,7 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	inboundMsg := &bus.InBoundMessage{
 		ID:        uuid.New().String(),
 		SenderID:  "web",
+		InChannel: "web",
 		ChatID:    chatID,
 		Content:   req.Message,
 		TimeStamp: time.Now(),
@@ -263,6 +285,11 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 			}
 			w.Write(data)
 			flusher.Flush()
+		case <-conn.RespCh:
+			// Agent response received — send done event immediately
+			fmt.Fprintf(w, "event: done\ndata: {\"chat_id\": \"%s\"}\n\n", chatID)
+			flusher.Flush()
+			return
 		case <-conn.DoneCh:
 			return
 		case <-ctx.Done():
