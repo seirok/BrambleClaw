@@ -1,3 +1,5 @@
+import { reportError } from '@/services/errorReporter'
+
 class ApiClient {
   private baseUrl: string
 
@@ -12,12 +14,20 @@ class ApiClient {
   async request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseUrl}${path}`
     const headers: Record<string, string> = { 'Content-Type': 'application/json', ...options.headers as Record<string, string> }
-    const res = await fetch(url, { ...options, headers })
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: res.statusText }))
-      throw new Error(err.error || `HTTP ${res.status}`)
+    try {
+      const res = await fetch(url, { ...options, headers })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }))
+        reportError('network_error', `HTTP ${res.status}: ${err.error || res.statusText} (${path})`)
+        throw new Error(err.error || `HTTP ${res.status}`)
+      }
+      return res.json() as Promise<T>
+    } catch (err) {
+      if (err instanceof Error && err.message.startsWith('Failed to fetch')) {
+        reportError('network_error', `Network request failed: ${path}`, err.stack)
+      }
+      throw err
     }
-    return res.json() as Promise<T>
   }
 
   async get<T>(path: string): Promise<T> {

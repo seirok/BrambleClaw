@@ -47,6 +47,7 @@ func NewServer(msgBus *bus.MessageBus, agentMgr *agent.AgentManager) *Server {
 	router.HandleFunc("GET /api/admin/audit", s.handleGetAuditLog)
 	router.HandleFunc("GET /api/metrics/summary", s.handleMetricsSummary)
 	router.HandleFunc("GET /api/metrics/channels", s.handleMetricsChannels)
+	router.HandleFunc("POST /api/log", s.handleClientLog)
 
 	// Static files + SPA fallback
 	handler := s.spaHandler(s.webDir, router)
@@ -109,7 +110,8 @@ func (s *Server) spaHandler(webDir string, apiRouter http.Handler) http.Handler 
 			r.URL.Path == "/api/admin/agents/reset" ||
 			r.URL.Path == "/api/admin/audit" ||
 			r.URL.Path == "/api/metrics/summary" ||
-			r.URL.Path == "/api/metrics/channels" {
+			r.URL.Path == "/api/metrics/channels" ||
+			r.URL.Path == "/api/log" {
 			apiRouter.ServeHTTP(w, r)
 			return
 		}

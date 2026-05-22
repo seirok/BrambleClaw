@@ -1,6 +1,7 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
+import { errorLoggerPlugin } from './plugins/errorLogger'
 
 import './css/reset.css'
 import './css/variables.css'
@@ -11,4 +12,5 @@ import './css/monitoring.css'
 
 const app = createApp(App)
 app.use(router)
+app.use(errorLoggerPlugin)
 app.mount('#app')

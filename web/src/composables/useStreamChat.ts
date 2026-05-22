@@ -74,6 +74,10 @@ export function useStreamChat() {
           callbacks.onError?.((err as Error).message)
         }
       })
+      .finally(() => {
+        isStreaming.value = false
+        abortController = null
+      })
 
     return controller
   }
