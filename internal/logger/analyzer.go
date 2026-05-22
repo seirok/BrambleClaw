@@ -2,6 +2,7 @@ package logger
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -9,9 +10,30 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// LogLevel maps zerolog level strings to integers for comparison
+var logLevelRank = map[string]int{
+	"trace": 0,
+	"debug": 1,
+	"info":  2,
+	"warn":  3,
+	"error": 4,
+	"fatal": 5,
+	"panic": 6,
+}
+
+// shouldShow returns true if the log line's level is >= minLevel
+func shouldShow(lineLevel, minLevel string) bool {
+	a, okA := logLevelRank[strings.ToLower(lineLevel)]
+	b, okB := logLevelRank[strings.ToLower(minLevel)]
+	if !okA || !okB {
+		return true
+	}
+	return a >= b
+}
+
 // AnalyzeLogs reads specified log file, gets last n lines, and formats output to console
-func AnalyzeLogs(logPath string, n int) error {
-	L().Debug().Str("log_path", logPath).Int("lines", n).Msg("Starting to read and analyze logs")
+func AnalyzeLogs(logPath string, n int, minLevel string) error {
+	L().Debug().Str("log_path", logPath).Int("lines", n).Str("min_level", minLevel).Msg("Starting to read and analyze logs")
 
 	file, err := os.Open(logPath)
 	if err != nil {
@@ -50,6 +72,15 @@ func AnalyzeLogs(logPath string, n int) error {
 		if line == "" {
 			continue
 		}
+
+		// Parse level from JSON for filtering
+		var entry map[string]any
+		if err := json.Unmarshal([]byte(line), &entry); err == nil {
+			if level, ok := entry["level"].(string); ok && !shouldShow(level, minLevel) {
+				continue
+			}
+		}
+
 		// 将 JSON 字符串写入 consoleWriter 进行格式化
 		// 注意 ConsoleWriter.Write 期望每行一个 JSON
 		_, err := consoleWriter.Write([]byte(line + "\n"))
@@ -59,5 +90,15 @@ func AnalyzeLogs(logPath string, n int) error {
 		}
 	}
 
+	return nil
+}
+
+// ClearLog truncates the log file, or creates it if it doesn't exist
+func ClearLog(logPath string) error {
+	f, err := os.Create(logPath)
+	if err != nil {
+		return fmt.Errorf("failed to clear log file(%s): %w", logPath, err)
+	}
+	f.Close()
 	return nil
 }
